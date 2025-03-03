@@ -1,27 +1,37 @@
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
-
-const demoProducts = [
-  { _id: "1", name: "Shampoo", mrp: 100, tp: 80 },
-  {
-    _id: "2",
-    name: "Flormar Water Lip Stain 004 Orange Juice",
-    mrp: 120,
-    tp: 90,
-  },
-  { _id: "3", name: "Hair Color", mrp: 150, tp: 110 },
-  { _id: "4", name: "Body Lotion", mrp: 200, tp: 160 },
-  { _id: "5", name: "Conditioner", mrp: 130, tp: 100 },
-];
+import axios from "axios";
 
 export default function TodaysSale() {
   const [search, setSearch] = useState("");
+  const [searchType, setSearchType] = useState("name"); // Default search type is 'name'
   const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem("cart")) || []);
   const [stock, setStock] = useState(500);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
+
+  // Search products from the backend based on search type
+  const handleSearch = async (query) => {
+    if (query) {
+      setIsLoading(true);
+      try {
+        const response = await axios.get("http://localhost:5000/search-product", {
+          params: { search: query, type: searchType }, // Send search type with the query
+        });
+        setSearchResults(response.data); // Set search results from the server
+      } catch (error) {
+        console.error("Error fetching search results:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setSearchResults([]); // Clear search results if search is empty
+    }
+  };
 
   const addToCart = (product) => {
     const existingItem = cart.find((item) => item._id === product._id);
@@ -36,7 +46,8 @@ export default function TodaysSale() {
     } else {
       setCart([...cart, { ...product, pcs: 1, total: product.mrp }]);
     }
-    setSearch("");
+    setSearch(""); // Clear search when product is added to cart
+    setSearchResults([]); // Clear search results
   };
 
   const updateQuantity = (id, change) => {
@@ -77,15 +88,27 @@ export default function TodaysSale() {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            handleSearch(e.target.value); // Trigger search on input change
+          }}
           placeholder="Search product..."
           className="w-full p-2 border rounded-lg"
         />
+        <select
+          value={searchType}
+          onChange={(e) => setSearchType(e.target.value)}
+          className="absolute right-[1px] top-[2px] p-[7px] bg-white border rounded-lg"
+        >
+          <option value="name">By Name</option>
+          <option value="barcode">By Barcode</option>
+        </select>
         {search && (
           <ul className="absolute bg-white w-full border rounded-lg mt-1 shadow">
-            {demoProducts
-              .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-              .map((p) => (
+            {isLoading ? (
+              <li className="p-2">Loading...</li>
+            ) : (
+              searchResults.map((p) => (
                 <li
                   key={p._id}
                   onClick={() => addToCart(p)}
@@ -93,7 +116,8 @@ export default function TodaysSale() {
                 >
                   {p.name}
                 </li>
-              ))}
+              ))
+            )}
           </ul>
         )}
       </div>
@@ -114,9 +138,7 @@ export default function TodaysSale() {
           <tbody>
             {cart.map((item) => (
               <tr key={item._id} className="border-b">
-                <td className="p-2 w-2/6 text-left break-words whitespace-normal">
-                  {item.name}
-                </td>
+                <td className="p-2 w-2/6 text-left break-words whitespace-normal">{item.name}</td>
 
                 <td className="p-2 w-1/6">
                   <div className="flex flex-col-reverse justify-center items-center gap-1">
@@ -139,11 +161,10 @@ export default function TodaysSale() {
                 <td className="p-2 w-1/6 text-center">{item.tp} BDT</td>
                 <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
                 <td className="p-2 w-1/6 text-center">
-                  <button
-                    onClick={() => removeFromCart(item._id)}
-                    className="mt-1 rounded"
-                  >
-                    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="#FD0032" d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>
+                  <button onClick={() => removeFromCart(item._id)} className="mt-1 rounded">
+                    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                      <path fill="#FD0032" d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z" />
+                    </svg>
                   </button>
                 </td>
               </tr>
