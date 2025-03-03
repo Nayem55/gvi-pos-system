@@ -188,3 +188,6 @@ export default function TodaysSale() {
     </div>
   );
 }
+
+
+// https://gvi-pos-server.vercel.app/
