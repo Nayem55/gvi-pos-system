@@ -82,11 +82,26 @@ export default function TodaysSale() {
     setCart(cart.filter((item) => item._id !== id));
   };
 
-  const handleSubmit = () => {
-    const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
-    setStock((prevStock) => Math.max(0, prevStock - totalSold));
-    setCart([]);
-    localStorage.removeItem("cart");
+  const handleSubmit = async () => {
+    try {
+      // Prepare the sales data for each cart item
+      const sales = cart.map((item) => ({
+        barcode: item.barcode,
+        quantity: item.pcs,
+      }));
+      // Update outlet stock for each sold product
+      await axios.post("https://gvi-pos-server.vercel.app/update-outlet-stock", {
+        sales,
+        outlet: outletName,
+      });
+      // Optionally update the global outlet stock (if you track overall outlet stock)
+      const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
+      setStock((prevStock) => Math.max(0, prevStock - totalSold));
+      setCart([]);
+      localStorage.removeItem("cart");
+    } catch (error) {
+      console.error("Error updating outlet stock:", error);
+    }
   };
 
   return (
@@ -178,7 +193,10 @@ export default function TodaysSale() {
                 <td className="p-2 w-1/6 text-center">
                   <button onClick={() => removeFromCart(item._id)} className="mt-1 rounded">
                     <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                      <path fill="#FD0032" d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z" />
+                      <path
+                        fill="#FD0032"
+                        d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                      />
                     </svg>
                   </button>
                 </td>
