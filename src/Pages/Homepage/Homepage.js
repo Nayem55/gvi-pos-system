@@ -19,7 +19,7 @@ export default function TodaysSale() {
     if (query) {
       setIsLoading(true);
       try {
-        const response = await axios.get("http://localhost:5000/search-product", {
+        const response = await axios.get("https://gvi-pos-server.vercel.app/search-product", {
           params: { search: query, type: searchType }, // Send search type with the query
         });
         setSearchResults(response.data); // Set search results from the server
