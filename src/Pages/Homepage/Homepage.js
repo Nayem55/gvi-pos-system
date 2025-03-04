@@ -16,22 +16,23 @@ export default function TodaysSale() {
 
   // Search products from the backend based on search type
   const handleSearch = async (query) => {
-    if (query) {
+    if (query.length > 2) { // Search only if input has more than 2 characters
       setIsLoading(true);
       try {
         const response = await axios.get("https://gvi-pos-server.vercel.app/search-product", {
-          params: { search: query, type: searchType }, // Send search type with the query
+          params: { search: query, type: searchType },
         });
-        setSearchResults(response.data); // Set search results from the server
+        setSearchResults(response.data);
       } catch (error) {
         console.error("Error fetching search results:", error);
       } finally {
         setIsLoading(false);
       }
     } else {
-      setSearchResults([]); // Clear search results if search is empty
+      setSearchResults([]); // Clear search results if less than 3 characters
     }
   };
+  
 
   const addToCart = (product) => {
     const existingItem = cart.find((item) => item._id === product._id);
