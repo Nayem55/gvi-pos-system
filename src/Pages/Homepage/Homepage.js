@@ -10,6 +10,9 @@ export default function TodaysSale() {
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // For now, we assume the outlet name is stored in localStorage; if not, default to this value.
+  const outletName = localStorage.getItem("outletName") || "Madina Trade International: New Market";
+
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
@@ -32,20 +35,30 @@ export default function TodaysSale() {
       setSearchResults([]); // Clear search results if less than 3 characters
     }
   };
-  
 
-  const addToCart = (product) => {
-    const existingItem = cart.find((item) => item._id === product._id);
-    if (existingItem) {
-      setCart(
-        cart.map((item) =>
-          item._id === product._id
-            ? { ...item, pcs: item.pcs + 1, total: (item.pcs + 1) * item.mrp }
-            : item
-        )
-      );
-    } else {
-      setCart([...cart, { ...product, pcs: 1, total: product.mrp }]);
+  const addToCart = async (product) => {
+    try {
+      // Fetch outlet stock for this product using its barcode and outlet name
+      const stockResponse = await axios.get("https://gvi-pos-server.vercel.app/outlet-stock", {
+        params: { barcode: product.barcode, outlet: outletName },
+      });
+      const outletStock = stockResponse.data.stock;
+      // Append the outlet stock to the product data as a new property
+      const productWithStock = { ...product, stock: outletStock };
+      const existingItem = cart.find((item) => item._id === productWithStock._id);
+      if (existingItem) {
+        setCart(
+          cart.map((item) =>
+            item._id === productWithStock._id
+              ? { ...item, pcs: item.pcs + 1, total: (item.pcs + 1) * item.mrp }
+              : item
+          )
+        );
+      } else {
+        setCart([...cart, { ...productWithStock, pcs: 1, total: productWithStock.mrp }]);
+      }
+    } catch (error) {
+      console.error("Error fetching outlet stock:", error);
     }
     setSearch(""); // Clear search when product is added to cart
     setSearchResults([]); // Clear search results
@@ -139,8 +152,9 @@ export default function TodaysSale() {
           <tbody>
             {cart.map((item) => (
               <tr key={item._id} className="border-b">
-                <td className="p-2 w-2/6 text-left break-words whitespace-normal">{item.name}</td>
-
+                <td className="p-2 w-2/6 text-left break-words whitespace-normal">
+                  {item.name} {item.stock ? `(${item.stock})` : ""}
+                </td>
                 <td className="p-2 w-1/6">
                   <div className="flex flex-col-reverse justify-center items-center gap-1">
                     <button
@@ -189,6 +203,3 @@ export default function TodaysSale() {
     </div>
   );
 }
-
-
-// https://gvi-pos-server.vercel.app/
