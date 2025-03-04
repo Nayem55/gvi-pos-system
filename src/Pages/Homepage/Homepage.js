@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 export default function TodaysSale() {
   const [search, setSearch] = useState("");
@@ -9,6 +10,7 @@ export default function TodaysSale() {
   const [stock, setStock] = useState(500);
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // For now, we assume the outlet name is stored in localStorage; if not, default to this value.
   const outletName = localStorage.getItem("outletName") || "Madina Trade International: New Market";
@@ -83,7 +85,12 @@ export default function TodaysSale() {
   };
 
   const handleSubmit = async () => {
+    if(cart.length===0){
+      toast.error("No item selected")
+      return
+    }
     try {
+      setIsSubmitting(true);
       // Prepare the sales data for each cart item
       const sales = cart.map((item) => ({
         barcode: item.barcode,
@@ -99,8 +106,11 @@ export default function TodaysSale() {
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
       setCart([]);
       localStorage.removeItem("cart");
+      toast.success("Sales report submitted");
     } catch (error) {
       console.error("Error updating outlet stock:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -213,9 +223,33 @@ export default function TodaysSale() {
         </span>
         <button
           onClick={handleSubmit}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg"
+          disabled={isSubmitting}
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
         >
-          Submit
+          {isSubmitting ? (
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
+          ) : (
+            "Submit"
+          )}
         </button>
       </div>
     </div>
