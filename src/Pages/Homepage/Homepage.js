@@ -13,7 +13,9 @@ export default function TodaysSale() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // For now, we assume the outlet name is stored in localStorage; if not, default to this value.
-  const outletName = localStorage.getItem("outletName") || "Madina Trade International: New Market";
+  const user = JSON.parse(localStorage.getItem("pos-user"))
+
+  console.log(user.outlet)
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -42,7 +44,7 @@ export default function TodaysSale() {
     try {
       // Fetch outlet stock for this product using its barcode and outlet name
       const stockResponse = await axios.get("https://gvi-pos-server.vercel.app/outlet-stock", {
-        params: { barcode: product.barcode, outlet: outletName },
+        params: { barcode: product.barcode, outlet: user.outlet },
       });
       const outletStock = stockResponse.data.stock;
       // Append the outlet stock to the product data as a new property
@@ -99,7 +101,7 @@ export default function TodaysSale() {
       // Update outlet stock for each sold product
       await axios.post("https://gvi-pos-server.vercel.app/update-outlet-stock", {
         sales,
-        outlet: outletName,
+        outlet: user.outlet,
       });
       // Optionally update the global outlet stock (if you track overall outlet stock)
       const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);

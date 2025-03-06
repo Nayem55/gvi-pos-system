@@ -25,13 +25,13 @@ const LoginForm = () => {
 
     try {
       const response = await axios.post(
-        "https://attendance-app-server-blue.vercel.app/login",
+        "https://gvi-pos-server.vercel.app/login",
         formData
       );
 
       // Save user information in localStorage
       const user = response.data.user;
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("pos-user", JSON.stringify(user));
 
       // Show success toast
       toast.success(response.data.message, {
@@ -58,7 +58,7 @@ const LoginForm = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-md bg-white p-8 rounded-md shadow-lg mx-6">
         <h2 className="text-2xl font-bold mb-6 text-center text-[#002B54]">
-          Attendance System
+          POS System
         </h2>
         <form onSubmit={handleLogin} className="space-y-6">
           <div>

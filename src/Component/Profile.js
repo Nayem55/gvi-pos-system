@@ -6,7 +6,7 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("pos-user")));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,7 +42,7 @@ const Profile = () => {
         toast.success(data.message);
 
         // Update local storage with the updated user data
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("pos-user", JSON.stringify(updatedUser));
         setUser(updatedUser);
         setLoading(false);
       } else {
@@ -64,7 +64,7 @@ const Profile = () => {
           <h2 className="text-2xl font-semibold text-center mb-4">Profile</h2>
           <button
             onClick={() => {
-              localStorage.removeItem("user");
+              localStorage.removeItem("pos-user");
               navigate("/login");
             }}
             className="text-2xl font-semibold text-center mb-4"
