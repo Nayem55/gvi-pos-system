@@ -15,7 +15,6 @@ export default function TodaysSale() {
   // For now, we assume the outlet name is stored in localStorage; if not, default to this value.
   const user = JSON.parse(localStorage.getItem("pos-user"))
 
-  console.log(user.outlet)
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -87,34 +86,47 @@ export default function TodaysSale() {
   };
 
   const handleSubmit = async () => {
-    if(cart.length===0){
-      toast.error("No item selected")
-      return
+    if (cart.length === 0) {
+      toast.error("No item selected");
+      return;
     }
     try {
       setIsSubmitting(true);
-      // Prepare the sales data for each cart item
-      const sales = cart.map((item) => ({
-        barcode: item.barcode,
-        quantity: item.pcs,
-      }));
-      // Update outlet stock for each sold product
-      await axios.post("https://gvi-pos-server.vercel.app/update-outlet-stock", {
-        sales,
+      
+      // Create a single sale entry with all cart items as an array of products
+      const saleEntry = {
+        user: user._id,
         outlet: user.outlet,
-      });
-      // Optionally update the global outlet stock (if you track overall outlet stock)
+        sale_date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        total_tp: cart.reduce((sum, item) => sum + item.tp * item.pcs, 0),
+        total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
+        products: cart.map((item) => ({
+          product_name: item.name,
+          barcode: item.barcode,
+          quantity: item.pcs,
+          tp: item.tp * item.pcs,
+          mrp: item.mrp * item.pcs,
+        })),
+      };
+  
+      // Send the sale entry to the backend
+      await axios.post("https://gvi-pos-server.vercel.app/add-sale-report", saleEntry);
+  
+      // Optionally update the stock in the UI
       const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
+      
       setCart([]);
       localStorage.removeItem("cart");
       toast.success("Sales report submitted");
     } catch (error) {
       console.error("Error updating outlet stock:", error);
+      toast.error("Failed to submit sales report");
     } finally {
       setIsSubmitting(false);
     }
   };
+  
 
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
