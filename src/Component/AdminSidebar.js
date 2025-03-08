@@ -8,8 +8,8 @@ const AdminSidebar = () => {
 
   // Sidebar navigation items
   const navItems = [
-    { name: "Products", path: "/admin/products", icon: <Package size={20} /> },
-    { name: "Sale Reports", path: "/admin/sale-reports", icon: <BarChart2 size={20} /> },
+    { name: "Products", path: "/admin", icon: <Package size={20} /> },
+    { name: "Sale Reports", path: "/admin/monthly-report", icon: <BarChart2 size={20} /> },
     { name: "Manage Stock", path: "/admin/manage-stock", icon: <Layers size={20} /> },
     { name: "Users", path: "/admin/users", icon: <Users size={20} /> },
   ];

@@ -9,6 +9,7 @@ import Profile from "../Component/Profile";
 import TodaysSale from "../Pages/Homepage/Homepage";
 import UserDashboard from "../Pages/UserDashboard";
 import AdminProducts from './../Pages/AdminPanel/Products';
+import SalesReport from "../Pages/AdminPanel/SalesReport";
 
 const router = createBrowserRouter([
   {
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       {
         path: "/admin",
         element: <AdminProducts/>,
+      },
+      {
+        path: "/admin/monthly-report",
+        element: <SalesReport/>,
       },
  
 
