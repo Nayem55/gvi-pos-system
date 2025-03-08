@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function TodaysSale() {
   const [search, setSearch] = useState("");
@@ -11,10 +12,17 @@ export default function TodaysSale() {
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   // For now, we assume the outlet name is stored in localStorage; if not, default to this value.
   const user = JSON.parse(localStorage.getItem("pos-user"))
 
+
+  useEffect(() => {
+    if(!user){
+      navigate("/login")
+    }
+  }, [user]);
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));

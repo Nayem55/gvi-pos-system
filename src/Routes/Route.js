@@ -7,6 +7,8 @@ import Profile from "../Component/Profile";
 
 
 import TodaysSale from "../Pages/Homepage/Homepage";
+import UserDashboard from "../Pages/UserDashboard";
+import AdminProducts from './../Pages/AdminPanel/Products';
 
 const router = createBrowserRouter([
   {
@@ -34,6 +36,16 @@ const router = createBrowserRouter([
         path: "/profile",
         element: <Profile/>,
       },
+      {
+        path: "/dashboard",
+        element: <UserDashboard/>,
+      },
+      {
+        path: "/admin",
+        element: <AdminProducts/>,
+      },
+ 
+
     ],
   },
 
