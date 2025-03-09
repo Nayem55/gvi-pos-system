@@ -10,6 +10,7 @@ import TodaysSale from "../Pages/Homepage/Homepage";
 import UserDashboard from "../Pages/UserDashboard";
 import AdminProducts from './../Pages/AdminPanel/Products';
 import SalesReport from "../Pages/AdminPanel/SalesReport";
+import DailyReport from "../Pages/AdminPanel/DailyReport";
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/monthly-report",
         element: <SalesReport/>,
+      },
+      {
+        path: "/sales-report/daily/:userId",
+        element: <DailyReport/>,
       },
  
 

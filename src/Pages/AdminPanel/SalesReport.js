@@ -30,18 +30,35 @@ const SalesReport = () => {
   };
 
   const fetchSalesReports = async () => {
-    const reports = {};
-    for (const user of users) {
-      try {
-        const response = await axios.get(
+    try {
+      // Create a list of promises for fetching sales reports for each user
+      const reportPromises = users.map((user) => {
+        return axios.get(
           `https://gvi-pos-server.vercel.app/sales-reports/${user._id}?month=${selectedMonth}`
-        );
-        reports[user._id] = response.data;
-      } catch (error) {
-        console.error(`Error fetching sales report for ${user.name}:`, error);
-      }
+        )
+        .then((response) => ({
+          userId: user._id,
+          reportData: response.data,
+        }))
+        .catch((error) => ({
+          userId: user._id,
+          reportData: [], // In case of an error, we set an empty array for that user
+        }));
+      });
+
+      // Execute all report fetches concurrently
+      const reports = await Promise.all(reportPromises);
+
+      // Update the salesReports state with the fetched data
+      const reportData = reports.reduce((acc, { userId, reportData }) => {
+        acc[userId] = reportData;
+        return acc;
+      }, {});
+
+      setSalesReports(reportData);
+    } catch (error) {
+      console.error("Error fetching sales reports:", error);
     }
-    setSalesReports(reports);
   };
 
   return (
@@ -64,7 +81,6 @@ const SalesReport = () => {
               <th className="border p-2">User</th>
               <th className="border p-2">Outlet</th>
               <th className="border p-2">Total Reports</th>
-              {/* <th className="border p-2">Total Products Sold</th> */}
               <th className="border p-2">Total MRP</th>
               <th className="border p-2">Action</th>
             </tr>
@@ -73,7 +89,6 @@ const SalesReport = () => {
             {users.map((user) => {
               const reports = salesReports[user._id] || [];
               const totalReports = reports.length;
-              {/* const totalProductsSold = reports.reduce((sum, report) => sum + (report.total_products || 0), 0); */}
               const totalMRP = reports.reduce((sum, report) => sum + (report.total_mrp || 0), 0);
 
               return (
@@ -81,11 +96,10 @@ const SalesReport = () => {
                   <td className="border p-2">{user.name}</td>
                   <td className="border p-2">{user.outlet}</td>
                   <td className="border p-2">{totalReports}</td>
-                  {/* <td className="border p-2">{totalProductsSold}</td> */}
                   <td className="border p-2">৳{totalMRP.toFixed(2)}</td>
                   <td className="border p-2">
                     <button
-                      className="bg-blue-500 text-white px-3 py-1 rounded"
+                      className="bg-gray-800 text-white px-3 py-1 rounded"
                       onClick={() =>
                         navigate(`/sales-report/daily/${user._id}?month=${selectedMonth}`)
                       }
