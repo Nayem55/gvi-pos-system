@@ -1,87 +1,111 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useParams, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 
 const UserDashboard = () => {
-  const [salesReports, setSalesReports] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM")); // Default: current month
-
-  const user = JSON.parse(localStorage.getItem("pos-user"));
+  const { search } = useLocation(); // Get the query parameters (e.g., selected month)
+  const [reports, setReports] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(new URLSearchParams(search).get("month") || dayjs().format("YYYY-MM"));
+  const user = JSON.parse(localStorage.getItem("pos-user"))
 
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(
-          `https://gvi-pos-server.vercel.app/sales-reports/${user._id}?month=${selectedMonth}`
-        );
-        setSalesReports(response.data);
-      } catch (error) {
-        console.error("Error fetching sales reports:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
+    fetchDailyReports();
   }, [user._id, selectedMonth]);
 
+  const fetchDailyReports = async () => {
+    try {
+      const response = await axios.get(
+        `https://gvi-pos-server.vercel.app/sales-reports/${user._id}?month=${selectedMonth}`
+      );
+      setReports(response.data); // Store the fetched daily reports
+    } catch (error) {
+      console.error("Error fetching daily reports:", error);
+    }
+  };
+
+  // Calculate the totals
+  const totalMRP = reports.reduce((sum, report) => sum + (report.total_mrp || 0), 0);
+  const totalTP = reports.reduce((sum, report) => sum + (report.total_tp || 0), 0);
+  const totalProductsSold = reports.reduce(
+    (sum, report) => sum + report.products.reduce((prodSum, product) => prodSum + product.quantity, 0),
+    0
+  );
+
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Sales Reports</h2>
+    <div className="flex">
+      <div className="flex-1 p-6 bg-gray-100">
+        <div className="container mx-auto">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">Sales Report</h2>
 
-      {/* Month Selector */}
-      <div className="flex justify-left mb-4">
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="border rounded-lg px-4 py-2"
-        />
-      </div>
+          {/* Select Month */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center">
+              <label className="font-medium text-lg text-gray-700">Select Month: </label>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="ml-3 p-2 rounded-lg border border-gray-300"
+              />
+            </div>
+            <div className="text-gray-700 font-medium">
+              <span>{`Showing reports for: ${selectedMonth}`}</span>
+            </div>
+          </div>
 
-      {loading ? (
-        <p className="text-center text-gray-600">Loading...</p>
-      ) : salesReports.length === 0 ? (
-        <p className="text-center text-gray-600">No sales reports found.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300 bg-white text-sm">
-            <thead>
-              <tr className="bg-gray-800 text-white text-left">
-                <th className="border px-4 py-2">Date</th>
-                <th className="border px-4 py-2">Outlet</th>
-                <th className="border px-4 py-2">Total TP</th>
-                <th className="border px-4 py-2">Total MRP</th>
-                <th className="border px-4 py-2">Products</th>
-              </tr>
-            </thead>
-            <tbody>
-              {salesReports.map((report) => (
-                <tr key={report._id} className="hover:bg-gray-100">
-                  <td className="border px-4 py-2">
-                    {dayjs(report.sale_date).format("DD-MMMM-YYYY")}
-                  </td>
-                  <td className="border px-4 py-2">{report.outlet}</td>
-                  <td className="border px-4 py-2">{report.total_tp} BDT</td>
-                  <td className="border px-4 py-2">{report.total_mrp} BDT</td>
-                  <td className="border px-4 py-2">
-                    <ul className="list-disc pl-4">
-                      {report.products.map((item, index) => (
-                        <li key={index}>
-                          {item.product_name} - {item.quantity} pcs
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
+          {/* Report Summary */}
+          <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Report Summary</h3>
+            <div className="grid grid-cols-3 gap-6">
+              <div className="flex gap-2">
+                <span className="text-gray-600">Total Products Sold:</span>
+                <span className="font-semibold text-gray-800">{totalProductsSold}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-gray-600">Total MRP:</span>
+                <span className="font-semibold text-gray-800">৳{totalMRP.toFixed(2)}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-gray-600">Total TP:</span>
+                <span className="font-semibold text-gray-800">৳{totalTP.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Report Table */}
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Daily Sales</h3>
+            <table className="min-w-full table-auto border-collapse">
+              <thead className="bg-gray-200">
+                <tr>
+                  <th className="p-4 text-left font-medium text-gray-700">Date</th>
+                  <th className="p-4 text-left font-medium text-gray-700">Products Sold</th>
+                  <th className="p-4 text-left font-medium text-gray-700">Total MRP</th>
+                  <th className="p-4 text-left font-medium text-gray-700">Total TP</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {reports.map((report, index) => (
+                  <tr key={index} className="border-b hover:bg-gray-50">
+                    <td className="p-4 text-gray-800">{dayjs(report.sale_date).format("YYYY-MM-DD")}</td>
+                    <td className="p-4 text-gray-600">
+                      {report.products.map((product, productIndex) => (
+                        <div key={productIndex}>
+                          {product.product_name} (Qty: {product.quantity})
+                        </div>
+                      ))}
+                    </td>
+                    <td className="p-4 text-gray-800">৳{report.total_mrp.toFixed(2)}</td>
+                    <td className="p-4 text-gray-800">৳{report.total_tp.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
