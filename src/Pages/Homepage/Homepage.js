@@ -66,7 +66,7 @@ export default function TodaysSale() {
           )
         );
       } else {
-        setCart([...cart, { ...productWithStock, pcs: 1, total: productWithStock.mrp }]);
+        setCart([...cart, { ...productWithStock, pcs: 1, total: parseInt(productWithStock.mrp) }]);
       }
     } catch (error) {
       console.error("Error fetching outlet stock:", error);
