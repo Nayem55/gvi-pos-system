@@ -86,17 +86,26 @@ const AdminProducts = () => {
   const saveUpdate = async (product) => {
     setUpdating(true);
     try {
+      // Update the product in the products collection
       await axios.put(`${API_URL}/${product._id}`, product);
+  
+      // Update the barcode in the outlet collection if it has changed
+      if (editingProduct && editingProduct.barcode !== product.barcode) {
+        await axios.put(`https://gvi-pos-server.vercel.app/update-outlet-barcode`, {
+          oldBarcode: editingProduct.barcode,
+          newBarcode: product.barcode,
+        });
+      }
+  
       setEditingProduct(null);
       toast.success("Product updated successfully");
-      setUpdating(false);
     } catch (error) {
       console.error("Error updating product:", error);
       toast.error("Product update failed");
+    } finally {
       setUpdating(false);
     }
   };
-
   // Delete Product
   const deleteProduct = async (id) => {
     try {
@@ -178,7 +187,7 @@ const AdminProducts = () => {
               {products.map((product) => (
                 <tr key={product._id} className="hover:bg-gray-100">
                   <td className="border p-2">
-                    {editingProduct === product._id ? (
+                    {editingProduct?._id === product._id ? (
                       <input
                         type="text"
                         value={product.name}
@@ -192,7 +201,7 @@ const AdminProducts = () => {
                     )}
                   </td>
                   <td className="border p-2">
-                    {editingProduct === product._id ? (
+                    {editingProduct?._id === product._id ? (
                       <input
                         type="text"
                         value={product.barcode}
@@ -206,7 +215,7 @@ const AdminProducts = () => {
                     )}
                   </td>
                   <td className="border p-2">
-                    {editingProduct === product._id ? (
+                    {editingProduct?._id === product._id ? (
                       <input
                         type="number"
                         value={product.tp}
@@ -220,7 +229,7 @@ const AdminProducts = () => {
                     )}
                   </td>
                   <td className="border p-2">
-                    {editingProduct === product._id ? (
+                    {editingProduct?._id === product._id ? (
                       <input
                         type="number"
                         value={product.mrp}
@@ -235,7 +244,7 @@ const AdminProducts = () => {
                   </td>
 
                   <td className="border p-2 flex gap-2">
-                    {editingProduct === product._id ? (
+                    {editingProduct?._id === product._id ? (
                       <button
                         onClick={() => saveUpdate(product)}
                         disabled={updating}
@@ -268,7 +277,7 @@ const AdminProducts = () => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => setEditingProduct(product._id)}
+                        onClick={() => setEditingProduct(product)}
                         className="text-blue-500"
                       >
                         <Pencil size={18} />
