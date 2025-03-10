@@ -147,7 +147,7 @@ const ManageStock = () => {
             />
             <button
               onClick={() => setSearchQuery(search)}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
+              className="bg-gray-800 text-white px-4 py-2 rounded"
             >
               Search
             </button>
@@ -191,7 +191,7 @@ const ManageStock = () => {
                     <button
                         onClick={() => updateStock(product.barcode)}
                         disabled={updating}
-                        className="bg-green-500 text-white px-3 py-1 rounded-md"
+                        className="bg-green-500 hover:bg-gray-800 ease-in-out duration-200 text-white px-3 py-1 rounded-md"
                       >
                         {updating ? (
                           <svg
@@ -224,7 +224,7 @@ const ManageStock = () => {
               </tbody>
             </table>
 
-            <div className="mt-4 flex justify-between">
+            <div className="mt-4 flex gap-4 justify-center">
               <button
                 disabled={page === 1}
                 onClick={() => setPage((prev) => prev - 1)}
