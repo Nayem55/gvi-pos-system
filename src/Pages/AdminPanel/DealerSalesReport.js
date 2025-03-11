@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 
-const SalesReport = () => {
+const DealerSalesReport = () => {
   const [users, setUsers] = useState([]);
   const [salesReports, setSalesReports] = useState({});
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
@@ -117,4 +117,4 @@ const SalesReport = () => {
   );
 };
 
-export default SalesReport;
+export default DealerSalesReport;

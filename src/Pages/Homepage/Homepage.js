@@ -14,7 +14,6 @@ export default function TodaysSale() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  // For now, we assume the outlet name is stored in localStorage; if not, default to this value.
   const user = JSON.parse(localStorage.getItem("pos-user"))
 
 
@@ -110,6 +109,7 @@ export default function TodaysSale() {
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
         products: cart.map((item) => ({
           product_name: item.name,
+          category: item.category,
           barcode: item.barcode,
           quantity: item.pcs,
           tp: item.tp * item.pcs,

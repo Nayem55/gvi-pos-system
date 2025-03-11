@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Package, BarChart2, Users, Layers } from "lucide-react";
+import { Menu, X, Package, BarChart2, Users, Layers, ChevronDown } from "lucide-react";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [salesDropdownOpen, setSalesDropdownOpen] = useState(false);
   const location = useLocation();
 
   // Sidebar navigation items
   const navItems = [
     { name: "Products", path: "/admin", icon: <Package size={20} /> },
-    { name: "Sale Reports", path: "/admin/monthly-report", icon: <BarChart2 size={20} /> },
     { name: "Manage Stock", path: "/admin/manage-stock", icon: <Layers size={20} /> },
     { name: "Users", path: "/admin/users", icon: <Users size={20} /> },
   ];
@@ -45,6 +45,32 @@ const AdminSidebar = () => {
               <span>{item.name}</span>
             </Link>
           ))}
+          
+          {/* Sales Movement Dropdown */}
+          <div>
+            <button 
+              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
+              onClick={() => setSalesDropdownOpen(!salesDropdownOpen)}
+            >
+              <span className="flex items-center gap-3">
+                <BarChart2 size={20} />Movement
+              </span>
+              <ChevronDown size={16} className={salesDropdownOpen ? "rotate-180" : ""} />
+            </button>
+            {salesDropdownOpen && (
+              <div className="ml-6 mt-2 space-y-2">
+                <Link to="/admin/sales-movement/dealer-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
+                  Dealer Wise
+                </Link>
+                <Link to="/admin/sales-movement/product-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
+                  Product Wise
+                </Link>
+                <Link to="/admin/sales-movement/category-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
+                  Category Wise
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
       </div>
 
