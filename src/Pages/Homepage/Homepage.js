@@ -8,7 +8,7 @@ export default function TodaysSale() {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name"); // Default search type is 'name'
   const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem("cart")) || []);
-  const [stock, setStock] = useState(500);
+  const [stock, setStock] = useState(0);
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +26,24 @@ export default function TodaysSale() {
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    if (user && user.outlet) {
+      getStockValue(user.outlet); // Pass outlet name from the user object
+    }
+  }, [user]);
+  
+
+  const getStockValue = async (outletName) => {
+    try {
+      const response = await axios.get(`https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`);
+      const stockValue = response.data.totalStockValue;
+      setStock(stockValue); // Update the stock state with the received value
+    } catch (error) {
+      console.error("Error fetching stock value:", error);
+    }
+  };
+  
 
   // Search products from the backend based on search type
   const handleSearch = async (query) => {

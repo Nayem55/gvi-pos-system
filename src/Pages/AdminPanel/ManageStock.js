@@ -261,7 +261,7 @@ const ManageStock = () => {
                   <th className="border p-2">Outlet</th>
                   <th className="border p-2">Barcode</th>
                   <th className="border p-2">Product Name</th>
-                  <th className="border p-2">Stock</th>
+                  <th className="border p-2">Opening Stock</th>
                   <th className="border p-2">Action</th>
                 </tr>
               </thead>
