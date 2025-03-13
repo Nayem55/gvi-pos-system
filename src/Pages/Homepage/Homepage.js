@@ -7,19 +7,20 @@ import { useNavigate } from "react-router-dom";
 export default function TodaysSale() {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name"); // Default search type is 'name'
-  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem("cart")) || []);
+  const [cart, setCart] = useState(
+    () => JSON.parse(localStorage.getItem("cart")) || []
+  );
   const [stock, setStock] = useState(0);
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("pos-user"))
-
+  const user = JSON.parse(localStorage.getItem("pos-user"));
 
   useEffect(() => {
-    if(!user){
-      navigate("/login")
+    if (!user) {
+      navigate("/login");
     }
   }, [user]);
 
@@ -32,27 +33,31 @@ export default function TodaysSale() {
       getStockValue(user.outlet); // Pass outlet name from the user object
     }
   }, [user]);
-  
 
   const getStockValue = async (outletName) => {
     try {
-      const response = await axios.get(`https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`);
+      const response = await axios.get(
+        `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
+      );
       const stockValue = response.data.totalStockValue;
       setStock(stockValue); // Update the stock state with the received value
     } catch (error) {
       console.error("Error fetching stock value:", error);
     }
   };
-  
 
   // Search products from the backend based on search type
   const handleSearch = async (query) => {
-    if (query.length > 2) { // Search only if input has more than 2 characters
+    if (query.length > 2) {
+      // Search only if input has more than 2 characters
       setIsLoading(true);
       try {
-        const response = await axios.get("https://gvi-pos-server.vercel.app/search-product", {
-          params: { search: query, type: searchType },
-        });
+        const response = await axios.get(
+          "https://gvi-pos-server.vercel.app/search-product",
+          {
+            params: { search: query, type: searchType },
+          }
+        );
         setSearchResults(response.data);
       } catch (error) {
         console.error("Error fetching search results:", error);
@@ -67,13 +72,18 @@ export default function TodaysSale() {
   const addToCart = async (product) => {
     try {
       // Fetch outlet stock for this product using its barcode and outlet name
-      const stockResponse = await axios.get("https://gvi-pos-server.vercel.app/outlet-stock", {
-        params: { barcode: product.barcode, outlet: user.outlet },
-      });
+      const stockResponse = await axios.get(
+        "https://gvi-pos-server.vercel.app/outlet-stock",
+        {
+          params: { barcode: product.barcode, outlet: user.outlet },
+        }
+      );
       const outletStock = stockResponse.data.stock;
       // Append the outlet stock to the product data as a new property
       const productWithStock = { ...product, stock: outletStock };
-      const existingItem = cart.find((item) => item._id === productWithStock._id);
+      const existingItem = cart.find(
+        (item) => item._id === productWithStock._id
+      );
       if (existingItem) {
         setCart(
           cart.map((item) =>
@@ -83,7 +93,14 @@ export default function TodaysSale() {
           )
         );
       } else {
-        setCart([...cart, { ...productWithStock, pcs: 1, total: parseInt(productWithStock.mrp) }]);
+        setCart([
+          ...cart,
+          {
+            ...productWithStock,
+            pcs: 1,
+            total: parseInt(productWithStock.mrp),
+          },
+        ]);
       }
     } catch (error) {
       console.error("Error fetching outlet stock:", error);
@@ -117,7 +134,7 @@ export default function TodaysSale() {
     }
     try {
       setIsSubmitting(true);
-      
+
       // Create a single sale entry with all cart items as an array of products
       const saleEntry = {
         user: user._id,
@@ -134,14 +151,17 @@ export default function TodaysSale() {
           mrp: item.mrp * item.pcs,
         })),
       };
-  
+
       // Send the sale entry to the backend
-      await axios.post("https://gvi-pos-server.vercel.app/add-sale-report", saleEntry);
-  
+      await axios.post(
+        "https://gvi-pos-server.vercel.app/add-sale-report",
+        saleEntry
+      );
+
       // Optionally update the stock in the UI
       const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
-      
+
       setCart([]);
       localStorage.removeItem("cart");
       toast.success("Sales report submitted");
@@ -152,14 +172,19 @@ export default function TodaysSale() {
       setIsSubmitting(false);
     }
   };
-  
 
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
       {/* Date & Outlet Stock */}
       <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4">
-        <span className="text-sm font-semibold">{dayjs().format("DD MMM, YYYY")}</span>
-        <span className="text-sm font-semibold">Outlet Stock: {stock}</span>
+        <span className="text-sm font-semibold">
+          {dayjs().format("DD MMM, YYYY")}
+        </span>
+        {user && user.outlet && (
+          <span className="text-sm font-semibold">
+            Outlet Stock: {stock.toLocaleString()}
+          </span>
+        )}
       </div>
 
       {/* Search Box */}
@@ -241,8 +266,15 @@ export default function TodaysSale() {
                 <td className="p-2 w-1/6 text-center">{item.tp} BDT</td>
                 <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
                 <td className="p-2 w-1/6 text-center">
-                  <button onClick={() => removeFromCart(item._id)} className="mt-1 rounded">
-                    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                  <button
+                    onClick={() => removeFromCart(item._id)}
+                    className="mt-1 rounded"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 448 512"
+                    >
                       <path
                         fill="#FD0032"
                         d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
