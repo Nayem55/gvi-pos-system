@@ -79,19 +79,29 @@ export default function TodaysSale() {
         }
       );
       const outletStock = stockResponse.data.stock;
+  
+      // Check if stock is 0, and if so, show an error toast and return
+      if (outletStock === 0) {
+        toast.error(`${product.name} is out of stock!`);
+        return;
+      }
+  
       // Append the outlet stock to the product data as a new property
       const productWithStock = { ...product, stock: outletStock };
-      const existingItem = cart.find(
-        (item) => item._id === productWithStock._id
-      );
+      const existingItem = cart.find((item) => item._id === productWithStock._id);
+  
       if (existingItem) {
-        setCart(
-          cart.map((item) =>
-            item._id === productWithStock._id
-              ? { ...item, pcs: item.pcs + 1, total: (item.pcs + 1) * item.mrp }
-              : item
-          )
-        );
+        if (existingItem.pcs < outletStock) {
+          setCart(
+            cart.map((item) =>
+              item._id === productWithStock._id
+                ? { ...item, pcs: item.pcs + 1, total: (item.pcs + 1) * item.mrp }
+                : item
+            )
+          );
+        } else {
+          toast.error(`Cannot add more ${product.name}. Only ${outletStock} left.`);
+        }
       } else {
         setCart([
           ...cart,
@@ -108,20 +118,21 @@ export default function TodaysSale() {
     setSearch(""); // Clear search when product is added to cart
     setSearchResults([]); // Clear search results
   };
-
+  
   const updateQuantity = (id, change) => {
     setCart(
       cart.map((item) =>
         item._id === id
           ? {
               ...item,
-              pcs: Math.max(1, item.pcs + change),
-              total: Math.max(1, item.pcs + change) * item.mrp,
+              pcs: Math.max(1, Math.min(item.pcs + change, item.stock)), // Ensure pcs is within available stock
+              total: Math.max(1, Math.min(item.pcs + change, item.stock)) * item.mrp,
             }
           : item
       )
     );
   };
+  
 
   const removeFromCart = (id) => {
     setCart(cart.filter((item) => item._id !== id));
