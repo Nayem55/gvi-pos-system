@@ -5,6 +5,7 @@ import { Menu, X, Package, BarChart2, Users, Layers, ChevronDown } from "lucide-
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [salesDropdownOpen, setSalesDropdownOpen] = useState(false);
+  const [salesDropdown1Open, setSalesDropdown1Open] = useState(false);
   const location = useLocation();
 
   // Sidebar navigation items
@@ -26,7 +27,7 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <div 
-        className={`fixed top-0 left-0 h-full bg-gray-900 text-white w-64 p-5 shadow-lg transform transition-transform duration-300 ease-in-out 
+        className={`fixed top-0 left-0 h-full bg-gray-900 text-white w-[300px] p-5 shadow-lg transform transition-transform duration-300 ease-in-out 
         ${isOpen ? "translate-x-0" : "-translate-x-64"} md:translate-x-0 md:relative md:h-screen`}
         style={{ position: "sticky", top: 0 }}
       >
@@ -46,18 +47,43 @@ const AdminSidebar = () => {
             </Link>
           ))}
           
-          {/* Sales Movement Dropdown */}
+          {/* Monthly Sales Movement Dropdown */}
           <div>
             <button 
               className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
               onClick={() => setSalesDropdownOpen(!salesDropdownOpen)}
             >
               <span className="flex items-center gap-3">
-                <BarChart2 size={20} />Movement
+                <BarChart2 size={20} />Monthly Movement
               </span>
               <ChevronDown size={16} className={salesDropdownOpen ? "rotate-180" : ""} />
             </button>
             {salesDropdownOpen && (
+              <div className="ml-6 mt-2 space-y-2">
+                <Link to="/admin/sales-movement/dealer-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
+                  Dealer Wise
+                </Link>
+                <Link to="/admin/sales-movement/product-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
+                  Product Wise
+                </Link>
+                <Link to="/admin/sales-movement/category-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
+                  Category Wise
+                </Link>
+              </div>
+            )}
+          </div>
+           {/*Daily Sales Movement Dropdown */}
+          <div>
+            <button 
+              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
+              onClick={() => setSalesDropdown1Open(!salesDropdown1Open)}
+            >
+              <span className="flex items-center gap-3">
+                <BarChart2 size={20} />Daily Movement
+              </span>
+              <ChevronDown size={16} className={salesDropdown1Open ? "rotate-180" : ""} />
+            </button>
+            {salesDropdown1Open && (
               <div className="ml-6 mt-2 space-y-2">
                 <Link to="/admin/sales-movement/dealer-wise" className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800">
                   Dealer Wise

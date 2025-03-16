@@ -11,6 +11,8 @@ export default function TodaysSale() {
     () => JSON.parse(localStorage.getItem("cart")) || []
   );
   const [stock, setStock] = useState(0);
+  const [route, setRoute] = useState("");
+  const [menu, setMenu] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,28 +81,36 @@ export default function TodaysSale() {
         }
       );
       const outletStock = stockResponse.data.stock;
-  
+
       // Check if stock is 0, and if so, show an error toast and return
       if (outletStock === 0) {
         toast.error(`${product.name} is out of stock!`);
         return;
       }
-  
+
       // Append the outlet stock to the product data as a new property
       const productWithStock = { ...product, stock: outletStock };
-      const existingItem = cart.find((item) => item._id === productWithStock._id);
-  
+      const existingItem = cart.find(
+        (item) => item._id === productWithStock._id
+      );
+
       if (existingItem) {
         if (existingItem.pcs < outletStock) {
           setCart(
             cart.map((item) =>
               item._id === productWithStock._id
-                ? { ...item, pcs: item.pcs + 1, total: (item.pcs + 1) * item.mrp }
+                ? {
+                    ...item,
+                    pcs: item.pcs + 1,
+                    total: (item.pcs + 1) * item.mrp,
+                  }
                 : item
             )
           );
         } else {
-          toast.error(`Cannot add more ${product.name}. Only ${outletStock} left.`);
+          toast.error(
+            `Cannot add more ${product.name}. Only ${outletStock} left.`
+          );
         }
       } else {
         setCart([
@@ -118,7 +128,7 @@ export default function TodaysSale() {
     setSearch(""); // Clear search when product is added to cart
     setSearchResults([]); // Clear search results
   };
-  
+
   const updateQuantity = (id, change) => {
     setCart(
       cart.map((item) =>
@@ -126,13 +136,13 @@ export default function TodaysSale() {
           ? {
               ...item,
               pcs: Math.max(1, Math.min(item.pcs + change, item.stock)), // Ensure pcs is within available stock
-              total: Math.max(1, Math.min(item.pcs + change, item.stock)) * item.mrp,
+              total:
+                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.mrp,
             }
           : item
       )
     );
   };
-  
 
   const removeFromCart = (id) => {
     setCart(cart.filter((item) => item._id !== id));
@@ -150,6 +160,8 @@ export default function TodaysSale() {
       const saleEntry = {
         user: user._id,
         outlet: user.outlet,
+        route: route,
+        menu: menu,
         sale_date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         total_tp: cart.reduce((sum, item) => sum + item.tp * item.pcs, 0),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
@@ -197,6 +209,26 @@ export default function TodaysSale() {
           </span>
         )}
       </div>
+      <div className="flex justify-between">
+        <input
+          onChange={(e) => {
+            setRoute(e.target.value);
+          }}
+          name="route"
+          type="text"
+          placeholder="Enter route name"
+          className="py-1 px-2 rounded my-2 border border-gray-200"
+        />
+        <input
+          onChange={(e) => {
+            setMenu(e.target.value);
+          }}
+          name="menu"
+          type="number"
+          placeholder="Enter menu count"
+          className="py-1 px-2 rounded my-2 border border-gray-200"
+        />
+      </div>
 
       {/* Search Box */}
       <div className="relative mb-4">
@@ -213,7 +245,7 @@ export default function TodaysSale() {
         <select
           value={searchType}
           onChange={(e) => setSearchType(e.target.value)}
-          className="absolute right-[1px] top-[2px] p-[7px] bg-white border rounded-lg"
+          className="absolute right-[0px] top-[0px] p-[8px] bg-white border rounded-lg"
         >
           <option value="name">By Name</option>
           <option value="barcode">By Barcode</option>
