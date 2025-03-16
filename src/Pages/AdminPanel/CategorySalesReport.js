@@ -3,28 +3,56 @@ import axios from "axios";
 import { BarChart2 } from "lucide-react";
 import AdminSidebar from "../../Component/AdminSidebar";
 import { Link } from "react-router-dom";
+import dayjs from "dayjs";
 
 const CategoryWiseSalesReport = () => {
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const fetchSalesData = async (params) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        "http://localhost:5000/sales/category-wise", // Replace with your actual server URL
+        { params }
+      );
+      setSalesData(response.data);
+    } catch (err) {
+      setError("Failed to fetch sales data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSalesData = async () => {
-      try {
-        const response = await axios.get(
-          "https://gvi-pos-server.vercel.app/api/sales/category-wise"
-        );
-        setSalesData(response.data);
-      } catch (err) {
-        setError("Failed to fetch sales data");
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Fetch data when the component loads
+    fetchSalesData({ month });
+  }, []); // Empty dependency array ensures this runs only once on page load
 
-    fetchSalesData();
-  }, []);
+  const handleFilter = () => {
+    // Construct the query params based on the filter state
+    const params = {};
+
+    if (startDate && endDate) {
+      params.startDate = startDate;
+      params.endDate = endDate;
+    } else if (month) {
+      params.month = month;
+    }
+
+    fetchSalesData(params); // Fetch sales data with selected filters
+  };
+
+  const handleResetFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setMonth(dayjs().format("YYYY-MM")); // Reset month to current month
+    fetchSalesData({ month: dayjs().format("YYYY-MM") }); // Fetch month-wise data
+  };
 
   return (
     <div className="flex">
@@ -39,6 +67,51 @@ const CategoryWiseSalesReport = () => {
             <h2 className="text-xl font-semibold">Category-wise Sales Report</h2>
           </div>
 
+          {/* Filters */}
+          <div className="mb-4 flex gap-4 items-end">
+            <div>
+              <label className="font-medium">Select Month: </label>
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="border rounded p-2 ml-2"
+                disabled={startDate && endDate} // Disable month input when custom date range is used
+              />
+            </div>
+            <div>
+              <label className="font-medium">Start Date: </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border rounded p-2"
+              />
+            </div>
+            <div>
+              <label className="font-medium">End Date: </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border rounded p-2"
+              />
+            </div>
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              onClick={handleFilter} // Apply filter on button click
+            >
+              Filter Reports
+            </button>
+            <button
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              onClick={handleResetFilters} // Reset filters to default (month-wise)
+            >
+              Reset Filters
+            </button>
+          </div>
+
+          {/* Sales Report Table */}
           {loading ? (
             <p className="text-center text-gray-500">Loading sales data...</p>
           ) : error ? (
@@ -62,7 +135,12 @@ const CategoryWiseSalesReport = () => {
                     <td className="border p-2 text-center">{category.total_tp}</td>
                     <td className="border p-2 text-center">{category.total_mrp}</td>
                     <td className="border p-2 text-center">
-                        <Link className="bg-gray-700 text-white rounded px-2 py-1" to={`/admin/sales-movement/category-wise/detail/${category._id}`}> Details </Link>
+                      <Link
+                        className="bg-gray-700 text-white rounded px-2 py-1"
+                        to={`/admin/sales-movement/category-wise/detail/${category._id}`}
+                      >
+                        Details
+                      </Link>
                     </td>
                   </tr>
                 ))}
