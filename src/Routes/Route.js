@@ -13,6 +13,7 @@ import DealerSalesReport from "../Pages/AdminPanel/DealerSalesReport";
 import CategoryWiseSalesReport from "../Pages/AdminPanel/CategorySalesReport";
 import CategoryReportDetails from "../Pages/AdminPanel/CategoryReportDetails";
 import ProductWiseSalesReport from "../Pages/AdminPanel/ProductWiseSalesReport";
+import DailyDealerSalesReport from "../Pages/AdminPanel/DailyDealerSalesReport";
 
 const router = createBrowserRouter([
   {
@@ -75,6 +76,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/users",
         element: <UserManagementPage/>,
+      },
+      {
+        path: "/admin/daily/dealer-sales-report",
+        element: <DailyDealerSalesReport/>,
       },
  
 

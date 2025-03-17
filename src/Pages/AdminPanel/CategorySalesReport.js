@@ -17,7 +17,7 @@ const CategoryWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://localhost:5000/sales/category-wise", // Replace with your actual server URL
+        "https://gvi-pos-server.vercel.app/sales/category-wise", // Replace with your actual server URL
         { params }
       );
       setSalesData(response.data);
