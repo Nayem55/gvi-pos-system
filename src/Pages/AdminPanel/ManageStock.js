@@ -226,6 +226,41 @@ const ManageStock = () => {
       <AdminSidebar />
       <div className="p-4 w-full">
         <h2 className="text-2xl font-bold mb-4">Manage Stock</h2>
+        <div className="mb-4 flex justify-between items-center">
+          {user.role === "super admin" && (
+            <div>
+              <label className="font-medium">Select Outlet: </label>
+              <select
+                value={selectedOutlet}
+                onChange={(e) => setSelectedOutlet(e.target.value)}
+                className="border rounded p-2 ml-2"
+              >
+                <option value="">Select an outlet</option>
+                {outlets.map((outlet) => (
+                  <option key={outlet} value={outlet}>
+                    {outlet}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex gap-2 ms-auto">
+            <input
+              type="text"
+              placeholder="Search by product name"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border p-2 rounded w-64"
+            />
+            <button
+              onClick={() => setSearchQuery(search)}
+              className="bg-gray-800 text-white px-4 py-2 rounded"
+            >
+              Search
+            </button>
+          </div>
+        </div>
         {loading ? (
           <p>Loading...</p>
         ) : (
@@ -265,7 +300,7 @@ const ManageStock = () => {
                       disabled={updating}
                       className="bg-green-500 hover:bg-gray-800 text-white px-3 py-1 rounded-md"
                     >
-                      {updating ? "Updating..." : "Update Stock"}
+                      {updating ? "Updating..." : "Update"}
                     </button>
                   </td>
                 </tr>
