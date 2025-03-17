@@ -245,7 +245,7 @@ export default function TodaysSale() {
         <select
           value={searchType}
           onChange={(e) => setSearchType(e.target.value)}
-          className="absolute right-[0px] top-[0px] p-[8px] bg-white border rounded-lg"
+          className="absolute right-[0px] top-[0px] p-[7px] mt-[1px] mr-[1px] bg-white border rounded-lg"
         >
           <option value="name">By Name</option>
           <option value="barcode">By Barcode</option>
