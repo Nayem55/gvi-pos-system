@@ -148,7 +148,7 @@ const ManageUserStock = () => {
                       <td className="border p-2">
                         <input
                           type="number"
-                          value={stocks[product.barcode] || 0}
+                          value={stocks[product.barcode]}
                           onChange={(e) =>
                             handleStockChange(
                               product.barcode,
@@ -161,7 +161,7 @@ const ManageUserStock = () => {
                       <td className="border p-2">
                         <button
                           onClick={() => updateStock(product.barcode)}
-                          disabled={originalStocks[product.barcode] > 0 || updating} // Only check original stock
+                          disabled={originalStocks[product.barcode] > 0 || updating} 
                           className={`px-3 py-1 rounded-md w-full sm:w-auto ${
                             originalStocks[product.barcode] > 0 || updating
                               ? "bg-gray-400 cursor-not-allowed text-white"
