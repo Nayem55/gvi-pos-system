@@ -84,7 +84,14 @@ const ManageUserStock = () => {
         outlet: selectedOutlet,
         newStock: stocks[barcode],
       });
+  
       toast.success("Stock updated successfully");
+  
+      setOriginalStocks((prevOriginalStocks) => ({
+        ...prevOriginalStocks,
+        [barcode]: stocks[barcode],
+      }));
+  
       setUpdating(false);
     } catch (error) {
       console.error("Error updating stock:", error);
@@ -92,6 +99,7 @@ const ManageUserStock = () => {
       setUpdating(false);
     }
   };
+  
 
   return (
     <div className="flex sm:p-10 p-4">
