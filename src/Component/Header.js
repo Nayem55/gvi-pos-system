@@ -4,6 +4,7 @@ import logo from "../Images/RL Logo.png";
 import application from "../Images/Application2.png";
 import admin from "../Images/admin-panel.png";
 import dashboard from "../Images/dashboard.png";
+import { Layers } from "lucide-react";
 
 const Header = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -103,6 +104,15 @@ const Header = () => {
               <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z" />
             </svg>
             <p className="font-bold">Profile</p>
+          </Link>
+          <Link
+            to={"/manage-stock"}
+            className="block py-2 px-[20px] text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"
+            onClick={toggleSidebar}
+          >
+            <Layers size={24} />
+
+            <p className="font-bold">Manage Stock</p>
           </Link>
           <Link
             to={"/dashboard"}

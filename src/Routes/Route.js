@@ -14,6 +14,7 @@ import CategoryWiseSalesReport from "../Pages/AdminPanel/CategorySalesReport";
 import CategoryReportDetails from "../Pages/AdminPanel/CategoryReportDetails";
 import ProductWiseSalesReport from "../Pages/AdminPanel/ProductWiseSalesReport";
 import DailyDealerSalesReport from "../Pages/AdminPanel/DailyDealerSalesReport";
+import ManageUserStock from "../Pages/UserStock";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard",
         element: <UserDashboard/>,
+      },
+      {
+        path: "/manage-stock",
+        element: <ManageUserStock/>,
       },
       {
         path: "/admin",
