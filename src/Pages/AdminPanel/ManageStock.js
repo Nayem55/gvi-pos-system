@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import AdminSidebar from "../../Component/AdminSidebar";
 import toast from "react-hot-toast";
@@ -133,36 +133,46 @@ const ManageStock = () => {
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [updating, setUpdating] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const observer = useRef();
 
+  // Fetch products when selectedOutlet or searchQuery changes
   useEffect(() => {
     if (selectedOutlet) {
-      fetchProducts();
+      setProducts([]); // Clear products on outlet change or search
+      setPage(1); // Reset page to 1 for fresh fetch
+      setHasMore(true); // Reset pagination
+      fetchProducts(1);
     }
-  }, [selectedOutlet, page, searchQuery]);
+  }, [selectedOutlet, searchQuery]);
 
-  const fetchProducts = async () => {
+  // Fetch products with pagination and search
+  const fetchProducts = async (pageNumber) => {
+    if (!hasMore && !searchQuery) return; // Stop if no more products and not searching
     setLoading(true);
     try {
       let response;
       let fetchedProducts;
 
       if (searchQuery) {
+        // Search query, disable pagination
         response = await axios.get(
           `https://gvi-pos-server.vercel.app/search-product?search=${searchQuery}&type=name`
         );
         fetchedProducts = response.data;
+        setHasMore(false); // No more products for pagination if searching
       } else {
+        // Regular fetch with pagination
         response = await axios.get(
-          `https://gvi-pos-server.vercel.app/products?page=${page}`
+          `https://gvi-pos-server.vercel.app/products?page=${pageNumber}`
         );
         fetchedProducts = response.data.products;
-        setTotalPages(response.data.totalPages);
+        setHasMore(response.data.products.length > 0);
       }
 
-      setProducts(fetchedProducts);
+      setProducts((prev) => [...prev, ...fetchedProducts]);
 
+      // Fetch stock data for each product
       const stockData = {};
       const stockRequests = fetchedProducts.map(async (product) => {
         try {
@@ -177,18 +187,46 @@ const ManageStock = () => {
           };
         } catch (error) {
           console.error(`Error fetching stock for ${product.barcode}:`, error);
-          stockData[product.barcode] = { stock: 0, primary: 0, officeReturn: 0, marketReturn: 0 };
+          stockData[product.barcode] = {
+            stock: 0,
+            primary: 0,
+            officeReturn: 0,
+            marketReturn: 0,
+          };
         }
       });
 
       await Promise.all(stockRequests);
-      setStocks(stockData);
+      setStocks((prev) => ({ ...prev, ...stockData }));
     } catch (error) {
       console.error("Error fetching products or stocks:", error);
     }
     setLoading(false);
   };
 
+  // Infinite scroll observer
+  const lastProductRef = useCallback(
+    (node) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore && !searchQuery) {
+          setPage((prevPage) => prevPage + 1);
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loading, hasMore, searchQuery]
+  );
+
+  // Fetch more products when page changes
+  useEffect(() => {
+    if (page > 1 && !searchQuery) {
+      fetchProducts(page);
+    }
+  }, [page, searchQuery]);
+
+  // Handle stock input changes
   const handleStockChange = (barcode, field, value) => {
     setStocks((prevStocks) => ({
       ...prevStocks,
@@ -199,8 +237,8 @@ const ManageStock = () => {
     }));
   };
 
+  // Update stock
   const updateStock = async (barcode) => {
-    setUpdating(true);
     try {
       const { stock, primary, officeReturn, marketReturn } = stocks[barcode];
       const newStock = stock + primary - officeReturn - marketReturn;
@@ -212,13 +250,17 @@ const ManageStock = () => {
       toast.success("Stock updated successfully");
       setStocks((prevStocks) => ({
         ...prevStocks,
-        [barcode]: { stock: newStock, primary: 0, officeReturn: 0, marketReturn: 0 },
+        [barcode]: {
+          stock: newStock,
+          primary: 0,
+          officeReturn: 0,
+          marketReturn: 0,
+        },
       }));
     } catch (error) {
       console.error("Error updating stock:", error);
       toast.error("Failed to update stock");
     }
-    setUpdating(false);
   };
 
   return (
@@ -254,59 +296,74 @@ const ManageStock = () => {
               className="border p-2 rounded w-64"
             />
             <button
-              onClick={() => setSearchQuery(search)}
+              onClick={() => {
+                setSearchQuery(search);
+                setPage(1); // Reset page on new search
+              }}
               className="bg-gray-800 text-white px-4 py-2 rounded"
             >
               Search
             </button>
           </div>
         </div>
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2">Outlet</th>
-                <th className="border p-2">Barcode</th>
-                <th className="border p-2">Product Name</th>
-                <th className="border p-2">Opening Stock</th>
-                <th className="border p-2">Primary</th>
-                <th className="border p-2">Office Return</th>
-                <th className="border p-2">Market Return</th>
-                <th className="border p-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.barcode} className="border">
-                  <td className="border p-2">{selectedOutlet}</td>
-                  <td className="border p-2">{product.barcode}</td>
-                  <td className="border p-2">{product.name}</td>
-                  <td className="border p-2">{stocks[product.barcode]?.stock || 0}</td>
-                  {['primary', 'officeReturn', 'marketReturn'].map((field) => (
-                    <td key={field} className="border p-2">
-                      <input
-                        type="number"
-                        value={stocks[product.barcode]?.[field] || 0}
-                        onChange={(e) => handleStockChange(product.barcode, field, e.target.value)}
-                        className="border p-1 w-full"
-                      />
-                    </td>
-                  ))}
-                  <td className="border p-2">
-                    <button
-                      onClick={() => updateStock(product.barcode)}
-                      disabled={updating}
-                      className="bg-green-500 hover:bg-gray-800 text-white px-3 py-1 rounded-md"
-                    >
-                      {updating ? "Updating..." : "Update"}
-                    </button>
+        <table className="w-full border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border p-2">Outlet</th>
+              <th className="border p-2">Barcode</th>
+              <th className="border p-2">Product Name</th>
+              <th className="border p-2">Opening Stock</th>
+              <th className="border p-2">Primary</th>
+              <th className="border p-2">Office Return</th>
+              <th className="border p-2">Market Return</th>
+              <th className="border p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product, index) => (
+              <tr
+                key={product.barcode}
+                ref={products.length - 1 === index ? lastProductRef : null}
+                className="border"
+              >
+                <td className="border p-2">{selectedOutlet}</td>
+                <td className="border p-2">{product.barcode}</td>
+                <td className="border p-2">{product.name}</td>
+                <td className="border p-2">
+                  {stocks[product.barcode]?.stock || 0}
+                </td>
+                {["primary", "officeReturn", "marketReturn"].map((field) => (
+                  <td key={field} className="border p-2">
+                    <input
+                      type="number"
+                      value={stocks[product.barcode]?.[field] || 0}
+                      onChange={(e) =>
+                        handleStockChange(
+                          product.barcode,
+                          field,
+                          e.target.value
+                        )
+                      }
+                      className="border p-1 w-full"
+                    />
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                ))}
+                <td className="border p-2">
+                  <button
+                    onClick={() => updateStock(product.barcode)}
+                    className="bg-green-500 text-white px-3 py-1 rounded-md"
+                  >
+                    Update
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {loading && (
+          <div className="flex justify-center items-center my-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+          </div>
         )}
       </div>
     </div>
