@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Package, BarChart2, Users, Layers, ChevronDown } from "lucide-react";
+import { Menu, X, Package, BarChart2, Users, Layers, ChevronDown, Target } from "lucide-react";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +13,7 @@ const AdminSidebar = () => {
     { name: "Products", path: "/admin", icon: <Package size={20} /> },
     { name: "Manage Stock", path: "/admin/manage-stock", icon: <Layers size={20} /> },
     { name: "Users", path: "/admin/users", icon: <Users size={20} /> },
+    { name: "Monthly Target", path: "/admin/monthly-target", icon: <Target size={20} /> },
   ];
 
   return (
