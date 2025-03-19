@@ -134,6 +134,7 @@ const ManageStock = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const observer = useRef();
 
   // Fetch products when selectedOutlet or searchQuery changes
@@ -239,6 +240,7 @@ const ManageStock = () => {
 
   // Update stock
   const updateStock = async (barcode) => {
+    setUpdating(true);
     try {
       const { stock, primary, officeReturn, marketReturn } = stocks[barcode];
       const newStock = stock + primary - officeReturn - marketReturn;
@@ -261,6 +263,7 @@ const ManageStock = () => {
       console.error("Error updating stock:", error);
       toast.error("Failed to update stock");
     }
+    setUpdating(false);
   };
 
   return (
@@ -353,7 +356,30 @@ const ManageStock = () => {
                     onClick={() => updateStock(product.barcode)}
                     className="bg-green-500 text-white px-3 py-1 rounded-md"
                   >
-                    Update
+                    {updating ? (
+                          <svg
+                            className="animate-spin h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            ></path>
+                          </svg>
+                        ) : (
+                          "Update"
+                        )}
                   </button>
                 </td>
               </tr>

@@ -21,7 +21,7 @@ const DealerSalesReport = () => {
     if (users.length > 0) {
       fetchSalesReports();
     }
-  }, [users]); // Fetch reports only after users are loaded
+  }, [users]);
 
   const fetchUsers = async () => {
     try {
@@ -67,11 +67,38 @@ const DealerSalesReport = () => {
     }
   };
 
+  // Calculate Summary Data
+  const totalDealers = users.length;
+  const totalReports = Object.values(salesReports).reduce(
+    (sum, reports) => sum + reports.length,
+    0
+  );
+  const totalMRP = Object.values(salesReports).reduce(
+    (sum, reports) => sum + reports.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0),
+    0
+  );
+
   return (
     <div className="flex">
       <AdminSidebar />
       <div className="p-4 w-full">
-        <h2 className="text-2xl font-bold mb-4">Sales Reports</h2>
+        <h2 className="text-2xl font-bold mb-4">Dealer Sales Reports</h2>
+
+        {/* Summary Report */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Total Dealers</h3>
+            <p className="text-xl font-bold">{totalDealers}</p>
+          </div>
+          <div className="bg-green-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Total Sales Reports</h3>
+            <p className="text-xl font-bold">{totalReports}</p>
+          </div>
+          <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Total MRP Sales</h3>
+            <p className="text-xl font-bold">৳{totalMRP.toFixed(2)}</p>
+          </div>
+        </div>
 
         {/* Filters */}
         <div className="mb-4 flex gap-4 items-end">
@@ -114,10 +141,10 @@ const DealerSalesReport = () => {
             onClick={() => {
               setStartDate("");
               setEndDate("");
-              fetchSalesReports(); // Fetch default month-wise report
+              fetchSalesReports();
             }}
           >
-            Reset Dates
+            Reset Filters
           </button>
         </div>
 

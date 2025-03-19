@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, ClipboardCheck, ShoppingCart, DollarSign } from "lucide-react";
 import AdminSidebar from "../../Component/AdminSidebar";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
@@ -12,6 +12,12 @@ const CategoryWiseSalesReport = () => {
   const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [summary, setSummary] = useState({
+    totalCategories: 0,
+    totalQuantity: 0,
+    totalTP: 0,
+    totalMRP: 0,
+  });
 
   const fetchSalesData = async (params) => {
     try {
@@ -21,6 +27,14 @@ const CategoryWiseSalesReport = () => {
         { params }
       );
       setSalesData(response.data);
+      
+      // Calculate summary data
+      const totalCategories = response.data.length;
+      const totalQuantity = response.data.reduce((acc, cat) => acc + cat.total_quantity, 0);
+      const totalTP = response.data.reduce((acc, cat) => acc + cat.total_tp, 0);
+      const totalMRP = response.data.reduce((acc, cat) => acc + cat.total_mrp, 0);
+      
+      setSummary({ totalCategories, totalQuantity, totalTP, totalMRP });
     } catch (err) {
       setError("Failed to fetch sales data");
     } finally {
@@ -29,29 +43,25 @@ const CategoryWiseSalesReport = () => {
   };
 
   useEffect(() => {
-    // Fetch data when the component loads
     fetchSalesData({ month });
-  }, []); // Empty dependency array ensures this runs only once on page load
+  }, []);
 
   const handleFilter = () => {
-    // Construct the query params based on the filter state
     const params = {};
-
     if (startDate && endDate) {
       params.startDate = startDate;
       params.endDate = endDate;
     } else if (month) {
       params.month = month;
     }
-
-    fetchSalesData(params); // Fetch sales data with selected filters
+    fetchSalesData(params);
   };
 
   const handleResetFilters = () => {
     setStartDate("");
     setEndDate("");
-    setMonth(dayjs().format("YYYY-MM")); // Reset month to current month
-    fetchSalesData({ month: dayjs().format("YYYY-MM") }); // Fetch month-wise data
+    setMonth(dayjs().format("YYYY-MM"));
+    fetchSalesData({ month: dayjs().format("YYYY-MM") });
   };
 
   return (
@@ -61,14 +71,47 @@ const CategoryWiseSalesReport = () => {
 
       {/* Main Content */}
       <div className="p-6 bg-gray-100 min-h-screen w-full">
-        <div className="bg-white p-4 rounded-lg shadow-lg">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          {/* Header */}
           <div className="flex items-center gap-2 mb-4">
             <BarChart2 size={24} />
-            <h2 className="text-xl font-semibold">Category-wise Sales Report</h2>
+            <h2 className="text-2xl font-semibold">Category-wise Sales Report</h2>
+          </div>
+
+          {/* Report Summary Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-100 p-4 rounded-lg flex items-center gap-3">
+              <ClipboardCheck size={28} className="text-blue-500" />
+              <div>
+                <p className="text-gray-600 text-sm">Total Categories</p>
+                <h3 className="text-lg font-bold">{summary.totalCategories}</h3>
+              </div>
+            </div>
+            <div className="bg-green-100 p-4 rounded-lg flex items-center gap-3">
+              <ShoppingCart size={28} className="text-green-500" />
+              <div>
+                <p className="text-gray-600 text-sm">Total PCS Sold</p>
+                <h3 className="text-lg font-bold">{summary.totalQuantity}</h3>
+              </div>
+            </div>
+            <div className="bg-yellow-100 p-4 rounded-lg flex items-center gap-3">
+              <DollarSign size={28} className="text-yellow-500" />
+              <div>
+                <p className="text-gray-600 text-sm">Total TP</p>
+                <h3 className="text-lg font-bold">{summary.totalTP.toFixed(2)}</h3>
+              </div>
+            </div>
+            <div className="bg-red-100 p-4 rounded-lg flex items-center gap-3">
+              <DollarSign size={28} className="text-red-500" />
+              <div>
+                <p className="text-gray-600 text-sm">Total MRP</p>
+                <h3 className="text-lg font-bold">{summary.totalMRP.toFixed(2)}</h3>
+              </div>
+            </div>
           </div>
 
           {/* Filters */}
-          <div className="mb-4 flex gap-4 items-end">
+          <div className="mb-4 flex flex-wrap gap-4 items-end">
             <div>
               <label className="font-medium">Select Month: </label>
               <input
@@ -76,7 +119,7 @@ const CategoryWiseSalesReport = () => {
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
                 className="border rounded p-2 ml-2"
-                disabled={startDate && endDate} // Disable month input when custom date range is used
+                disabled={startDate && endDate}
               />
             </div>
             <div>
@@ -97,16 +140,10 @@ const CategoryWiseSalesReport = () => {
                 className="border rounded p-2"
               />
             </div>
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              onClick={handleFilter} // Apply filter on button click
-            >
+            <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={handleFilter}>
               Filter Reports
             </button>
-            <button
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              onClick={handleResetFilters} // Reset filters to default (month-wise)
-            >
+            <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onClick={handleResetFilters}>
               Reset Filters
             </button>
           </div>
@@ -135,10 +172,7 @@ const CategoryWiseSalesReport = () => {
                     <td className="border p-2 text-center">{category.total_tp}</td>
                     <td className="border p-2 text-center">{category.total_mrp}</td>
                     <td className="border p-2 text-center">
-                      <Link
-                        className="bg-gray-700 text-white rounded px-2 py-1"
-                        to={`/admin/sales-movement/category-wise/detail/${category._id}`}
-                      >
+                      <Link className="bg-gray-700 text-white rounded px-2 py-1" to={`/admin/sales-movement/category-wise/detail/${category._id}`}>
                         Details
                       </Link>
                     </td>

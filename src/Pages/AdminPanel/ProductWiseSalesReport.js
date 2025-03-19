@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 
 const ProductWiseSalesReport = () => {
     const [salesData, setSalesData] = useState([]);
+    const [summary, setSummary] = useState({ totalSold: 0, totalTP: 0, totalMRP: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
@@ -17,6 +18,7 @@ const ProductWiseSalesReport = () => {
             setLoading(true);
             const response = await axios.get("https://gvi-pos-server.vercel.app/api/sales/product-wise", { params });
             setSalesData(response.data);
+            calculateSummary(response.data);
         } catch (err) {
             setError("Failed to fetch sales data");
         } finally {
@@ -24,8 +26,15 @@ const ProductWiseSalesReport = () => {
         }
     };
 
+    const calculateSummary = (data) => {
+        const totalSold = data.reduce((sum, item) => sum + item.total_quantity, 0);
+        const totalTP = data.reduce((sum, item) => sum + item.total_tp, 0);
+        const totalMRP = data.reduce((sum, item) => sum + item.total_mrp, 0);
+        setSummary({ totalSold, totalTP, totalMRP });
+    };
+
     useEffect(() => {
-        fetchSalesData({ month }); // Fetch initial month-wise data
+        fetchSalesData({ month });
     }, []);
 
     const handleFilter = () => {
@@ -54,6 +63,22 @@ const ProductWiseSalesReport = () => {
                     <div className="flex items-center gap-2 mb-4">
                         <BarChart2 size={24} />
                         <h2 className="text-xl font-semibold">Product-wise Sales Report</h2>
+                    </div>
+
+                    {/* Summary Report */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="bg-blue-100 p-4 rounded-lg text-center shadow-md">
+                            <h3 className="text-lg font-semibold text-blue-800">Total Sales</h3>
+                            <p className="text-2xl font-bold">{summary.totalSold} PCS</p>
+                        </div>
+                        <div className="bg-green-100 p-4 rounded-lg text-center shadow-md">
+                            <h3 className="text-lg font-semibold text-green-800">Total TP</h3>
+                            <p className="text-2xl font-bold">৳{summary.totalTP}</p>
+                        </div>
+                        <div className="bg-red-100 p-4 rounded-lg text-center shadow-md">
+                            <h3 className="text-lg font-semibold text-red-800">Total MRP</h3>
+                            <p className="text-2xl font-bold">৳{summary.totalMRP}</p>
+                        </div>
                     </div>
 
                     {/* Filters */}
