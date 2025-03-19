@@ -118,7 +118,7 @@ const DealerSalesReport = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="border rounded p-2"
+              className="border rounded p-2 ml-2"
             />
           </div>
           <div>
@@ -127,11 +127,11 @@ const DealerSalesReport = () => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="border rounded p-2"
+              className="border rounded p-2 ml-2"
             />
           </div>
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2"
             onClick={fetchSalesReports}
           >
             Filter Reports

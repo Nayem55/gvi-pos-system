@@ -128,7 +128,7 @@ const CategoryWiseSalesReport = () => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border rounded p-2"
+                className="border rounded p-2 ml-2"
               />
             </div>
             <div>
@@ -137,10 +137,10 @@ const CategoryWiseSalesReport = () => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border rounded p-2"
+                className="border rounded p-2 ml-2"
               />
             </div>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={handleFilter}>
+            <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2" onClick={handleFilter}>
               Filter Reports
             </button>
             <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onClick={handleResetFilters}>

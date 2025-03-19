@@ -89,13 +89,13 @@ const ProductWiseSalesReport = () => {
                         </div>
                         <div>
                             <label className="font-medium">Start Date: </label>
-                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded p-2" />
+                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded p-2 ml-2" />
                         </div>
                         <div>
                             <label className="font-medium">End Date: </label>
-                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded p-2"/>
+                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded p-2 ml-2"/>
                         </div>
-                        <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={handleFilter}>Filter Reports</button>
+                        <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2" onClick={handleFilter}>Filter Reports</button>
                         <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onClick={handleResetFilters}>Reset Filters</button>
                     </div>
 
