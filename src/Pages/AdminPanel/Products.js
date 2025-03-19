@@ -141,7 +141,6 @@ const AdminProducts = () => {
     }
   };
 
-  if (loading) return <p className="text-center py-6">Loading products...</p>;
 
   return (
     <div className="flex">

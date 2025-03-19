@@ -175,7 +175,7 @@ const MonthlyTargetPage = () => {
                   </td>
                   <td className="border p-3 text-center">
                     <button
-                      className={`px-4 py-2 rounded ${
+                      className={`px-4 py-2 rounded w-[100px] ${
                         targets[user._id]
                           ? "bg-blue-500 hover:bg-blue-600"
                           : "bg-green-500 hover:bg-green-600"
