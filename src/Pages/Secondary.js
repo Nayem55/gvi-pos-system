@@ -209,7 +209,7 @@ export default function Secondary() {
           </span>
         )}
       </div>
-      <div className="flex justify-between">
+      <div className="flex justify-between w-[100%] gap-4">
         <input
           onChange={(e) => {
             setRoute(e.target.value);
@@ -217,7 +217,7 @@ export default function Secondary() {
           name="route"
           type="text"
           placeholder="Enter route name"
-          className="py-1 px-2 rounded my-2 border border-gray-200"
+          className="w-[50%] py-1 px-2 rounded my-2 border border-gray-200"
         />
         <input
           onChange={(e) => {
@@ -225,8 +225,8 @@ export default function Secondary() {
           }}
           name="menu"
           type="number"
-          placeholder="Enter menu count"
-          className="py-1 px-2 rounded my-2 border border-gray-200"
+          placeholder="Enter memo count"
+          className="w-[50%] py-1 px-2 rounded my-2 border border-gray-200"
         />
       </div>
 
