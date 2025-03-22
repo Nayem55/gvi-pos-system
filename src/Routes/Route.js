@@ -17,6 +17,7 @@ import DailyDealerSalesReport from "../Pages/AdminPanel/DailyDealerSalesReport";
 import ManageUserStock from "../Pages/UserStock";
 import MonthlyTargetPage from "../Pages/AdminPanel/MonthlyTarget";
 import AdminHomePage from "../Pages/AdminPanel/AdminHomePage";
+import Home from "../Pages/Homepage/Homepage";
 
 const router = createBrowserRouter([
   {
@@ -25,7 +26,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <TodaysSale/>,
+        element: <Home/>,
       },
       {
         path: "/home",
