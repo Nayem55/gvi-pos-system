@@ -312,7 +312,7 @@ const ManageStock = () => {
         <table className="w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border p-2">Outlet</th>
+              {/* <th className="border p-2">Outlet</th> */}
               <th className="border p-2">Barcode</th>
               <th className="border p-2">Product Name</th>
               <th className="border p-2">Opening Stock</th>
@@ -329,7 +329,7 @@ const ManageStock = () => {
                 ref={products.length - 1 === index ? lastProductRef : null}
                 className="border"
               >
-                <td className="border p-2">{selectedOutlet}</td>
+                {/* <td className="border p-2">{selectedOutlet}</td> */}
                 <td className="border p-2">{product.barcode}</td>
                 <td className="border p-2">{product.name}</td>
                 <td className="border p-2">

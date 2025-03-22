@@ -16,6 +16,7 @@ export default function Secondary() {
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD")); // Default to today's date
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -118,7 +119,7 @@ export default function Secondary() {
           {
             ...productWithStock,
             pcs: 1,
-            total: parseInt(productWithStock.mrp),
+            total: parseInt(productWithStock.tp),
           },
         ]);
       }
@@ -162,7 +163,7 @@ export default function Secondary() {
         outlet: user.outlet,
         route: route,
         menu: menu,
-        sale_date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"), // Use selected date
         total_tp: cart.reduce((sum, item) => sum + item.tp * item.pcs, 0),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
         products: cart.map((item) => ({
@@ -199,16 +200,21 @@ export default function Secondary() {
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
       {/* Date & Outlet Stock */}
-      <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4">
-        <span className="text-sm font-semibold">
-          {dayjs().format("DD MMM, YYYY")}
-        </span>
+      <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4 items-center">
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="text-sm font-semibold border rounded p-1"
+        />
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-            Outlet Stock: {stock.toLocaleString()}
+            Stock : {stock.toLocaleString()}
           </span>
         )}
       </div>
+
+      {/* Route & Menu Inputs */}
       <div className="flex justify-between w-[100%] gap-4">
         <input
           onChange={(e) => {
@@ -223,7 +229,7 @@ export default function Secondary() {
           onChange={(e) => {
             setMenu(e.target.value);
           }}
-          name="menu"
+          name="memo"
           type="number"
           placeholder="Enter memo count"
           className="w-[50%] py-1 px-2 rounded my-2 border border-gray-200"
