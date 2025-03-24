@@ -45,68 +45,17 @@ const DealerSalesReport = () => {
         params.month = selectedMonth;
       }
 
-      // Filter the users based on roles and zone
-      const filteredUsers = users.filter((user) => {
-        if (user.role === "SO") return true;
-        const zone = user.zone;
-
-        // Check if user is ASM, RSM, or SOM
-        if (user.role === "ASM") {
-          // Get all SOs in the same zone as the ASM
-          return users.some((u) => u.role === "SO" && u.zone.includes(zone));
-        }
-        if (user.role === "RSM") {
-          // Get all SOs in the same zone as the RSM
-          return users.some((u) => u.role === "SO" && u.zone.includes(zone));
-        }
-        if (user.role === "SOM") {
-          // Get all SOs in the same zone as the SOM
-          return users.some((u) => u.role === "SO" && u.zone.includes(zone));
-        }
-        return false;
-      });
-
-      // Fetch sales reports for filtered users (SOs and aggregating for ASM, RSM, SOM)
-      const reportPromises = filteredUsers.map((user) =>
+      const reportPromises = users.map((user) =>
         axios
-          .get(`https://gvi-pos-server.vercel.app/sales-reports/${user?._id}`, { params })
-          .then((response) => ({
-            userId: user._id,
-            userRole: user.role,
-            userZone: user.zone,
-            reportData: response.data,
-          }))
-          .catch(() => ({
-            userId: user._id,
-            userRole: user.role,
-            userZone: user.zone,
-            reportData: [],
-          }))
+          .get(`https://gvi-pos-server.vercel.app/sales-reports/${user._id}`, { params })
+          .then((response) => ({ userId: user._id, reportData: response.data }))
+          .catch(() => ({ userId: user._id, reportData: [] }))
       );
 
       const reports = await Promise.all(reportPromises);
 
-      const reportData = reports.reduce((acc, { userId, userRole, userZone, reportData }) => {
-        // If the user is a SO, store the reports directly
-        if (userRole === "SO") {
-          acc[userId] = { role: userRole, zone: userZone, reports: reportData };
-        }
-
-        // If the user is ASM, RSM, or SOM, aggregate SO reports by zone
-        if (["ASM", "RSM", "SOM"].includes(userRole)) {
-          // Find the SOs in the same zone as this ASM/RSM/SOM
-          const teamReports = users
-            .filter((u) => u.role === "SO" && u.zone.includes(userZone))
-            .map((u) => acc[u._id]?.reports || [])
-            .flat();
-
-          acc[userId] = {
-            role: userRole,
-            zone: userZone,
-            reports: teamReports,
-          };
-        }
-
+      const reportData = reports.reduce((acc, { userId, reportData }) => {
+        acc[userId] = reportData;
         return acc;
       }, {});
 
@@ -121,12 +70,11 @@ const DealerSalesReport = () => {
   // Calculate Summary Data
   const totalDealers = users.length;
   const totalReports = Object.values(salesReports).reduce(
-    (sum, reports) => sum + reports.reports.length,
+    (sum, reports) => sum + reports.length,
     0
   );
   const totalMRP = Object.values(salesReports).reduce(
-    (sum, reports) =>
-      sum + reports.reports.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0),
+    (sum, reports) => sum + reports.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0),
     0
   );
 
@@ -211,7 +159,6 @@ const DealerSalesReport = () => {
               <tr className="bg-gray-100">
                 <th className="border p-2">User</th>
                 <th className="border p-2">Outlet</th>
-                <th className="border p-2">Role</th>
                 <th className="border p-2">Total Reports</th>
                 <th className="border p-2">Total MRP</th>
                 <th className="border p-2">Action</th>
@@ -219,18 +166,17 @@ const DealerSalesReport = () => {
             </thead>
             <tbody>
               {users.map((user) => {
-                const reports = salesReports[user._id] || { reports: [] };
-                const totalReports = reports.reports.length;
-                const totalMRP = reports.reports.reduce(
+                const reports = salesReports[user._id] || [];
+                const totalReports = reports.length;
+                const totalMRP = reports.reduce(
                   (sum, report) => sum + (report.total_mrp || 0),
                   0
                 );
 
                 return (
                   <tr key={user._id} className="border">
-                    <td className="border p-2">{user?.name}</td>
-                    <td className="border p-2">{user?.outlet}</td>
-                    <td className="border p-2">{user?.role}</td>
+                    <td className="border p-2">{user.name}</td>
+                    <td className="border p-2">{user.outlet}</td>
                     <td className="border p-2">{totalReports}</td>
                     <td className="border p-2">৳{totalMRP.toFixed(2)}</td>
                     <td className="border p-2">
