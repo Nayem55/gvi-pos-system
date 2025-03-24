@@ -8,6 +8,7 @@ export default function OfficeReturn({ user, stock, setStock }) {
   const [searchResults, setSearchResults] = useState([]);
   const [officeReturnItems, setOfficeReturnItems] = useState({});
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState({}); // Track updating state for each product
 
   // Fetch search results
   const handleSearch = async (query) => {
@@ -64,16 +65,28 @@ export default function OfficeReturn({ user, stock, setStock }) {
     }));
   };
 
-  // Update office return stock
+  // Update office return stock and create a transaction report
   const handleUpdateStock = async (barcode) => {
+    setUpdating((prev) => ({ ...prev, [barcode]: true })); // Start loading
     try {
       const { openingStock, officeReturn } = officeReturnItems[barcode];
       const newStock = openingStock - officeReturn; // Deduct office return from opening stock
 
+      // Update the stock in the database
       await axios.put("https://gvi-pos-server.vercel.app/update-outlet-stock", {
         barcode,
         outlet: user.outlet,
         newStock,
+      });
+
+      // Create a new transaction report in the transaction collection
+      await axios.post("https://gvi-pos-server.vercel.app/stock-transactions", {
+        barcode,
+        outlet: user.outlet,
+        type: "office return",
+        quantity: officeReturn,
+        date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        user: user.name,
       });
 
       toast.success("Office return updated successfully!");
@@ -87,6 +100,8 @@ export default function OfficeReturn({ user, stock, setStock }) {
     } catch (error) {
       console.error("Error updating office return:", error);
       toast.error("Failed to update office return.");
+    } finally {
+      setUpdating((prev) => ({ ...prev, [barcode]: false })); // Stop loading
     }
   };
 
@@ -153,7 +168,11 @@ export default function OfficeReturn({ user, stock, setStock }) {
                       onClick={() => handleUpdateStock(product.barcode)}
                       className="bg-green-500 text-white px-3 py-1 rounded-md w-full"
                     >
-                      Update
+                      {updating[product.barcode] ? (
+                        <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div>
+                      ) : (
+                        "Update"
+                      )}
                     </button>
                   </td>
                 </tr>

@@ -8,6 +8,7 @@ export default function Primary({ user, stock, setStock }) {
   const [searchResults, setSearchResults] = useState([]);
   const [primaryItems, setPrimaryItems] = useState({});
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState({});
 
   // Fetch search results
   const handleSearch = async (query) => {
@@ -16,9 +17,7 @@ export default function Primary({ user, stock, setStock }) {
       try {
         const response = await axios.get(
           "https://gvi-pos-server.vercel.app/search-product",
-          {
-            params: { search: query, type: "name" },
-          }
+          { params: { search: query, type: "name" } }
         );
         setSearchResults(response.data);
 
@@ -30,14 +29,11 @@ export default function Primary({ user, stock, setStock }) {
               `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
             );
             stockData[product.barcode] = {
-              openingStock: stockResponse.data.stock || 0, // Current stock
-              primary: 0, // New stock to add
-            };
-          } catch (error) {
-            stockData[product.barcode] = {
-              openingStock: 0,
+              openingStock: stockResponse.data.stock || 0,
               primary: 0,
             };
+          } catch (error) {
+            stockData[product.barcode] = { openingStock: 0, primary: 0 };
           }
         });
 
@@ -49,7 +45,7 @@ export default function Primary({ user, stock, setStock }) {
         setLoading(false);
       }
     } else {
-      setSearchResults([]); // Clear search results if query is too short
+      setSearchResults([]);
     }
   };
 
@@ -59,34 +55,50 @@ export default function Primary({ user, stock, setStock }) {
       ...prev,
       [barcode]: {
         ...prev[barcode],
-        primary: parseInt(value) || 0, // Ensure value is a number
+        primary: parseInt(value) || 0,
       },
     }));
   };
 
-  // Update primary stock
+  // Update primary stock & log transaction
   const handleUpdateStock = async (barcode) => {
     try {
+      setUpdating((prev) => ({ ...prev, [barcode]: true }));
       const { openingStock, primary } = primaryItems[barcode];
-      const newStock = openingStock + primary; // Add primary to opening stock
+      if (primary <= 0) {
+        toast.error("Enter a valid primary stock quantity.");
+        return;
+      }
 
+      const newStock = openingStock + primary;
+
+      // Update Outlet Stock
       await axios.put("https://gvi-pos-server.vercel.app/update-outlet-stock", {
         barcode,
         outlet: user.outlet,
         newStock,
       });
 
+      // Store Primary Stock Transaction
+      await axios.post("https://gvi-pos-server.vercel.app/stock-transactions", {
+        barcode,
+        outlet: user.outlet,
+        type: "primary",
+        quantity: primary,
+        date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        user: user.name, // Tracking who performed the transaction
+      });
+
       toast.success("Primary stock updated successfully!");
       setPrimaryItems((prev) => ({
         ...prev,
-        [barcode]: {
-          openingStock: newStock, // Update opening stock to reflect the new total
-          primary: 0, // Reset primary input
-        },
+        [barcode]: { openingStock: newStock, primary: 0 },
       }));
     } catch (error) {
       console.error("Error updating primary stock:", error);
       toast.error("Failed to update primary stock.");
+    } finally {
+      setUpdating((prev) => ({ ...prev, [barcode]: false }));
     }
   };
 
@@ -96,7 +108,7 @@ export default function Primary({ user, stock, setStock }) {
         <span className="text-sm font-semibold">
           {dayjs().format("DD MMM, YYYY")}
         </span>
-        {user && user.outlet && (
+        {user?.outlet && (
           <span className="text-sm font-semibold">
             Outlet Stock: {stock.toLocaleString()}
           </span>
@@ -151,22 +163,18 @@ export default function Primary({ user, stock, setStock }) {
                   <td className="border p-2">
                     <button
                       onClick={() => handleUpdateStock(product.barcode)}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md w-full"
+                      disabled={updating[product.barcode]}
+                      className={`${
+                        updating[product.barcode] ? "bg-gray-400" : "bg-green-500"
+                      } text-white px-3 py-1 rounded-md w-full`}
                     >
-                      Update
+                      {updating[product.barcode] ? <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div> : "Update"}
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="flex justify-center items-center my-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
-          </div>
         )}
       </div>
     </div>
