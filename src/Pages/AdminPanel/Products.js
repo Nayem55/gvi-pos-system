@@ -10,7 +10,7 @@ import {
 import AdminSidebar from "../../Component/AdminSidebar";
 import toast from "react-hot-toast";
 
-const API_URL = "https://gvi-pos-server.vercel.app/products"; // Update with your actual API endpoint
+const API_URL = "https://gvi-pos-server.vercel.app/products";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -21,25 +21,37 @@ const AdminProducts = () => {
   const [newProduct, setNewProduct] = useState({
     name: "",
     barcode: "",
+    dp: "",
     tp: "",
     mrp: "",
+    category: ""
   });
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [bulkUpdateFields, setBulkUpdateFields] = useState({
+    dp: "",
+    tp: "",
+    mrp: ""
+  });
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
-  // Fetch Products
+  // Fetch Products and Categories
   useEffect(() => {
     fetchProducts(currentPage);
+    fetchCategories();
   }, [currentPage]);
 
-  // useEffect(() => {
-  //   if (searchQuery !== "") {
-  //     handleSearch();
-  //   } else {
-  //     setProducts([]);
-  //   }
-  // }, [searchQuery]);
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get("https://gvi-pos-server.vercel.app/product-categories");
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   const handleSearch = async () => {
     setProducts([]);
@@ -74,7 +86,6 @@ const AdminProducts = () => {
     }
   };
 
-  // Handle Input Changes
   const handleInputChange = (e, id, field) => {
     const updatedProducts = products.map((product) =>
       product._id === id ? { ...product, [field]: e.target.value } : product
@@ -82,21 +93,16 @@ const AdminProducts = () => {
     setProducts(updatedProducts);
   };
 
-  // Save Updated Product
   const saveUpdate = async (product) => {
     setUpdating(true);
     try {
-      // Update the product in the products collection
       await axios.put(`${API_URL}/${product._id}`, product);
-  
-      // Update the barcode in the outlet collection if it has changed
       if (editingProduct && editingProduct.barcode !== product.barcode) {
         await axios.put(`https://gvi-pos-server.vercel.app/update-outlet-barcode`, {
           oldBarcode: editingProduct.barcode,
           newBarcode: product.barcode,
         });
       }
-  
       setEditingProduct(null);
       toast.success("Product updated successfully");
     } catch (error) {
@@ -106,29 +112,62 @@ const AdminProducts = () => {
       setUpdating(false);
     }
   };
-  // Delete Product
+
   const deleteProduct = async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
       setProducts(products.filter((product) => product._id !== id));
+      toast.success("Product deleted successfully");
     } catch (error) {
       console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
     }
   };
 
-  // Add New Product
   const addProduct = async () => {
     try {
       const res = await axios.post(API_URL, newProduct);
       setProducts([...products, res.data]);
       setShowModal(false);
-      setNewProduct({ name: "", price: "", stock: "" });
+      setNewProduct({ name: "", barcode: "", dp: "", tp: "", mrp: "", category: "" });
+      toast.success("Product added successfully");
     } catch (error) {
       console.error("Error adding product:", error);
+      toast.error("Failed to add product");
     }
   };
 
-  // Pagination handlers
+  const handleBulkCategoryUpdate = async () => {
+    if (!selectedCategory) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    try {
+      setIsBulkUpdating(true);
+      const response = await axios.put(
+        "https://gvi-pos-server.vercel.app/category-bulk-update",
+        {
+          category: selectedCategory,
+          updateFields: {
+            dp: bulkUpdateFields.dp,
+            tp: bulkUpdateFields.tp,
+            mrp: bulkUpdateFields.mrp
+          }
+        }
+      );
+      
+      toast.success(response.data.message);
+      fetchProducts(currentPage);
+    } catch (error) {
+      console.error("Error in bulk update:", error);
+      toast.error("Failed to update category products");
+    } finally {
+      setIsBulkUpdating(false);
+      setBulkUpdateFields({ dp: "", tp: "", mrp: "" });
+    }
+  };
+
   const nextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -141,13 +180,9 @@ const AdminProducts = () => {
     }
   };
 
-
   return (
     <div className="flex">
-      {/* Sidebar */}
       <AdminSidebar />
-
-      {/* Main Content */}
       <div className="p-4 w-full">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">Manage Products</h2>
@@ -170,6 +205,69 @@ const AdminProducts = () => {
           </button>
         </div>
 
+        {/* Category Bulk Update Section */}
+        <div className="bg-gray-100 p-4 rounded-lg mb-6">
+          <h3 className="text-lg font-semibold mb-3">Bulk Update by Category</h3>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1">
+              <label className="font-medium">Category:</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="border rounded p-2 w-full mt-4"
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="font-medium">DP:</label>
+              <input
+                type="number"
+                value={bulkUpdateFields.dp}
+                onChange={(e) => setBulkUpdateFields({...bulkUpdateFields, dp: e.target.value})}
+                className="border rounded p-2 w-full"
+                placeholder="DP Price"
+              />
+            </div>
+            
+            <div>
+              <label className="font-medium">TP:</label>
+              <input
+                type="number"
+                value={bulkUpdateFields.tp}
+                onChange={(e) => setBulkUpdateFields({...bulkUpdateFields, tp: e.target.value})}
+                className="border rounded p-2 w-full"
+                placeholder="TP Price"
+              />
+            </div>
+            
+            <div>
+              <label className="font-medium">MRP:</label>
+              <input
+                type="number"
+                value={bulkUpdateFields.mrp}
+                onChange={(e) => setBulkUpdateFields({...bulkUpdateFields, mrp: e.target.value})}
+                className="border rounded p-2 w-full"
+                placeholder="MRP Price"
+              />
+            </div>
+            
+            <button
+              onClick={handleBulkCategoryUpdate}
+              disabled={isBulkUpdating || !selectedCategory}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+            >
+              {isBulkUpdating ? "Updating..." : "Update Category"}
+            </button>
+          </div>
+        </div>
+
         {/* Product Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border rounded-lg shadow-md">
@@ -177,6 +275,8 @@ const AdminProducts = () => {
               <tr>
                 <th className="border p-2">Name</th>
                 <th className="border p-2">Barcode</th>
+                <th className="border p-2">Category</th>
+                <th className="border p-2">Price (DP)</th>
                 <th className="border p-2">Price (TP)</th>
                 <th className="border p-2">Price (MRP)</th>
                 <th className="border p-2">Actions</th>
@@ -211,6 +311,40 @@ const AdminProducts = () => {
                       />
                     ) : (
                       product.barcode
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    {editingProduct?._id === product._id ? (
+                      <select
+                        value={product.category}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "category")
+                        }
+                        className="border p-1 w-full"
+                      >
+                        <option value="">Select Category</option>
+                        {categories.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      product.category || "-"
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    {editingProduct?._id === product._id ? (
+                      <input
+                        type="number"
+                        value={product.dp}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "dp")
+                        }
+                        className="border p-1 w-full"
+                      />
+                    ) : (
+                      `${product.dp} BDT`
                     )}
                   </td>
                   <td className="border p-2">
@@ -347,9 +481,32 @@ const AdminProducts = () => {
                   setNewProduct({ ...newProduct, barcode: e.target.value })
                 }
               />
+              <select
+                value={newProduct.category}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, category: e.target.value })
+                }
+                className="w-full border p-2 mb-2"
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
               <input
                 type="number"
-                placeholder="Price(TP)"
+                placeholder="Price (DP)"
+                className="w-full border p-2 mb-2"
+                value={newProduct.dp}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, dp: e.target.value })
+                }
+              />
+              <input
+                type="number"
+                placeholder="Price (TP)"
                 className="w-full border p-2 mb-2"
                 value={newProduct.tp}
                 onChange={(e) =>
@@ -358,20 +515,13 @@ const AdminProducts = () => {
               />
               <input
                 type="number"
-                placeholder="Price(MRP)"
+                placeholder="Price (MRP)"
                 className="w-full border p-2 mb-2"
                 value={newProduct.mrp}
                 onChange={(e) =>
                   setNewProduct({ ...newProduct, mrp: e.target.value })
                 }
               />
-              {/* <input
-                type="number"
-                placeholder="Stock"
-                className="w-full border p-2 mb-2"
-                value={newProduct.stock}
-                onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-              /> */}
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowModal(false)}
