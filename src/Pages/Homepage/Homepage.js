@@ -18,7 +18,7 @@ export default function Home() {
         <select
           value={selectedTab}
           onChange={(e) => setSelectedTab(e.target.value)}
-          className="p-2 border rounded-lg"
+          className="p-2 border rounded-lg w-[100%]"
         >
           <option value="opening">Opening Stock</option>
           <option value="primary">Primary</option>
