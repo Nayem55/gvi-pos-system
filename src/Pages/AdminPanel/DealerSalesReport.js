@@ -11,13 +11,12 @@ const DealerSalesReport = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("SO");  // New state for role filter
-  const [selectedZone, setSelectedZone] = useState("");  // New state for zone filter
+  const [selectedRole, setSelectedRole] = useState(""); // Empty string shows all roles
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
-  }, [selectedRole, selectedZone]);  // Fetch users whenever filters change
+  }, []);
 
   useEffect(() => {
     if (users.length > 0) {
@@ -27,7 +26,9 @@ const DealerSalesReport = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/getAllUser"
+      );
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -49,7 +50,9 @@ const DealerSalesReport = () => {
 
       const reportPromises = users.map((user) =>
         axios
-          .get(`https://gvi-pos-server.vercel.app/sales-reports/${user._id}`, { params })
+          .get(`https://gvi-pos-server.vercel.app/sales-reports/${user._id}`, {
+            params,
+          })
           .then((response) => ({ userId: user._id, reportData: response.data }))
           .catch(() => ({ userId: user._id, reportData: [] }))
       );
@@ -68,25 +71,40 @@ const DealerSalesReport = () => {
       setLoading(false);
     }
   };
+  // Filter users by selected role
+  const filteredUsers = selectedRole
+    ? users.filter((user) => user.role === selectedRole)
+    : users.filter((user) => !["ASM", "RSM", "SOM"].includes(user.role)); // Exclude managers in "All Roles" view
 
   // Aggregating Reports for ASM, RSM, and SOM
-  const aggregatedReports = users.map((user) => {
+  const aggregatedReports = filteredUsers.map((user) => {
     let totalReports = 0;
     let totalMRP = 0;
 
     if (user.role === "ASM" || user.role === "RSM" || user.role === "SOM") {
-      const assignedSOs = users.filter(u => u.zone.includes(user.zone));
+      // When specific manager role is selected, show their aggregated reports
+      const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
       totalReports = assignedSOs.reduce(
         (sum, so) => sum + (salesReports[so._id]?.length || 0),
         0
       );
       totalMRP = assignedSOs.reduce(
-        (sum, so) => sum + (salesReports[so._id]?.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0) || 0),
+        (sum, so) =>
+          sum +
+          (salesReports[so._id]?.reduce(
+            (subSum, report) => subSum + (report.total_mrp || 0),
+            0
+          ) || 0),
         0
       );
     } else {
+      // Regular users (SO, SELF, COMMISSION)
       totalReports = salesReports[user._id]?.length || 0;
-      totalMRP = salesReports[user._id]?.reduce((sum, report) => sum + (report.total_mrp || 0), 0) || 0;
+      totalMRP =
+        salesReports[user._id]?.reduce(
+          (sum, report) => sum + (report.total_mrp || 0),
+          0
+        ) || 0;
     }
 
     return {
@@ -95,18 +113,18 @@ const DealerSalesReport = () => {
       outlet: user.outlet,
       role: user.role,
       totalReports,
-      totalMRP
+      totalMRP,
     };
   });
 
-  // Calculate Summary Data
-  const totalDealers = users.length;
-  const totalReports = Object.values(salesReports).reduce(
-    (sum, reports) => sum + reports.length,
+  // Calculate Summary Data based on filtered users
+  const totalDealers = filteredUsers.length;
+  const totalReports = aggregatedReports.reduce(
+    (sum, user) => sum + user.totalReports,
     0
   );
-  const totalMRP = Object.values(salesReports).reduce(
-    (sum, reports) => sum + reports.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0),
+  const totalMRP = aggregatedReports.reduce(
+    (sum, user) => sum + user.totalMRP,
     0
   );
 
@@ -181,23 +199,8 @@ const DealerSalesReport = () => {
             </select>
           </div>
 
-          {/* Zone Filter Dropdown */}
-          {/* <div>
-            <label className="font-medium">Zone: </label>
-            <select
-              value={selectedZone}
-              onChange={(e) => setSelectedZone(e.target.value)}
-              className="border rounded p-2 ml-2"
-            >
-              <option value="">All Zones</option>
-              <option value="Zone 1">ZONE-1</option>
-              <option value="Zone 2">Zone 2</option>
-              <option value="Zone 3">Zone 3</option>
-            </select>
-          </div> */}
-
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             onClick={fetchSalesReports}
           >
             Filter Reports
@@ -208,7 +211,6 @@ const DealerSalesReport = () => {
               setStartDate("");
               setEndDate("");
               setSelectedRole("");
-              setSelectedZone("");
               fetchSalesReports();
             }}
           >
@@ -222,41 +224,47 @@ const DealerSalesReport = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
           </div>
         ) : (
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2">User</th>
-                <th className="border p-2">Outlet</th>
-                <th className="border p-2">Role</th>
-                <th className="border p-2">Total Reports</th>
-                <th className="border p-2">Total MRP</th>
-                <th className="border p-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-            {aggregatedReports.map((user) => (
-              <tr key={user.userId} className="border">
-                <td className="border p-2">{user.name}</td>
-                <td className="border p-2">{user.outlet}</td>
-                <td className="border p-2">{user.role}</td>
-                <td className="border p-2">{user.totalReports}</td>
-                <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
-                <td className="border p-2">
-                  <button
-                    className="bg-gray-800 text-white px-3 py-1 rounded"
-                    onClick={() =>
-                      navigate(
-                        `/sales-report/daily/${user.userId}?$${startDate && endDate ? `startDate=${startDate}&endDate=${endDate}` : `month=${selectedMonth}`}`
-                      )
-                    }
-                  >
-                    View Daily Report
-                  </button>
-                </td>
-              </tr>
-            ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">User</th>
+                  <th className="border p-2">Outlet</th>
+                  <th className="border p-2">Role</th>
+                  <th className="border p-2">Total Reports</th>
+                  <th className="border p-2">Total MRP</th>
+                  <th className="border p-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregatedReports.map((user) => (
+                  <tr key={user.userId} className="border">
+                    <td className="border p-2">{user.name}</td>
+                    <td className="border p-2">{user.outlet}</td>
+                    <td className="border p-2">{user.role}</td>
+                    <td className="border p-2">{user.totalReports}</td>
+                    <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
+                    <td className="border p-2">
+                      <button
+                        className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
+                        onClick={() =>
+                          navigate(
+                            `/sales-report/daily/${user.userId}?${
+                              startDate && endDate
+                                ? `startDate=${startDate}&endDate=${endDate}`
+                                : `month=${selectedMonth}`
+                            }`
+                          )
+                        }
+                      >
+                        View Daily Report
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
