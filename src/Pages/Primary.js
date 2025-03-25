@@ -9,6 +9,25 @@ export default function Primary({ user, stock, setStock }) {
   const [primaryItems, setPrimaryItems] = useState({});
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState({});
+  // const [stock, setStock] = useState(0);
+
+  // useEffect(() => {
+  //   if (user && user.outlet) {
+  //     getStockValue(user.outlet); // Pass outlet name from the user object
+  //   }
+  // }, [user]);
+
+  // const getStockValue = async (outletName) => {
+  //   try {
+  //     const response = await axios.get(
+  //       `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
+  //     );
+  //     const stockValue = response.data.totalStockValue;
+  //     setStock(stockValue); // Update the stock state with the received value
+  //   } catch (error) {
+  //     console.error("Error fetching stock value:", error);
+  //   }
+  // };
 
   // Fetch search results
   const handleSearch = async (query) => {
@@ -165,10 +184,16 @@ export default function Primary({ user, stock, setStock }) {
                       onClick={() => handleUpdateStock(product.barcode)}
                       disabled={updating[product.barcode]}
                       className={`${
-                        updating[product.barcode] ? "bg-gray-400" : "bg-green-500"
+                        updating[product.barcode]
+                          ? "bg-gray-400"
+                          : "bg-green-500"
                       } text-white px-3 py-1 rounded-md w-full`}
                     >
-                      {updating[product.barcode] ? <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div> : "Update"}
+                      {updating[product.barcode] ? (
+                        <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div>
+                      ) : (
+                        "Update"
+                      )}
                     </button>
                   </td>
                 </tr>

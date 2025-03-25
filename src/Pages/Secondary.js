@@ -4,13 +4,13 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-export default function Secondary() {
+export default function Secondary({stock,setStock}) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name"); // Default search type is 'name'
   const [cart, setCart] = useState(
     () => JSON.parse(localStorage.getItem("cart")) || []
   );
-  const [stock, setStock] = useState(0);
+  // const [stock, setStock] = useState(0);
   const [route, setRoute] = useState("");
   const [menu, setMenu] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -31,23 +31,23 @@ export default function Secondary() {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  useEffect(() => {
-    if (user && user.outlet) {
-      getStockValue(user.outlet); // Pass outlet name from the user object
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user && user.outlet) {
+  //     getStockValue(user.outlet); // Pass outlet name from the user object
+  //   }
+  // }, [user]);
 
-  const getStockValue = async (outletName) => {
-    try {
-      const response = await axios.get(
-        `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
-      );
-      const stockValue = response.data.totalStockValue;
-      setStock(stockValue); // Update the stock state with the received value
-    } catch (error) {
-      console.error("Error fetching stock value:", error);
-    }
-  };
+  // const getStockValue = async (outletName) => {
+  //   try {
+  //     const response = await axios.get(
+  //       `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
+  //     );
+  //     const stockValue = response.data.totalStockValue;
+  //     setStock(stockValue); // Update the stock state with the received value
+  //   } catch (error) {
+  //     console.error("Error fetching stock value:", error);
+  //   }
+  // };
 
   // Search products from the backend based on search type
   const handleSearch = async (query) => {

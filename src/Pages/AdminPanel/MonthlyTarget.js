@@ -22,7 +22,6 @@ const MonthlyTargetPage = () => {
         console.error("Failed to fetch users");
       }
     };
-
     fetchUsers();
   }, []);
 
