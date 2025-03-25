@@ -11,11 +11,13 @@ const DealerSalesReport = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("SO");  // New state for role filter
+  const [selectedZone, setSelectedZone] = useState("");  // New state for zone filter
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [selectedRole, selectedZone]);  // Fetch users whenever filters change
 
   useEffect(() => {
     if (users.length > 0) {
@@ -66,6 +68,36 @@ const DealerSalesReport = () => {
       setLoading(false);
     }
   };
+
+  // Aggregating Reports for ASM, RSM, and SOM
+  const aggregatedReports = users.map((user) => {
+    let totalReports = 0;
+    let totalMRP = 0;
+
+    if (user.role === "ASM" || user.role === "RSM" || user.role === "SOM") {
+      const assignedSOs = users.filter(u => u.zone.includes(user.zone));
+      totalReports = assignedSOs.reduce(
+        (sum, so) => sum + (salesReports[so._id]?.length || 0),
+        0
+      );
+      totalMRP = assignedSOs.reduce(
+        (sum, so) => sum + (salesReports[so._id]?.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0) || 0),
+        0
+      );
+    } else {
+      totalReports = salesReports[user._id]?.length || 0;
+      totalMRP = salesReports[user._id]?.reduce((sum, report) => sum + (report.total_mrp || 0), 0) || 0;
+    }
+
+    return {
+      userId: user._id,
+      name: user.name,
+      outlet: user.outlet,
+      role: user.role,
+      totalReports,
+      totalMRP
+    };
+  });
 
   // Calculate Summary Data
   const totalDealers = users.length;
@@ -130,6 +162,40 @@ const DealerSalesReport = () => {
               className="border rounded p-2 ml-2"
             />
           </div>
+
+          {/* Role Filter Dropdown */}
+          <div>
+            <label className="font-medium">Role: </label>
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="border rounded p-2 ml-2"
+            >
+              <option value="">All Roles</option>
+              <option value="SO">Sales Officer</option>
+              <option value="SELF">Self</option>
+              <option value="COMMISSION">Commission</option>
+              <option value="ASM">ASM</option>
+              <option value="RSM">RSM</option>
+              <option value="SOM">SOM</option>
+            </select>
+          </div>
+
+          {/* Zone Filter Dropdown */}
+          {/* <div>
+            <label className="font-medium">Zone: </label>
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="border rounded p-2 ml-2"
+            >
+              <option value="">All Zones</option>
+              <option value="Zone 1">ZONE-1</option>
+              <option value="Zone 2">Zone 2</option>
+              <option value="Zone 3">Zone 3</option>
+            </select>
+          </div> */}
+
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2"
             onClick={fetchSalesReports}
@@ -141,6 +207,8 @@ const DealerSalesReport = () => {
             onClick={() => {
               setStartDate("");
               setEndDate("");
+              setSelectedRole("");
+              setSelectedZone("");
               fetchSalesReports();
             }}
           >
@@ -159,45 +227,34 @@ const DealerSalesReport = () => {
               <tr className="bg-gray-100">
                 <th className="border p-2">User</th>
                 <th className="border p-2">Outlet</th>
+                <th className="border p-2">Role</th>
                 <th className="border p-2">Total Reports</th>
                 <th className="border p-2">Total MRP</th>
                 <th className="border p-2">Action</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
-                const reports = salesReports[user._id] || [];
-                const totalReports = reports.length;
-                const totalMRP = reports.reduce(
-                  (sum, report) => sum + (report.total_mrp || 0),
-                  0
-                );
-
-                return (
-                  <tr key={user._id} className="border">
-                    <td className="border p-2">{user.name}</td>
-                    <td className="border p-2">{user.outlet}</td>
-                    <td className="border p-2">{totalReports}</td>
-                    <td className="border p-2">৳{totalMRP.toFixed(2)}</td>
-                    <td className="border p-2">
-                      <button
-                        className="bg-gray-800 text-white px-3 py-1 rounded"
-                        onClick={() =>
-                          navigate(
-                            `/sales-report/daily/${user._id}?${
-                              startDate && endDate
-                                ? `startDate=${startDate}&endDate=${endDate}`
-                                : `month=${selectedMonth}`
-                            }`
-                          )
-                        }
-                      >
-                        View Daily Report
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+            {aggregatedReports.map((user) => (
+              <tr key={user.userId} className="border">
+                <td className="border p-2">{user.name}</td>
+                <td className="border p-2">{user.outlet}</td>
+                <td className="border p-2">{user.role}</td>
+                <td className="border p-2">{user.totalReports}</td>
+                <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
+                <td className="border p-2">
+                  <button
+                    className="bg-gray-800 text-white px-3 py-1 rounded"
+                    onClick={() =>
+                      navigate(
+                        `/sales-report/daily/${user.userId}?$${startDate && endDate ? `startDate=${startDate}&endDate=${endDate}` : `month=${selectedMonth}`}`
+                      )
+                    }
+                  >
+                    View Daily Report
+                  </button>
+                </td>
+              </tr>
+            ))}
             </tbody>
           </table>
         )}
