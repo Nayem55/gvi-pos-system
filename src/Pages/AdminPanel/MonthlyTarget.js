@@ -7,12 +7,11 @@ import toast from "react-hot-toast";
 const MonthlyTargetPage = () => {
   const [users, setUsers] = useState([]);
   const [targets, setTargets] = useState({}); // Store targets fetched from the database
-  const [tempTargets, setTempTargets] = useState({}); // Store temporary input values
+  const [tempTargets, setTempTargets] = useState({}); // Store temporary input values for both TP and DP
   const [year, setYear] = useState(dayjs().year());
   const [month, setMonth] = useState(dayjs().format("MM"));
   const [loading, setLoading] = useState(false);
 
-  // Fetch users when the component mounts
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -25,7 +24,6 @@ const MonthlyTargetPage = () => {
     fetchUsers();
   }, []);
 
-  // Fetch targets for the selected year and month
   useEffect(() => {
     const fetchTargets = async () => {
       if (!year || !month) return;
@@ -35,7 +33,6 @@ const MonthlyTargetPage = () => {
           params: { year, month },
         });
 
-        // Map the targets data to associate each userID with their target
         const targetsMap = {};
         res.data.forEach((targetEntry) => {
           targetEntry.targets.forEach((target) => {
@@ -43,12 +40,15 @@ const MonthlyTargetPage = () => {
               target.year === parseInt(year) &&
               target.month === parseInt(month)
             ) {
-              targetsMap[targetEntry.userID] = target.target;
+              targetsMap[targetEntry.userID] = {
+                tp: target.tp,
+                dp: target.dp, // Store DP along with TP
+              };
             }
           });
         });
 
-        setTargets(targetsMap); // Update the targets state
+        setTargets(targetsMap);
         setTempTargets(targetsMap); // Initialize tempTargets with fetched targets
       } catch (error) {
         console.error("Failed to fetch targets");
@@ -58,48 +58,50 @@ const MonthlyTargetPage = () => {
     fetchTargets();
   }, [year, month]);
 
-  // Handle target input change
-  const handleTargetChange = (userID, value) => {
-    setTempTargets((prev) => ({ ...prev, [userID]: value }));
+  const handleTargetChange = (userID, value, field) => {
+    setTempTargets((prev) => ({
+      ...prev,
+      [userID]: {
+        ...prev[userID],
+        [field]: value,
+      },
+    }));
   };
 
-  // Save or update target for a user
   const handleUserTargetSaveOrUpdate = async (userID) => {
-    const target = tempTargets[userID]; // Get the target value from tempTargets
+    const { tp, dp } = tempTargets[userID];
 
-    if (target === undefined || target === "") {
-      return alert("Please enter a valid target");
+    if (tp === undefined || dp === undefined || tp === "" || dp === "") {
+      return alert("Please enter valid TP and DP values");
     }
 
-    setLoading(true); // Show loading indicator
+    setLoading(true);
 
     try {
-      // Check if the target already exists for the user in the database
       const targetExists = targets[userID] !== undefined;
 
       if (targetExists) {
-        // PUT request to update the existing target
         await axios.put("https://gvi-pos-server.vercel.app/targets", {
           userID,
           year: parseInt(year),
           month: parseInt(month),
-          target,
+          tp,
+          dp, // Send DP value along with TP
         });
         toast.success("Target updated successfully");
       } else {
-        // POST request to create a new target
         await axios.post("https://gvi-pos-server.vercel.app/targets", {
           year: parseInt(year),
           month: parseInt(month),
-          targets: [{ userID, target }],
+          targets: [{ userID, tp, dp }], // Include both TP and DP in the POST request
         });
         toast.success("Target created successfully");
       }
 
-      // Refresh targets after saving or updating
       const res = await axios.get("https://gvi-pos-server.vercel.app/targets", {
         params: { year, month },
       });
+
       const updatedTargetsMap = {};
       res.data.forEach((targetEntry) => {
         targetEntry.targets.forEach((target) => {
@@ -107,28 +109,30 @@ const MonthlyTargetPage = () => {
             target.year === parseInt(year) &&
             target.month === parseInt(month)
           ) {
-            updatedTargetsMap[targetEntry.userID] = target.target;
+            updatedTargetsMap[targetEntry.userID] = {
+              tp: target.tp,
+              dp: target.dp, // Store DP alongside TP in the updated state
+            };
           }
         });
       });
+
       setTargets(updatedTargetsMap);
       setTempTargets(updatedTargetsMap); // Sync tempTargets with the updated targets
     } catch (error) {
       console.error("Failed to save or update target", error.response?.data || error);
       toast.error("Error saving or updating target");
     } finally {
-      setLoading(false); // Hide loading indicator
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex">
       <AdminSidebar />
-
       <div className="p-6 bg-gray-100 min-h-screen flex-1">
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
           <h2 className="text-2xl font-semibold mb-6">Set Monthly Targets</h2>
-
           <div className="mb-6 flex gap-4 items-center">
             <input
               type="number"
@@ -149,13 +153,13 @@ const MonthlyTargetPage = () => {
               ))}
             </select>
           </div>
-
           <table className="w-full table-auto border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-200">
                 <th className="border p-3 text-left">User</th>
                 <th className="border p-3 text-left">Outlet</th>
-                <th className="border p-3 text-center">Target</th>
+                <th className="border p-3 text-center">Target (TP)</th>
+                <th className="border p-3 text-center">Target (DP)</th>
                 <th className="border p-3 text-center">Action</th>
               </tr>
             </thead>
@@ -168,10 +172,16 @@ const MonthlyTargetPage = () => {
                     <input
                       type="number"
                       className="border p-2 rounded w-32"
-                      value={tempTargets[user._id] || ""}
-                      onChange={(e) =>
-                        handleTargetChange(user._id, e.target.value)
-                      }
+                      value={tempTargets[user._id]?.tp || ""}
+                      onChange={(e) => handleTargetChange(user._id, e.target.value, 'tp')}
+                    />
+                  </td>
+                  <td className="border p-3 text-center">
+                    <input
+                      type="number"
+                      className="border p-2 rounded w-32"
+                      value={tempTargets[user._id]?.dp || ""}
+                      onChange={(e) => handleTargetChange(user._id, e.target.value, 'dp')}
                     />
                   </td>
                   <td className="border p-3 text-center">
