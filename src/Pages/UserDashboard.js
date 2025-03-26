@@ -47,7 +47,7 @@ const UserDashboard = () => {
           (t) => t.year === parseInt(year) && t.month === parseInt(month)
         );
         if (targetForMonth) {
-          setTarget(targetForMonth.target);
+          setTarget(targetForMonth.tp);
         }
       }
     } catch (error) {
