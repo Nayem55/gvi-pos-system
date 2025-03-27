@@ -153,58 +153,61 @@ export default function Primary({ user, stock, setStock }) {
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2">Product Name</th>
-                <th className="border p-2">Opening Stock</th>
-                <th className="border p-2">Value (DP)</th>
-                <th className="border p-2">Primary</th>
-                <th className="border p-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {searchResults.map((product) => (
-                <tr key={product.barcode} className="border">
-                  <td className="border p-2">{product.name}</td>
-                  <td className="border p-2">
-                    {primaryItems[product.barcode]?.openingStock || 0}
-                  </td>
-                  <td className="border p-2">
-                    {primaryItems[product.barcode]?.openingStock * (product.promoDP || product.dp) || 0}
-                  </td>
-                  <td className="border p-2">
-                    <input
-                      type="number"
-                      value={primaryItems[product.barcode]?.primary}
-                      onChange={(e) =>
-                        handlePrimaryChange(product.barcode, e.target.value)
-                      }
-                      className="border p-1 w-full text-center"
-                    />
-                  </td>
-  
-                  <td className="border p-2">
-                    <button
-                      onClick={() => handleUpdateStock(product.barcode)}
-                      disabled={updating[product.barcode]}
-                      className={`${
-                        updating[product.barcode]
-                          ? "bg-gray-400"
-                          : "bg-green-500"
-                      } text-white px-3 py-1 rounded-md w-full`}
-                    >
-                      {updating[product.barcode] ? (
-                        <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div>
-                      ) : (
-                        "Update"
-                      )}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">Product Name</th>
+                  <th className="border p-2">Opening Stock</th>
+                  <th className="border p-2">Value (DP)</th>
+                  <th className="border p-2">Primary</th>
+                  <th className="border p-2">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {searchResults.map((product) => (
+                  <tr key={product.barcode} className="border">
+                    <td className="border p-2">{product.name}</td>
+                    <td className="border p-2">
+                      {primaryItems[product.barcode]?.openingStock || 0}
+                    </td>
+                    <td className="border p-2">
+                      {primaryItems[product.barcode]?.openingStock *
+                        (product.promoDP || product.dp) || 0}
+                    </td>
+                    <td className="border p-2">
+                      <input
+                        type="number"
+                        value={primaryItems[product.barcode]?.primary}
+                        onChange={(e) =>
+                          handlePrimaryChange(product.barcode, e.target.value)
+                        }
+                        className="border p-1 w-full text-center"
+                      />
+                    </td>
+
+                    <td className="border p-2">
+                      <button
+                        onClick={() => handleUpdateStock(product.barcode)}
+                        disabled={updating[product.barcode]}
+                        className={`${
+                          updating[product.barcode]
+                            ? "bg-gray-400"
+                            : "bg-green-500"
+                        } text-white px-3 py-1 rounded-md w-full`}
+                      >
+                        {updating[product.barcode] ? (
+                          <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div>
+                        ) : (
+                          "Update"
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
