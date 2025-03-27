@@ -164,14 +164,14 @@ export default function Secondary({stock,setStock}) {
         route: route,
         menu: menu,
         sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"), // Use selected date
-        total_tp: cart.reduce((sum, item) => sum + item.tp * item.pcs, 0),
+        total_tp: cart.reduce((sum, item) => sum + item.promoTP * item.pcs, 0),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
         products: cart.map((item) => ({
           product_name: item.name,
           category: item.category,
           barcode: item.barcode,
           quantity: item.pcs,
-          tp: item.tp * item.pcs,
+          tp: item.promoTP * item.pcs,
           mrp: item.mrp * item.pcs,
         })),
       };
@@ -209,7 +209,7 @@ export default function Secondary({stock,setStock}) {
         />
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-            Stock : {stock.toLocaleString()}
+          Stock (DP) : {stock.toLocaleString()}
           </span>
         )}
       </div>

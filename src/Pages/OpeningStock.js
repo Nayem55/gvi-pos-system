@@ -85,7 +85,7 @@ export default function OpeningStock({ user, stock, setStock }) {
         </span>
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-            Outlet Stock: {stock.toLocaleString()}
+          Stock (DP) : {stock.toLocaleString()}
           </span>
         )}
       </div>
@@ -115,6 +115,7 @@ export default function OpeningStock({ user, stock, setStock }) {
                 {/* <th className="border p-2">Barcode</th> */}
                 <th className="border p-2">Product Name</th>
                 <th className="border p-2">Opening Stock</th>
+                <th className="border p-2">Value (DP)</th>
                 <th className="border p-2">Action</th>
               </tr>
             </thead>
@@ -126,7 +127,7 @@ export default function OpeningStock({ user, stock, setStock }) {
                   <td className="border p-2">
                     <input
                       type="number"
-                      value={stocks[product.barcode] || 0}
+                      value={stocks[product.barcode]}
                       onChange={(e) =>
                         handleStockChange(
                           product.barcode,
@@ -136,6 +137,7 @@ export default function OpeningStock({ user, stock, setStock }) {
                       className="border p-1 w-full text-center"
                     />
                   </td>
+                  <td className="border p-2">{stocks[product.barcode] * (product.promoDP || product.dp)}</td>
                   <td className="border p-2">
                     <button
                       onClick={() => updateStock(product.barcode)}

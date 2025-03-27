@@ -113,7 +113,7 @@ export default function MarketReturn({ user, stock, setStock }) {
         </span>
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-            Outlet Stock: {stock.toLocaleString()}
+            Stock (DP) : {stock.toLocaleString()}
           </span>
         )}
       </div>
@@ -142,6 +142,7 @@ export default function MarketReturn({ user, stock, setStock }) {
               <tr className="bg-gray-100">
                 <th className="border p-2">Product Name</th>
                 <th className="border p-2">Opening Stock</th>
+                <th className="border p-2">Value (TP)</th>
                 <th className="border p-2">Market Return</th>
                 <th className="border p-2">Action</th>
               </tr>
@@ -154,11 +155,19 @@ export default function MarketReturn({ user, stock, setStock }) {
                     {marketReturnItems[product.barcode]?.openingStock || 0}
                   </td>
                   <td className="border p-2">
+                    {marketReturnItems[product.barcode]?.openingStock * (product.promoDP || product.dp) || 0}
+                  </td>
+                  <td className="border p-2">
                     <input
                       type="number"
-                      value={marketReturnItems[product.barcode]?.marketReturn || 0}
+                      value={
+                        marketReturnItems[product.barcode]?.marketReturn || 0
+                      }
                       onChange={(e) =>
-                        handleMarketReturnChange(product.barcode, e.target.value)
+                        handleMarketReturnChange(
+                          product.barcode,
+                          e.target.value
+                        )
                       }
                       className="border p-1 w-full text-center"
                     />

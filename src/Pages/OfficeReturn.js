@@ -113,7 +113,7 @@ export default function OfficeReturn({ user, stock, setStock }) {
         </span>
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-            Outlet Stock: {stock.toLocaleString()}
+            Stock (DP) : {stock.toLocaleString()}
           </span>
         )}
       </div>
@@ -142,6 +142,7 @@ export default function OfficeReturn({ user, stock, setStock }) {
               <tr className="bg-gray-100">
                 <th className="border p-2">Product Name</th>
                 <th className="border p-2">Opening Stock</th>
+                <th className="border p-2">Value (DP)</th>
                 <th className="border p-2">Office Return</th>
                 <th className="border p-2">Action</th>
               </tr>
@@ -154,11 +155,20 @@ export default function OfficeReturn({ user, stock, setStock }) {
                     {officeReturnItems[product.barcode]?.openingStock || 0}
                   </td>
                   <td className="border p-2">
+                    {officeReturnItems[product.barcode]?.openingStock *
+                      (product.promoDP || product.dp)}
+                  </td>
+                  <td className="border p-2">
                     <input
                       type="number"
-                      value={officeReturnItems[product.barcode]?.officeReturn || 0}
+                      value={
+                        officeReturnItems[product.barcode]?.officeReturn || 0
+                      }
                       onChange={(e) =>
-                        handleOfficeReturnChange(product.barcode, e.target.value)
+                        handleOfficeReturnChange(
+                          product.barcode,
+                          e.target.value
+                        )
                       }
                       className="border p-1 w-full text-center"
                     />

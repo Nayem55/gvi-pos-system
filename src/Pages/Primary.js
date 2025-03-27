@@ -74,7 +74,7 @@ export default function Primary({ user, stock, setStock }) {
       ...prev,
       [barcode]: {
         ...prev[barcode],
-        primary: parseInt(value) || 0,
+        primary: parseInt(value),
       },
     }));
   };
@@ -129,7 +129,7 @@ export default function Primary({ user, stock, setStock }) {
         </span>
         {user?.outlet && (
           <span className="text-sm font-semibold">
-            Outlet Stock: {stock.toLocaleString()}
+            Stock (DP) : {stock.toLocaleString()}
           </span>
         )}
       </div>
@@ -158,6 +158,7 @@ export default function Primary({ user, stock, setStock }) {
               <tr className="bg-gray-100">
                 <th className="border p-2">Product Name</th>
                 <th className="border p-2">Opening Stock</th>
+                <th className="border p-2">Value (DP)</th>
                 <th className="border p-2">Primary</th>
                 <th className="border p-2">Action</th>
               </tr>
@@ -170,15 +171,19 @@ export default function Primary({ user, stock, setStock }) {
                     {primaryItems[product.barcode]?.openingStock || 0}
                   </td>
                   <td className="border p-2">
+                    {primaryItems[product.barcode]?.openingStock * (product.promoDP || product.dp) || 0}
+                  </td>
+                  <td className="border p-2">
                     <input
                       type="number"
-                      value={primaryItems[product.barcode]?.primary || 0}
+                      value={primaryItems[product.barcode]?.primary}
                       onChange={(e) =>
                         handlePrimaryChange(product.barcode, e.target.value)
                       }
                       className="border p-1 w-full text-center"
                     />
                   </td>
+  
                   <td className="border p-2">
                     <button
                       onClick={() => handleUpdateStock(product.barcode)}
