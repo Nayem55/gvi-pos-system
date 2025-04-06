@@ -105,7 +105,7 @@ const Header = () => {
             </svg>
             <p className="font-bold">Profile</p>
           </Link>
-          <Link
+          {/* <Link
             to={"/manage-stock"}
             className="block py-2 px-[20px] text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"
             onClick={toggleSidebar}
@@ -113,7 +113,7 @@ const Header = () => {
             <Layers size={24} />
 
             <p className="font-bold">Manage Stock</p>
-          </Link>
+          </Link> */}
           <Link
             to={"/dashboard"}
             className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"
