@@ -103,7 +103,7 @@ export default function Secondary({stock,setStock}) {
                 ? {
                     ...item,
                     pcs: item.pcs + 1,
-                    total: (item.pcs + 1) * item.mrp,
+                    total: (item.pcs + 1) * item.promoTP,
                   }
                 : item
             )
@@ -119,7 +119,7 @@ export default function Secondary({stock,setStock}) {
           {
             ...productWithStock,
             pcs: 1,
-            total: parseInt(productWithStock.tp),
+            total: productWithStock.promoTP,
           },
         ]);
       }
@@ -138,7 +138,7 @@ export default function Secondary({stock,setStock}) {
               ...item,
               pcs: Math.max(1, Math.min(item.pcs + change, item.stock)), // Ensure pcs is within available stock
               total:
-                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.mrp,
+                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.promoTP,
             }
           : item
       )
@@ -312,7 +312,7 @@ export default function Secondary({stock,setStock}) {
                   </div>
                 </td>
                 <td className="p-2 w-1/6 text-center">{item.mrp} BDT</td>
-                <td className="p-2 w-1/6 text-center">{item.tp} BDT</td>
+                <td className="p-2 w-1/6 text-center">{item.promoTP} BDT</td>
                 <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
                 <td className="p-2 w-1/6 text-center">
                   <button
