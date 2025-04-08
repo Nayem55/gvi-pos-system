@@ -19,6 +19,7 @@ import MonthlyTargetPage from "../Pages/AdminPanel/MonthlyTarget";
 import AdminHomePage from "../Pages/AdminPanel/AdminHomePage";
 import Home from "../Pages/Homepage/Homepage";
 import PromotionalPage from "../Pages/AdminPanel/Promotion";
+import StockMovementReport from "../Pages/AdminPanel/StockMovementReport";
 
 const router = createBrowserRouter([
   {
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/promotion",
         element: <PromotionalPage/>,
+      },
+      {
+        path: "/admin/stock-movement",
+        element: <StockMovementReport/>,
       },
       {
         path: "/admin/sales-movement/dealer-wise",
