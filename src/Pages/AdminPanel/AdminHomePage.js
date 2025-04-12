@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
-import { ShoppingCart, DollarSign, Box, TrendingUp } from "lucide-react";
+import {
+  ShoppingCart,
+  DollarSign,
+  Box,
+  TrendingUp,
+  Star,
+  Tag,
+  Users,
+} from "lucide-react";
 import AdminSidebar from "../../Component/AdminSidebar";
 import {
   BarChart,
@@ -19,6 +27,9 @@ import {
 const AdminHomePage = () => {
   const [salesData, setSalesData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [topCategories, setTopCategories] = useState([]);
+  const [topDealers, setTopDealers] = useState([]);
   const [summary, setSummary] = useState({
     totalSold: 0,
     totalTP: 0,
@@ -31,6 +42,7 @@ const AdminHomePage = () => {
   useEffect(() => {
     fetchSalesData({ month });
     fetchCategoryData();
+    fetchTopData();
   }, [month]);
 
   const fetchSalesData = async (params) => {
@@ -71,34 +83,81 @@ const AdminHomePage = () => {
     }
   };
 
+  const fetchTopData = async () => {
+    try {
+      const [productsRes, categoriesRes, dealersRes] = await Promise.all([
+        axios.get("https://gvi-pos-server.vercel.app/top-products", {
+          params: { month },
+        }),
+        axios.get("https://gvi-pos-server.vercel.app/top-categories", {
+          params: { month },
+        }),
+        axios.get("https://gvi-pos-server.vercel.app/top-dealers", {
+          params: { month },
+        }),
+      ]);
+      setTopProducts(productsRes.data);
+      setTopCategories(categoriesRes.data);
+      setTopDealers(dealersRes.data);
+    } catch (error) {
+      console.error("Error fetching top data:", error);
+    }
+  };
+
   const totalCategories = categoryData.length;
+
+  // Generate last 12 months for select options
+  const getLast12Months = () => {
+    const months = [];
+    for (let i = 0; i < 12; i++) {
+      months.push(dayjs().subtract(i, "month").format("YYYY-MM"));
+    }
+    return months;
+  };
+
 
   return (
     <div className="flex">
       <AdminSidebar />
       <div className="p-6 bg-gray-100 min-h-screen w-full">
-        <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-          <TrendingUp size={24} /> Admin Dashboard
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <TrendingUp size={24} /> Admin Dashboard
+          </h1>
+          <div>
+            <label htmlFor="month" className="mr-2 font-medium">
+              Select Month:
+            </label>
+            <select
+              id="month"
+              className="px-3 py-2 border rounded-md"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            >
+              {getLast12Months().map((m) => (
+                <option key={m} value={m}>
+                  {dayjs(m).format("MMMM YYYY")}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
+        {/* Summary cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-blue-100 p-6 rounded-lg shadow-md">
             <div className="flex items-center gap-3">
               <DollarSign size={24} className="text-blue-500" />
               <h3 className="text-xl font-semibold">Total MRP</h3>
             </div>
-            <p className="text-2xl font-bold mt-2">
-              ৳{summary.totalMRP.toFixed(2)}
-            </p>
+            <p className="text-2xl font-bold mt-2">৳{summary.totalMRP.toFixed(2)}</p>
           </div>
           <div className="bg-green-100 p-6 rounded-lg shadow-md">
             <div className="flex items-center gap-3">
               <DollarSign size={24} className="text-green-500" />
               <h3 className="text-xl font-semibold">Total TP</h3>
             </div>
-            <p className="text-2xl font-bold mt-2">
-              ৳{summary.totalTP.toFixed(2)}
-            </p>
+            <p className="text-2xl font-bold mt-2">৳{summary.totalTP.toFixed(2)}</p>
           </div>
           <div className="bg-yellow-100 p-6 rounded-lg shadow-md">
             <div className="flex items-center gap-3">
@@ -116,6 +175,7 @@ const AdminHomePage = () => {
           </div>
         </div>
 
+        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-xl font-semibold mb-4">Monthly Sales Trend</h3>
@@ -150,6 +210,51 @@ const AdminHomePage = () => {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Top Data */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Star size={20} /> Top 10 Products
+            </h3>
+            <ul className="space-y-2">
+              {topProducts.map((item, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>{item._id}</span>
+                  <span className="font-semibold">{item.total_tp.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Tag size={20} /> Top 10 Categories
+            </h3>
+            <ul className="space-y-2">
+              {topCategories.map((item, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>{item._id}</span>
+                  <span className="font-semibold">{item.total_tp.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Users size={20} /> Top 10 Dealers
+            </h3>
+            <ul className="space-y-2">
+              {topDealers?.map((item, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>{item._id}</span>
+                  <span className="font-semibold">{item.total_tp.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>
