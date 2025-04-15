@@ -103,13 +103,13 @@ const StockMovementReport = () => {
         {/* Summary Section */}
         {!loading && reportData.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white border-l-4 border-blue-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Primary (PC)</p>
-              <p className="text-2xl font-semibold text-blue-700">{totalPrimary}</p>
-            </div>
             <div className="bg-white border-l-4 border-green-600 rounded shadow p-4">
+              <p className="text-sm text-gray-600">Total Primary (PC)</p>
+              <p className="text-2xl font-semibold text-green-700">{totalPrimary}</p>
+            </div>
+            <div className="bg-white border-l-4 border-red-600 rounded shadow p-4">
               <p className="text-sm text-gray-600">Total Market Return (PC)</p>
-              <p className="text-2xl font-semibold text-green-700">{totalMarketReturn}</p>
+              <p className="text-2xl font-semibold text-red-700">{totalMarketReturn}</p>
             </div>
             <div className="bg-white border-l-4 border-yellow-600 rounded shadow p-4">
               <p className="text-sm text-gray-600">Total Office Return (PC)</p>
