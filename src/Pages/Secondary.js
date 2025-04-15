@@ -10,7 +10,6 @@ export default function Secondary({stock,setStock}) {
   const [cart, setCart] = useState(
     () => JSON.parse(localStorage.getItem("cart")) || []
   );
-  // const [stock, setStock] = useState(0);
   const [route, setRoute] = useState("");
   const [menu, setMenu] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -31,23 +30,10 @@ export default function Secondary({stock,setStock}) {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  // useEffect(() => {
-  //   if (user && user.outlet) {
-  //     getStockValue(user.outlet); // Pass outlet name from the user object
-  //   }
-  // }, [user]);
-
-  // const getStockValue = async (outletName) => {
-  //   try {
-  //     const response = await axios.get(
-  //       `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
-  //     );
-  //     const stockValue = response.data.totalStockValue;
-  //     setStock(stockValue); // Update the stock state with the received value
-  //   } catch (error) {
-  //     console.error("Error fetching stock value:", error);
-  //   }
-  // };
+  // Format number to 2 decimal places
+  const formatNumber = (num) => {
+    return parseFloat(num).toFixed(2);
+  };
 
   // Search products from the backend based on search type
   const handleSearch = async (query) => {
@@ -90,7 +76,12 @@ export default function Secondary({stock,setStock}) {
       }
 
       // Append the outlet stock to the product data as a new property
-      const productWithStock = { ...product, stock: outletStock };
+      const productWithStock = { 
+        ...product, 
+        stock: outletStock,
+        promoTP: formatNumber(product.promoTP),
+        mrp: formatNumber(product.mrp)
+      };
       const existingItem = cart.find(
         (item) => item._id === productWithStock._id
       );
@@ -103,7 +94,7 @@ export default function Secondary({stock,setStock}) {
                 ? {
                     ...item,
                     pcs: item.pcs + 1,
-                    total: (item.pcs + 1) * item.promoTP,
+                    total: formatNumber((item.pcs + 1) * parseFloat(item.promoTP)),
                   }
                 : item
             )
@@ -119,7 +110,7 @@ export default function Secondary({stock,setStock}) {
           {
             ...productWithStock,
             pcs: 1,
-            total: productWithStock.promoTP,
+            total: formatNumber(productWithStock.promoTP),
           },
         ]);
       }
@@ -137,8 +128,9 @@ export default function Secondary({stock,setStock}) {
           ? {
               ...item,
               pcs: Math.max(1, Math.min(item.pcs + change, item.stock)), // Ensure pcs is within available stock
-              total:
-                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.promoTP,
+              total: formatNumber(
+                Math.max(1, Math.min(item.pcs + change, item.stock)) * parseFloat(item.promoTP)
+              ),
             }
           : item
       )
@@ -157,6 +149,14 @@ export default function Secondary({stock,setStock}) {
     try {
       setIsSubmitting(true);
 
+      // Calculate totals with 2 decimal places
+      const totalTP = formatNumber(
+        cart.reduce((sum, item) => sum + parseFloat(item.promoTP) * item.pcs, 0)
+      );
+      const totalMRP = formatNumber(
+        cart.reduce((sum, item) => sum + parseFloat(item.mrp) * item.pcs, 0)
+      );
+
       // Create a single sale entry with all cart items as an array of products
       const saleEntry = {
         user: user._id,
@@ -164,15 +164,15 @@ export default function Secondary({stock,setStock}) {
         route: route,
         menu: menu,
         sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"), // Use selected date
-        total_tp: cart.reduce((sum, item) => sum + item.promoTP * item.pcs, 0),
-        total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
+        total_tp: totalTP,
+        total_mrp: totalMRP,
         products: cart.map((item) => ({
           product_name: item.name,
           category: item.category,
           barcode: item.barcode,
           quantity: item.pcs,
-          tp: item.promoTP * item.pcs,
-          mrp: item.mrp * item.pcs,
+          tp: formatNumber(parseFloat(item.promoTP) * item.pcs),
+          mrp: formatNumber(parseFloat(item.mrp) * item.pcs),
         })),
       };
 
@@ -197,6 +197,11 @@ export default function Secondary({stock,setStock}) {
     }
   };
 
+  // Calculate cart total with 2 decimal places
+  const cartTotal = formatNumber(
+    cart.reduce((sum, item) => sum + parseFloat(item.total), 0)
+  );
+
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
       {/* Date & Outlet Stock */}
@@ -209,7 +214,10 @@ export default function Secondary({stock,setStock}) {
         />
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-          Stock (DP) : {stock.toLocaleString()}
+          Stock (DP) : {parseFloat(stock).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })}
           </span>
         )}
       </div>
@@ -311,9 +319,9 @@ export default function Secondary({stock,setStock}) {
                     </button>
                   </div>
                 </td>
-                <td className="p-2 w-1/6 text-center">{item.mrp} BDT</td>
-                <td className="p-2 w-1/6 text-center">{item.promoTP} BDT</td>
-                <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
+                <td className="p-2 w-1/6 text-center">{formatNumber(item.mrp)} BDT</td>
+                <td className="p-2 w-1/6 text-center">{formatNumber(item.promoTP)} BDT</td>
+                <td className="p-2 w-1/6 text-center">{formatNumber(item.total)} BDT</td>
                 <td className="p-2 w-1/6 text-center">
                   <button
                     onClick={() => removeFromCart(item._id)}
@@ -340,7 +348,7 @@ export default function Secondary({stock,setStock}) {
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0)} BDT
+          Total: {cartTotal} BDT
         </span>
         <button
           onClick={handleSubmit}
