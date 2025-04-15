@@ -12,11 +12,6 @@ const UserDashboard = () => {
   const [target, setTarget] = useState(null);
   const user = JSON.parse(localStorage.getItem("pos-user"));
 
-  // Helper function to format numbers to 2 decimal places
-  const formatNumber = (num) => {
-    return parseFloat(num || 0).toFixed(2);
-  };
-
   useEffect(() => {
     fetchDailyReports();
     fetchUserTarget();
@@ -28,18 +23,7 @@ const UserDashboard = () => {
       const response = await axios.get(
         `https://gvi-pos-server.vercel.app/sales-reports/${user._id}?month=${selectedMonth}`
       );
-      // Format the report data with 2 decimal places
-      const formattedReports = response.data.map(report => ({
-        ...report,
-        total_mrp: formatNumber(report.total_mrp),
-        total_tp: formatNumber(report.total_tp),
-        products: report.products.map(product => ({
-          ...product,
-          mrp: formatNumber(product.mrp),
-          tp: formatNumber(product.tp)
-        }))
-      }));
-      setReports(formattedReports); 
+      setReports(response.data); 
     } catch (error) {
       console.error("Error fetching daily reports:", error);
     }
@@ -63,7 +47,7 @@ const UserDashboard = () => {
           (t) => t.year === parseInt(year) && t.month === parseInt(month)
         );
         if (targetForMonth) {
-          setTarget(formatNumber(targetForMonth.tp));
+          setTarget(targetForMonth.tp);
         }
       }
     } catch (error) {
@@ -71,19 +55,15 @@ const UserDashboard = () => {
     }
   };
 
-  // Calculate totals with proper formatting
-  const totalMRP = formatNumber(
-    reports.reduce((sum, report) => sum + parseFloat(report.total_mrp || 0), 0)
-  );
-  const totalTP = formatNumber(
-    reports.reduce((sum, report) => sum + parseFloat(report.total_tp || 0), 0)
-  );
+  // Calculate totals
+  const totalMRP = reports.reduce((sum, report) => sum + (report.total_mrp || 0), 0);
+  const totalTP = reports.reduce((sum, report) => sum + (report.total_tp || 0), 0);
   const totalProductsSold = reports.reduce(
     (sum, report) => sum + report.products.reduce((prodSum, product) => prodSum + product.quantity, 0),
     0
   );
 
-  const percentageAchieved = target ? ((parseFloat(totalTP) / parseFloat(target)) * 100).toFixed(2) : 0;
+  const percentageAchieved = target ? ((totalTP / target) * 100).toFixed(2) : 0;
 
   return (
     <div className="flex flex-col lg:flex-row bg-gray-100 min-h-screen">
@@ -115,11 +95,11 @@ const UserDashboard = () => {
             </div>
             <div className="flex gap-2">
               <span className="text-gray-600">Total MRP :</span>
-              <span className="font-semibold text-gray-800">৳{totalMRP}</span>
+              <span className="font-semibold text-gray-800">৳{totalMRP.toFixed(2)}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-gray-600">Total TP :</span>
-              <span className="font-semibold text-gray-800">৳{totalTP}</span>
+              <span className="font-semibold text-gray-800">৳{totalTP.toFixed(2)}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-gray-600">Target Achieved :</span>
@@ -153,8 +133,8 @@ const UserDashboard = () => {
                           </div>
                         ))}
                       </td>
-                      <td className="p-4 text-gray-800">৳{formatNumber(report.total_mrp)}</td>
-                      <td className="p-4 text-gray-800">৳{formatNumber(report.total_tp)}</td>
+                      <td className="p-4 text-gray-800">৳{report.total_mrp.toFixed(2)}</td>
+                      <td className="p-4 text-gray-800">৳{report.total_tp.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
