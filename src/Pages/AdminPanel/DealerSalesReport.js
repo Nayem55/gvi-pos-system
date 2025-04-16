@@ -7,6 +7,7 @@ import AdminSidebar from "../../Component/AdminSidebar";
 const DealerSalesReport = () => {
   const [users, setUsers] = useState([]);
   const [salesReports, setSalesReports] = useState({});
+  const [targets, setTargets] = useState({}); // Changed to object for easier lookup
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -16,15 +17,24 @@ const DealerSalesReport = () => {
   const [selectedBelt, setSelectedBelt] = useState("");
   const navigate = useNavigate();
 
+  // Extract year and month from selectedMonth
+  const [year, month] = selectedMonth.split("-").map(Number);
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
   useEffect(() => {
+    if (selectedMonth) {
+      fetchTargets();
+    }
+  }, [selectedMonth]);
+
+  useEffect(() => {
     if (users.length > 0) {
       fetchSalesReports();
     }
-  }, [users]);
+  }, [users, selectedMonth, startDate, endDate]);
 
   const fetchUsers = async () => {
     try {
@@ -32,6 +42,28 @@ const DealerSalesReport = () => {
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
+    }
+  };
+
+  const fetchTargets = async () => {
+    try {
+      const response = await axios.get("https://gvi-pos-server.vercel.app/targets", {
+        params: { year, month },
+      });
+
+      // Convert targets array to an object with userID as key for easier lookup
+      const targetsMap = {};
+      response.data.forEach((targetEntry) => {
+        targetEntry.targets.forEach((target) => {
+          if (target.year === year && target.month === month) {
+            targetsMap[targetEntry.userID] = target.tp; // Using tp as the target value
+          }
+        });
+      });
+
+      setTargets(targetsMap);
+    } catch (error) {
+      console.error("Error fetching targets:", error);
     }
   };
 
@@ -72,11 +104,14 @@ const DealerSalesReport = () => {
     }
   };
 
-  // Utility to detect belt from zone
   const getBeltFromZone = (zoneName) => {
     if (zoneName.includes("ZONE-01")) return "Belt-1";
     if (zoneName.includes("ZONE-03")) return "Belt-3";
     return "";
+  };
+
+  const getUserTarget = (userId) => {
+    return targets[userId] || 0; // Return 0 if no target found
   };
 
   const filteredUsers = users.filter((user) => {
@@ -96,15 +131,16 @@ const DealerSalesReport = () => {
       totalReports = assignedSOs.reduce((sum, so) => sum + (salesReports[so._id]?.length || 0), 0);
       totalMRP = assignedSOs.reduce(
         (sum, so) =>
-          sum +
-          (salesReports[so._id]?.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0) || 0),
+          sum + (salesReports[so._id]?.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0) || 0),
         0
       );
     } else {
       totalReports = salesReports[user._id]?.length || 0;
-      totalMRP =
-        salesReports[user._id]?.reduce((sum, report) => sum + (report.total_mrp || 0), 0) || 0;
+      totalMRP = salesReports[user._id]?.reduce((sum, report) => sum + (report.total_mrp || 0), 0) || 0;
     }
+
+    const target = getUserTarget(user._id);
+    const achievement = target > 0 ? (totalMRP / target) * 100 : 0;
 
     return {
       userId: user._id,
@@ -114,6 +150,8 @@ const DealerSalesReport = () => {
       role: user.role,
       totalReports,
       totalMRP,
+      target,
+      achievement,
     };
   });
 
@@ -127,7 +165,7 @@ const DealerSalesReport = () => {
       <div className="p-4 w-full">
         <h2 className="text-2xl font-bold mb-4">Dealer Sales Reports</h2>
 
-        {/* Summary Report */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Total Dealers</h3>
@@ -260,8 +298,10 @@ const DealerSalesReport = () => {
                   <th className="border p-2">Outlet</th>
                   <th className="border p-2">Zone</th>
                   <th className="border p-2">Role</th>
-                  <th className="border p-2">Total Reports</th>
+                  <th className="border p-2">Target</th>
                   <th className="border p-2">Total MRP</th>
+                  <th className="border p-2">Achievement (%)</th>
+                  <th className="border p-2">Total Reports</th>
                   <th className="border p-2">Action</th>
                 </tr>
               </thead>
@@ -272,8 +312,12 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.outlet}</td>
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
-                    <td className="border p-2">{user.totalReports}</td>
+                    <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
+                    <td className="border p-2">
+                      {user.target > 0 ? `${user.achievement.toFixed(1)}%` : "-"}
+                    </td>
+                    <td className="border p-2">{user.totalReports}</td>
                     <td className="border p-2">
                       <button
                         className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
