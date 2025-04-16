@@ -38,7 +38,9 @@ const DealerSalesReport = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/getAllUser"
+      );
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -47,9 +49,12 @@ const DealerSalesReport = () => {
 
   const fetchTargets = async () => {
     try {
-      const response = await axios.get("https://gvi-pos-server.vercel.app/targets", {
-        params: { year, month },
-      });
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/targets",
+        {
+          params: { year, month },
+        }
+      );
 
       // Convert targets array to an object with userID as key for easier lookup
       const targetsMap = {};
@@ -115,7 +120,9 @@ const DealerSalesReport = () => {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchRole = selectedRole ? user.role === selectedRole : !["ASM", "RSM", "SOM"].includes(user.role);
+    const matchRole = selectedRole
+      ? user.role === selectedRole
+      : !["ASM", "RSM", "SOM"].includes(user.role);
     const matchZone = selectedZone ? user.zone.includes(selectedZone) : true;
     const belt = getBeltFromZone(user.zone);
     const matchBelt = selectedBelt ? belt === selectedBelt : true;
@@ -128,15 +135,26 @@ const DealerSalesReport = () => {
 
     if (["ASM", "RSM", "SOM"].includes(user.role)) {
       const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
-      totalReports = assignedSOs.reduce((sum, so) => sum + (salesReports[so._id]?.length || 0), 0);
+      totalReports = assignedSOs.reduce(
+        (sum, so) => sum + (salesReports[so._id]?.length || 0),
+        0
+      );
       totalMRP = assignedSOs.reduce(
         (sum, so) =>
-          sum + (salesReports[so._id]?.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0) || 0),
+          sum +
+          (salesReports[so._id]?.reduce(
+            (subSum, report) => subSum + (report.total_mrp || 0),
+            0
+          ) || 0),
         0
       );
     } else {
       totalReports = salesReports[user._id]?.length || 0;
-      totalMRP = salesReports[user._id]?.reduce((sum, report) => sum + (report.total_mrp || 0), 0) || 0;
+      totalMRP =
+        salesReports[user._id]?.reduce(
+          (sum, report) => sum + (report.total_mrp || 0),
+          0
+        ) || 0;
     }
 
     const target = getUserTarget(user._id);
@@ -156,8 +174,14 @@ const DealerSalesReport = () => {
   });
 
   const totalDealers = filteredUsers.length;
-  const totalReports = aggregatedReports.reduce((sum, user) => sum + user.totalReports, 0);
-  const totalMRP = aggregatedReports.reduce((sum, user) => sum + user.totalMRP, 0);
+  const totalReports = aggregatedReports.reduce(
+    (sum, user) => sum + user.totalReports,
+    0
+  );
+  const totalMRP = aggregatedReports.reduce(
+    (sum, user) => sum + user.totalMRP,
+    0
+  );
 
   return (
     <div className="flex">
@@ -315,7 +339,36 @@ const DealerSalesReport = () => {
                     <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
                     <td className="border p-2">
-                      {user.target > 0 ? `${user.achievement.toFixed(1)}%` : "-"}
+                      <div className="relative h-8 bg-[#000] bg-opacity-30 rounded-full overflow-hidden">
+                        <div
+                          className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
+                            user.achievement >= 100
+                              ? "bg-green-500"
+                              : user.achievement >= 70
+                              ? "bg-blue-500"
+                              : user.achievement >= 40
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
+                          }`}
+                          style={{
+                            width: `${Math.min(100, user.achievement)}%`,
+                            transition: "width 0.5s ease-in-out",
+                          }}
+                        >
+                          {/* <span className="text-xs font-medium text-white mix-blend-difference">
+                            {user.target > 0
+                              ? `${user.achievement.toFixed(1)}%`
+                              : "-"}
+                          </span> */}
+                        </div>
+                        {user.target > 0 && (
+                          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
+                            {user.target > 0
+                              ? `${user.achievement.toFixed(1)}%`
+                              : "-"}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="border p-2">{user.totalReports}</td>
                     <td className="border p-2">
