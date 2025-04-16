@@ -24,6 +24,7 @@ const MonthlyTargetPage = () => {
     fetchUsers();
   }, []);
 
+
   useEffect(() => {
     const fetchTargets = async () => {
       if (!year || !month) return;
@@ -79,7 +80,6 @@ const MonthlyTargetPage = () => {
 
     try {
       const targetExists = targets[userID] !== undefined;
-
       if (targetExists) {
         await axios.put("https://gvi-pos-server.vercel.app/targets", {
           userID,
