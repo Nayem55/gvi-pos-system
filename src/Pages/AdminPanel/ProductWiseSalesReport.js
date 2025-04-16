@@ -73,7 +73,7 @@ const ProductWiseSalesReport = () => {
                         </div>
                         <div className="bg-green-100 p-4 rounded-lg text-center shadow-md">
                             <h3 className="text-lg font-semibold text-green-800">Total TP</h3>
-                            <p className="text-2xl font-bold">৳{summary.totalTP}</p>
+                            <p className="text-2xl font-bold">৳{summary.totalTP.toFixed(2)}</p>
                         </div>
                         <div className="bg-red-100 p-4 rounded-lg text-center shadow-md">
                             <h3 className="text-lg font-semibold text-red-800">Total MRP</h3>
