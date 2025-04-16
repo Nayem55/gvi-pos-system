@@ -11,7 +11,9 @@ const DealerSalesReport = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(""); // Empty string shows all roles
+  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedZone, setSelectedZone] = useState("");
+  const [selectedBelt, setSelectedBelt] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,9 +28,7 @@ const DealerSalesReport = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/getAllUser"
-      );
+      const response = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -71,62 +71,55 @@ const DealerSalesReport = () => {
       setLoading(false);
     }
   };
-  // Filter users by selected role
-  const filteredUsers = selectedRole
-    ? users.filter((user) => user.role === selectedRole)
-    : users.filter((user) => !["ASM", "RSM", "SOM"].includes(user.role)); // Exclude managers in "All Roles" view
 
-  // Aggregating Reports for ASM, RSM, and SOM
+  // Utility to detect belt from zone
+  const getBeltFromZone = (zoneName) => {
+    if (zoneName.includes("ZONE-01")) return "Belt-1";
+    if (zoneName.includes("ZONE-03")) return "Belt-3";
+    return "";
+  };
+
+  const filteredUsers = users.filter((user) => {
+    const matchRole = selectedRole ? user.role === selectedRole : !["ASM", "RSM", "SOM"].includes(user.role);
+    const matchZone = selectedZone ? user.zone.includes(selectedZone) : true;
+    const belt = getBeltFromZone(user.zone);
+    const matchBelt = selectedBelt ? belt === selectedBelt : true;
+    return matchRole && matchZone && matchBelt;
+  });
+
   const aggregatedReports = filteredUsers.map((user) => {
     let totalReports = 0;
     let totalMRP = 0;
 
-    if (user.role === "ASM" || user.role === "RSM" || user.role === "SOM") {
-      // When specific manager role is selected, show their aggregated reports
+    if (["ASM", "RSM", "SOM"].includes(user.role)) {
       const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
-      totalReports = assignedSOs.reduce(
-        (sum, so) => sum + (salesReports[so._id]?.length || 0),
-        0
-      );
+      totalReports = assignedSOs.reduce((sum, so) => sum + (salesReports[so._id]?.length || 0), 0);
       totalMRP = assignedSOs.reduce(
         (sum, so) =>
           sum +
-          (salesReports[so._id]?.reduce(
-            (subSum, report) => subSum + (report.total_mrp || 0),
-            0
-          ) || 0),
+          (salesReports[so._id]?.reduce((subSum, report) => subSum + (report.total_mrp || 0), 0) || 0),
         0
       );
     } else {
-      // Regular users (SO, SELF, COMMISSION)
       totalReports = salesReports[user._id]?.length || 0;
       totalMRP =
-        salesReports[user._id]?.reduce(
-          (sum, report) => sum + (report.total_mrp || 0),
-          0
-        ) || 0;
+        salesReports[user._id]?.reduce((sum, report) => sum + (report.total_mrp || 0), 0) || 0;
     }
 
     return {
       userId: user._id,
       name: user.name,
       outlet: user.outlet,
+      zone: user.zone,
       role: user.role,
       totalReports,
       totalMRP,
     };
   });
 
-  // Calculate Summary Data based on filtered users
   const totalDealers = filteredUsers.length;
-  const totalReports = aggregatedReports.reduce(
-    (sum, user) => sum + user.totalReports,
-    0
-  );
-  const totalMRP = aggregatedReports.reduce(
-    (sum, user) => sum + user.totalMRP,
-    0
-  );
+  const totalReports = aggregatedReports.reduce((sum, user) => sum + user.totalReports, 0);
+  const totalMRP = aggregatedReports.reduce((sum, user) => sum + user.totalMRP, 0);
 
   return (
     <div className="flex">
@@ -151,9 +144,9 @@ const DealerSalesReport = () => {
         </div>
 
         {/* Filters */}
-        <div className="mb-4 flex gap-4 items-end">
+        <div className="mb-4 flex flex-wrap gap-4 items-end">
           <div>
-            <label className="font-medium">Select Month: </label>
+            <label className="font-medium">Select Month:</label>
             <input
               type="month"
               value={selectedMonth}
@@ -163,7 +156,7 @@ const DealerSalesReport = () => {
             />
           </div>
           <div>
-            <label className="font-medium">Start Date: </label>
+            <label className="font-medium">Start Date:</label>
             <input
               type="date"
               value={startDate}
@@ -172,7 +165,7 @@ const DealerSalesReport = () => {
             />
           </div>
           <div>
-            <label className="font-medium">End Date: </label>
+            <label className="font-medium">End Date:</label>
             <input
               type="date"
               value={endDate}
@@ -181,9 +174,8 @@ const DealerSalesReport = () => {
             />
           </div>
 
-          {/* Role Filter Dropdown */}
           <div>
-            <label className="font-medium">Role: </label>
+            <label className="font-medium">Role:</label>
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
@@ -199,6 +191,40 @@ const DealerSalesReport = () => {
             </select>
           </div>
 
+          <div>
+            <label className="font-medium">Zone:</label>
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="border rounded p-2 ml-2"
+            >
+              <option value="">All Zones</option>
+              <option value="DHAKA-01-ZONE-01">DHAKA-01-ZONE-01</option>
+              <option value="DHAKA-02-ZONE-03">DHAKA-02-ZONE-03</option>
+              <option value="DHAKA-03-ZONE-03">DHAKA-03-ZONE-03</option>
+              <option value="KHULNA-ZONE-01">KHULNA-ZONE-01</option>
+              <option value="COMILLA-ZONE-03">COMILLA-ZONE-03</option>
+              <option value="CHITTAGONG-ZONE-03">CHITTAGONG-ZONE-03</option>
+              <option value="RANGPUR-ZONE-01">RANGPUR-ZONE-01</option>
+              <option value="BARISAL-ZONE-03">BARISAL-ZONE-03</option>
+              <option value="BOGURA-ZONE-01">BOGURA-ZONE-01</option>
+              <option value="MYMENSINGH-ZONE-01">MYMENSINGH-ZONE-01</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="font-medium">Belt:</label>
+            <select
+              value={selectedBelt}
+              onChange={(e) => setSelectedBelt(e.target.value)}
+              className="border rounded p-2 ml-2"
+            >
+              <option value="">All Belts</option>
+              <option value="Belt-1">Belt-1 (ZONE-01)</option>
+              <option value="Belt-3">Belt-3 (ZONE-03)</option>
+            </select>
+          </div>
+
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             onClick={fetchSalesReports}
@@ -211,6 +237,8 @@ const DealerSalesReport = () => {
               setStartDate("");
               setEndDate("");
               setSelectedRole("");
+              setSelectedZone("");
+              setSelectedBelt("");
               fetchSalesReports();
             }}
           >
@@ -218,7 +246,7 @@ const DealerSalesReport = () => {
           </button>
         </div>
 
-        {/* Sales Report Table */}
+        {/* Table */}
         {loading ? (
           <div className="flex justify-center items-center my-10">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
@@ -230,6 +258,7 @@ const DealerSalesReport = () => {
                 <tr className="bg-gray-100">
                   <th className="border p-2">User</th>
                   <th className="border p-2">Outlet</th>
+                  <th className="border p-2">Zone</th>
                   <th className="border p-2">Role</th>
                   <th className="border p-2">Total Reports</th>
                   <th className="border p-2">Total MRP</th>
@@ -241,6 +270,7 @@ const DealerSalesReport = () => {
                   <tr key={user.userId} className="border">
                     <td className="border p-2">{user.name}</td>
                     <td className="border p-2">{user.outlet}</td>
+                    <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
                     <td className="border p-2">{user.totalReports}</td>
                     <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
