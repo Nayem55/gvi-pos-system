@@ -21,6 +21,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
   ResponsiveContainer,
 } from "recharts";
 
@@ -30,6 +32,7 @@ const AdminHomePage = () => {
   const [topProducts, setTopProducts] = useState([]);
   const [topCategories, setTopCategories] = useState([]);
   const [topDealers, setTopDealers] = useState([]);
+  const [dailySales, setDailySales] = useState([]);
   const [summary, setSummary] = useState({
     totalSold: 0,
     totalTP: 0,
@@ -43,6 +46,7 @@ const AdminHomePage = () => {
     fetchSalesData({ month });
     fetchCategoryData();
     fetchTopData();
+    fetchDailySalesData(month);
   }, [month]);
 
   const fetchSalesData = async (params) => {
@@ -104,9 +108,20 @@ const AdminHomePage = () => {
     }
   };
 
+  const fetchDailySalesData = async (month) => {
+    try {
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/daily-sales",
+        { params: { month } }
+      );
+      setDailySales(response.data.sales || []);
+    } catch (error) {
+      console.error("Error fetching daily sales:", error);
+    }
+  };
+
   const totalCategories = categoryData.length;
 
-  // Generate last 12 months for select options
   const getLast12Months = () => {
     const months = [];
     for (let i = 0; i < 12; i++) {
@@ -114,7 +129,6 @@ const AdminHomePage = () => {
     }
     return months;
   };
-
 
   return (
     <div className="flex">
@@ -203,7 +217,7 @@ const AdminHomePage = () => {
                   {categoryData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={["#FF6384", "#36A2EB", "#FFCE56"][index % 3]}
+                      fill={["#6aa84f", "#36A2EB", "#FFCE56", "#cc0000", "#134f5c","#660000"][index % 6]}
                     />
                   ))}
                 </Pie>
@@ -211,6 +225,21 @@ const AdminHomePage = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Daily Line Chart */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-xl font-semibold mb-4">Daily Sales (Line Chart)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dailySales}>
+              <XAxis dataKey="date" tickFormatter={(date) => dayjs(date).format("MMM D")} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="total_tp" stroke="#36A2EB" name="Total TP" />
+              {/* <Line type="monotone" dataKey="total_mrp" stroke="#FF6384" name="Total MRP" /> */}
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Top Data */}

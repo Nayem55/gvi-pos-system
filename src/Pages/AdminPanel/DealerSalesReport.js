@@ -339,7 +339,7 @@ const DealerSalesReport = () => {
                     <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
                     <td className="border p-2">
-                      <div className="relative h-8 bg-[#000] bg-opacity-30 rounded-full overflow-hidden">
+                      <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
                             user.achievement >= 100
@@ -362,7 +362,7 @@ const DealerSalesReport = () => {
                           </span> */}
                         </div>
                         {user.target > 0 && (
-                          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
+                          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
                             {user.target > 0
                               ? `${user.achievement.toFixed(1)}%`
                               : "-"}
