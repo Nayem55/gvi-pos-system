@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
+import * as XLSX from "xlsx";
 
 const DealerSalesReport = () => {
   const [users, setUsers] = useState([]);
@@ -354,11 +355,65 @@ const DealerSalesReport = () => {
   const isLoading =
     loading.users || loading.targets || loading.sales || loading.stock;
 
+  const exportToExcel = () => {
+    // Prepare the data for export
+    const exportData = aggregatedReports.map((report) => ({
+      "User Name": report.name,
+      Outlet: report.outlet,
+      Zone: report.zone,
+      Role: report.role,
+      Target: `৳${report.target}`,
+      "Total MRP": `৳${report.totalTP.toFixed(2)}`,
+      "Total Primary": `৳${report.totalPrimary.toFixed(2)}`,
+      "Office Return": `৳${report.totalOfficeReturn.toFixed(2)}`,
+      "Market Return": `৳${report.totalMarketReturn.toFixed(2)}`,
+      "Achievement (%)": `${report.achievement.toFixed(1)}%`,
+      "Total Reports": report.totalReports,
+    }));
+
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Dealer Sales Report");
+
+    // Generate the Excel file and trigger download
+    const fileName = `Dealer_Sales_Report_${
+      selectedMonth ||
+      (startDate && endDate
+        ? `${startDate}_to_${endDate}`
+        : dayjs().format("YYYY-MM"))
+    }.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
+
   return (
     <div className="flex">
       <AdminSidebar />
       <div className="p-4 w-full">
-        <h2 className="text-2xl font-bold mb-4">Dealer Sales Reports</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Dealer Sales Reports</h2>
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
+            disabled={isLoading}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-2"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Export to Excel
+          </button>
+        </div>
 
         {/* Summary Cards - 2 rows with 3 columns each */}
         <div className="grid grid-cols-3 gap-4 mb-4">
