@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -7,61 +7,66 @@ import AdminSidebar from "../../Component/AdminSidebar";
 const DealerSalesReport = () => {
   const [users, setUsers] = useState([]);
   const [salesReports, setSalesReports] = useState({});
-  const [targets, setTargets] = useState({}); // Changed to object for easier lookup
+  const [stockMovementData, setStockMovementData] = useState({});
+  const [targets, setTargets] = useState({});
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({
+    users: false,
+    targets: false,
+    sales: false,
+    stock: false,
+  });
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
   const navigate = useNavigate();
 
-  // Extract year and month from selectedMonth
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  useEffect(() => {
-    fetchUsers();
+  // Memoized functions
+  const getBeltFromZone = useCallback((zoneName) => {
+    if (zoneName.includes("ZONE-01")) return "Belt-1";
+    if (zoneName.includes("ZONE-03")) return "Belt-3";
+    return "";
   }, []);
 
-  useEffect(() => {
-    if (selectedMonth) {
-      fetchTargets();
-    }
-  }, [selectedMonth]);
+  const getUserTarget = useCallback(
+    (userId) => {
+      return targets[userId] || 0;
+    },
+    [targets]
+  );
 
-  useEffect(() => {
-    if (users.length > 0) {
-      fetchSalesReports();
-    }
-  }, [users, selectedMonth, startDate, endDate]);
-
-  const fetchUsers = async () => {
+  // Fetch data functions
+  const fetchUsers = useCallback(async () => {
     try {
+      setLoading((prev) => ({ ...prev, users: true }));
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/getAllUser"
       );
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
+    } finally {
+      setLoading((prev) => ({ ...prev, users: false }));
     }
-  };
+  }, []);
 
-  const fetchTargets = async () => {
+  const fetchTargets = useCallback(async () => {
     try {
+      setLoading((prev) => ({ ...prev, targets: true }));
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/targets",
-        {
-          params: { year, month },
-        }
+        { params: { year, month } }
       );
 
-      // Convert targets array to an object with userID as key for easier lookup
       const targetsMap = {};
       response.data.forEach((targetEntry) => {
         targetEntry.targets.forEach((target) => {
           if (target.year === year && target.month === month) {
-            targetsMap[targetEntry.userID] = target.tp; // Using tp as the target value
+            targetsMap[targetEntry.userID] = target.tp;
           }
         });
       });
@@ -69,12 +74,14 @@ const DealerSalesReport = () => {
       setTargets(targetsMap);
     } catch (error) {
       console.error("Error fetching targets:", error);
+    } finally {
+      setLoading((prev) => ({ ...prev, targets: false }));
     }
-  };
+  }, [year, month]);
 
-  const fetchSalesReports = async () => {
+  const fetchSalesReports = useCallback(async () => {
     try {
-      setLoading(true);
+      setLoading((prev) => ({ ...prev, sales: true }));
       setSalesReports({});
 
       let params = {};
@@ -89,13 +96,13 @@ const DealerSalesReport = () => {
         axios
           .get(`https://gvi-pos-server.vercel.app/sales-reports/${user._id}`, {
             params,
+            timeout: 10000,
           })
           .then((response) => ({ userId: user._id, reportData: response.data }))
           .catch(() => ({ userId: user._id, reportData: [] }))
       );
 
       const reports = await Promise.all(reportPromises);
-
       const reportData = reports.reduce((acc, { userId, reportData }) => {
         acc[userId] = reportData;
         return acc;
@@ -105,83 +112,247 @@ const DealerSalesReport = () => {
     } catch (error) {
       console.error("Error fetching sales reports:", error);
     } finally {
-      setLoading(false);
+      setLoading((prev) => ({ ...prev, sales: false }));
     }
-  };
+  }, [users, selectedMonth, startDate, endDate]);
+  
+  // Filter users
+  const filteredUsers = React.useMemo(() => {
+    return users.filter((user) => {
+      const matchRole = selectedRole
+        ? user.role === selectedRole
+        : !["ASM", "RSM", "SOM"].includes(user.role);
+      const matchZone = selectedZone ? user.zone.includes(selectedZone) : true;
+      const belt = getBeltFromZone(user.zone);
+      const matchBelt = selectedBelt ? belt === selectedBelt : true;
+      return matchRole && matchZone && matchBelt;
+    });
+  }, [users, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
 
-  const getBeltFromZone = (zoneName) => {
-    if (zoneName.includes("ZONE-01")) return "Belt-1";
-    if (zoneName.includes("ZONE-03")) return "Belt-3";
-    return "";
-  };
+  const fetchStockMovementReports = useCallback(async () => {
+    try {
+      setLoading((prev) => ({ ...prev, stock: true }));
 
-  const getUserTarget = (userId) => {
-    return targets[userId] || 0; // Return 0 if no target found
-  };
+      // Get unique outlets from filtered users
+      const uniqueOutlets = [
+        ...new Set(filteredUsers.map((user) => user.outlet)),
+      ];
 
-  const filteredUsers = users.filter((user) => {
-    const matchRole = selectedRole
-      ? user.role === selectedRole
-      : !["ASM", "RSM", "SOM"].includes(user.role);
-    const matchZone = selectedZone ? user.zone.includes(selectedZone) : true;
-    const belt = getBeltFromZone(user.zone);
-    const matchBelt = selectedBelt ? belt === selectedBelt : true;
-    return matchRole && matchZone && matchBelt;
-  });
+      const promises = uniqueOutlets.map(async (outlet) => {
+        try {
+          const response = await axios.get(
+            "https://gvi-pos-server.vercel.app/stock-movement-report",
+            {
+              params: { outlet, month: selectedMonth },
+              timeout: 10000,
+            }
+          );
+          return { outlet, data: response.data?.data || [] };
+        } catch (error) {
+          console.error(`Error fetching stock movement for ${outlet}:`, error);
+          return { outlet, data: [] };
+        }
+      });
 
-  const aggregatedReports = filteredUsers.map((user) => {
-    let totalReports = 0;
-    let totalTP = 0;
+      const results = await Promise.all(promises);
+      const stockDataMap = results.reduce((acc, { outlet, data }) => {
+        acc[outlet] = data;
+        return acc;
+      }, {});
 
-    if (["ASM", "RSM", "SOM"].includes(user.role)) {
-      const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
-      totalReports = assignedSOs.reduce(
-        (sum, so) => sum + (salesReports[so._id]?.length || 0),
-        0
-      );
-      totalTP = assignedSOs.reduce(
-        (sum, so) =>
-          sum +
-          (salesReports[so._id]?.reduce(
-            (subSum, report) => subSum + (report.total_tp || 0),
-            0
-          ) || 0),
-        0
-      );
-    } else {
-      totalReports = salesReports[user._id]?.length || 0;
-      totalTP =
-        salesReports[user._id]?.reduce(
-          (sum, report) => sum + (report.total_tp || 0),
+      setStockMovementData(stockDataMap);
+    } catch (error) {
+      console.error("Error fetching stock movement reports:", error);
+    } finally {
+      setLoading((prev) => ({ ...prev, stock: false }));
+    }
+  }, [filteredUsers, selectedMonth]);
+
+  // Process reports data
+  const aggregatedReports = React.useMemo(() => {
+    // Create a map of outlet to users for quick lookup
+    const outletUsersMap = filteredUsers.reduce((acc, user) => {
+      if (!acc[user.outlet]) {
+        acc[user.outlet] = [];
+      }
+      acc[user.outlet].push(user);
+      return acc;
+    }, {});
+
+    return filteredUsers.map((user) => {
+      let totalReports = 0;
+      let totalMRP = 0;
+      let totalPrimary = 0;
+      let totalOfficeReturn = 0;
+      let totalMarketReturn = 0;
+
+      if (["ASM", "RSM", "SOM"].includes(user.role)) {
+        const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
+        totalReports = assignedSOs.reduce(
+          (sum, so) => sum + (salesReports[so._id]?.length || 0),
           0
-        ) || 0;
-    }
+        );
+        totalMRP = assignedSOs.reduce(
+          (sum, so) =>
+            sum +
+            (salesReports[so._id]?.reduce(
+              (subSum, report) => subSum + (report.total_mrp || 0),
+              0
+            ) || 0),
+          0
+        );
 
-    const target = getUserTarget(user._id);
-    const achievement = target > 0 ? (totalTP / target) * 100 : 0;
+        // For managers, sum unique outlet stock data from their team
+        const managerOutlets = [...new Set(assignedSOs.map((so) => so.outlet))];
+        totalPrimary = managerOutlets.reduce(
+          (sum, outlet) =>
+            sum +
+            ((stockMovementData[outlet] || []).reduce(
+              (subSum, item) => subSum + (item.primary || 0),
+              0
+            ),
+            0)
+        );
+        totalOfficeReturn = managerOutlets.reduce(
+          (sum, outlet) =>
+            sum +
+            ((stockMovementData[outlet] || []).reduce(
+              (subSum, item) => subSum + (item.officeReturn || 0),
+              0
+            ),
+            0)
+        );
+        totalMarketReturn = managerOutlets.reduce(
+          (sum, outlet) =>
+            sum +
+            ((stockMovementData[outlet] || []).reduce(
+              (subSum, item) => subSum + (item.marketReturn || 0),
+              0
+            ),
+            0)
+        );
+      } else {
+        totalReports = salesReports[user._id]?.length || 0;
+        totalMRP =
+          salesReports[user._id]?.reduce(
+            (sum, report) => sum + (report.total_mrp || 0),
+            0
+          ) || 0;
+
+        // For regular users, get their outlet's stock data
+        totalPrimary =
+          (stockMovementData[user.outlet] || []).reduce(
+            (sum, item) => sum + (item.primary || 0),
+            0
+          ) || 0;
+        totalOfficeReturn =
+          (stockMovementData[user.outlet] || []).reduce(
+            (sum, item) => sum + (item.officeReturn || 0),
+            0
+          ) || 0;
+        totalMarketReturn =
+          (stockMovementData[user.outlet] || []).reduce(
+            (sum, item) => sum + (item.marketReturn || 0),
+            0
+          ) || 0;
+      }
+
+      const target = getUserTarget(user._id);
+      const achievement = target > 0 ? (totalMRP / target) * 100 : 0;
+
+      return {
+        userId: user._id,
+        name: user.name,
+        outlet: user.outlet,
+        zone: user.zone,
+        role: user.role,
+        totalReports,
+        totalMRP,
+        totalPrimary,
+        totalOfficeReturn,
+        totalMarketReturn,
+        target,
+        achievement,
+      };
+    });
+  }, [filteredUsers, users, salesReports, stockMovementData, getUserTarget]);
+
+  // Calculate totals
+  const {
+    totalDealers,
+    totalReports,
+    totalMRP,
+    totalPrimary,
+    totalOfficeReturn,
+    totalMarketReturn,
+  } = React.useMemo(() => {
+    // Get unique outlets to avoid duplicate counting
+    const uniqueOutlets = [
+      ...new Set(filteredUsers.map((user) => user.outlet)),
+    ];
 
     return {
-      userId: user._id,
-      name: user.name,
-      outlet: user.outlet,
-      zone: user.zone,
-      role: user.role,
-      totalReports,
-      totalTP,
-      target,
-      achievement,
+      totalDealers: filteredUsers.length,
+      totalReports: aggregatedReports.reduce(
+        (sum, user) => sum + user.totalReports,
+        0
+      ),
+      totalMRP: aggregatedReports.reduce((sum, user) => sum + user.totalMRP, 0),
+      totalPrimary: uniqueOutlets.reduce(
+        (sum, outlet) =>
+          sum +
+          (stockMovementData[outlet] || []).reduce(
+            (subSum, item) => subSum + (item.primary || 0),
+            0
+          ),
+        0
+      ),
+      totalOfficeReturn: uniqueOutlets.reduce(
+        (sum, outlet) =>
+          sum +
+          (stockMovementData[outlet] || []).reduce(
+            (subSum, item) => subSum + (item.officeReturn || 0),
+            0
+          ),
+        0
+      ),
+      totalMarketReturn: uniqueOutlets.reduce(
+        (sum, outlet) =>
+          sum +
+          (stockMovementData[outlet] || []).reduce(
+            (subSum, item) => subSum + (item.marketReturn || 0),
+            0
+          ),
+        0
+      ),
     };
-  });
+  }, [filteredUsers, aggregatedReports, stockMovementData]);
 
-  const totalDealers = filteredUsers.length;
-  const totalReports = aggregatedReports.reduce(
-    (sum, user) => sum + user.totalReports,
-    0
-  );
-  const totalTP = aggregatedReports.reduce(
-    (sum, user) => sum + user.totalTP,
-    0
-  );
+  // Initial data load
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (selectedMonth) {
+      fetchTargets();
+    }
+  }, [selectedMonth, fetchTargets]);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      fetchSalesReports();
+    }
+  }, [users, selectedMonth, startDate, endDate, fetchSalesReports]);
+
+  useEffect(() => {
+    if (filteredUsers.length > 0 && selectedMonth) {
+      fetchStockMovementReports();
+    }
+  }, [filteredUsers, selectedMonth, fetchStockMovementReports]);
+
+  const isLoading =
+    loading.users || loading.targets || loading.sales || loading.stock;
 
   return (
     <div className="flex">
@@ -189,8 +360,8 @@ const DealerSalesReport = () => {
       <div className="p-4 w-full">
         <h2 className="text-2xl font-bold mb-4">Dealer Sales Reports</h2>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        {/* Summary Cards - 2 rows with 3 columns each */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Total Dealers</h3>
             <p className="text-xl font-bold">{totalDealers}</p>
@@ -200,8 +371,22 @@ const DealerSalesReport = () => {
             <p className="text-xl font-bold">{totalReports}</p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total TP Sales</h3>
-            <p className="text-xl font-bold">৳{totalTP.toFixed(2)}</p>
+            <h3 className="text-lg font-semibold">Total MRP Sales</h3>
+            <p className="text-xl font-bold">৳{totalMRP.toFixed(2)}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-purple-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Total Primary</h3>
+            <p className="text-xl font-bold">৳{totalPrimary.toFixed(2)}</p>
+          </div>
+          <div className="bg-red-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Total Office Return</h3>
+            <p className="text-xl font-bold">৳{totalOfficeReturn.toFixed(2)}</p>
+          </div>
+          <div className="bg-pink-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Total Market Return</h3>
+            <p className="text-xl font-bold">৳{totalMarketReturn.toFixed(2)}</p>
           </div>
         </div>
 
@@ -289,9 +474,13 @@ const DealerSalesReport = () => {
 
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            onClick={fetchSalesReports}
+            onClick={() => {
+              fetchSalesReports();
+              fetchStockMovementReports();
+            }}
+            disabled={isLoading}
           >
-            Filter Reports
+            {isLoading ? "Loading..." : "Filter Reports"}
           </button>
           <button
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
@@ -302,14 +491,15 @@ const DealerSalesReport = () => {
               setSelectedZone("");
               setSelectedBelt("");
               fetchSalesReports();
+              fetchStockMovementReports();
             }}
+            disabled={isLoading}
           >
             Reset Filters
           </button>
         </div>
 
-        {/* Table */}
-        {loading ? (
+        {isLoading ? (
           <div className="flex justify-center items-center my-10">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
           </div>
@@ -323,7 +513,10 @@ const DealerSalesReport = () => {
                   <th className="border p-2">Zone</th>
                   <th className="border p-2">Role</th>
                   <th className="border p-2">Target</th>
-                  <th className="border p-2">Total TP</th>
+                  <th className="border p-2">Total MRP</th>
+                  <th className="border p-2">Primary</th>
+                  <th className="border p-2">Office Return</th>
+                  <th className="border p-2">Market Return</th>
                   <th className="border p-2">Achievement (%)</th>
                   <th className="border p-2">Total Reports</th>
                   <th className="border p-2">Action</th>
@@ -337,7 +530,16 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
                     <td className="border p-2">৳{user.target}</td>
-                    <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
+                    <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
+                    <td className="border p-2">
+                      ৳{user.totalPrimary.toFixed(2)}
+                    </td>
+                    <td className="border p-2">
+                      ৳{user.totalOfficeReturn.toFixed(2)}
+                    </td>
+                    <td className="border p-2">
+                      ৳{user.totalMarketReturn.toFixed(2)}
+                    </td>
                     <td className="border p-2">
                       <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
                         <div
@@ -354,13 +556,7 @@ const DealerSalesReport = () => {
                             width: `${Math.min(100, user.achievement)}%`,
                             transition: "width 0.5s ease-in-out",
                           }}
-                        >
-                          {/* <span className="text-xs font-medium text-white mix-blend-difference">
-                            {user.target > 0
-                              ? `${user.achievement.toFixed(1)}%`
-                              : "-"}
-                          </span> */}
-                        </div>
+                        ></div>
                         {user.target > 0 && (
                           <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
                             {user.target > 0
