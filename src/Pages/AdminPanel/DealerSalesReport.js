@@ -362,13 +362,13 @@ const DealerSalesReport = () => {
       Outlet: report.outlet,
       Zone: report.zone,
       Role: report.role,
-      Target: `৳${report.target}`,
-      "Total MRP": `৳${report.totalTP.toFixed(2)}`,
       "Total Primary": `৳${report.totalPrimary.toFixed(2)}`,
       "Office Return": `৳${report.totalOfficeReturn.toFixed(2)}`,
       "Market Return": `৳${report.totalMarketReturn.toFixed(2)}`,
+      Target: `৳${report.target}`,
+      "Total TP": `৳${report.totalTP.toFixed(2)}`,
       "Achievement (%)": `${report.achievement.toFixed(1)}%`,
-      "Total Reports": report.totalReports,
+      // "Total Reports": report.totalReports,
     }));
 
     // Create a new workbook
@@ -567,13 +567,13 @@ const DealerSalesReport = () => {
                   <th className="border p-2">Outlet</th>
                   <th className="border p-2">Zone</th>
                   <th className="border p-2">Role</th>
-                  <th className="border p-2">Target</th>
-                  <th className="border p-2">Total TP</th>
                   <th className="border p-2">Primary</th>
                   <th className="border p-2">Office Return</th>
                   <th className="border p-2">Market Return</th>
+                  <th className="border p-2">Target</th>
+                  <th className="border p-2">Total TP</th>
                   <th className="border p-2">Achievement (%)</th>
-                  <th className="border p-2">Total Reports</th>
+                  {/* <th className="border p-2">Total Reports</th> */}
                   <th className="border p-2">Action</th>
                 </tr>
               </thead>
@@ -584,8 +584,6 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.outlet}</td>
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
-                    <td className="border p-2">৳{user.target}</td>
-                    <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
                     <td className="border p-2">
                       ৳{user.totalPrimary.toFixed(2)}
                     </td>
@@ -595,6 +593,8 @@ const DealerSalesReport = () => {
                     <td className="border p-2">
                       ৳{user.totalMarketReturn.toFixed(2)}
                     </td>
+                    <td className="border p-2">৳{user.target}</td>
+                    <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
                     <td className="border p-2">
                       <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
                         <div
@@ -621,7 +621,7 @@ const DealerSalesReport = () => {
                         )}
                       </div>
                     </td>
-                    <td className="border p-2">{user.totalReports}</td>
+                    {/* <td className="border p-2">{user.totalReports}</td> */}
                     <td className="border p-2">
                       <button
                         className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
