@@ -115,7 +115,7 @@ const DealerSalesReport = () => {
       setLoading((prev) => ({ ...prev, sales: false }));
     }
   }, [users, selectedMonth, startDate, endDate]);
-  
+
   // Filter users
   const filteredUsers = React.useMemo(() => {
     return users.filter((user) => {
@@ -181,7 +181,7 @@ const DealerSalesReport = () => {
 
     return filteredUsers.map((user) => {
       let totalReports = 0;
-      let totalMRP = 0;
+      let totalTP = 0;
       let totalPrimary = 0;
       let totalOfficeReturn = 0;
       let totalMarketReturn = 0;
@@ -192,11 +192,11 @@ const DealerSalesReport = () => {
           (sum, so) => sum + (salesReports[so._id]?.length || 0),
           0
         );
-        totalMRP = assignedSOs.reduce(
+        totalTP = assignedSOs.reduce(
           (sum, so) =>
             sum +
             (salesReports[so._id]?.reduce(
-              (subSum, report) => subSum + (report.total_mrp || 0),
+              (subSum, report) => subSum + (report.total_tp || 0),
               0
             ) || 0),
           0
@@ -233,9 +233,9 @@ const DealerSalesReport = () => {
         );
       } else {
         totalReports = salesReports[user._id]?.length || 0;
-        totalMRP =
+        totalTP =
           salesReports[user._id]?.reduce(
-            (sum, report) => sum + (report.total_mrp || 0),
+            (sum, report) => sum + (report.total_tp || 0),
             0
           ) || 0;
 
@@ -258,7 +258,7 @@ const DealerSalesReport = () => {
       }
 
       const target = getUserTarget(user._id);
-      const achievement = target > 0 ? (totalMRP / target) * 100 : 0;
+      const achievement = target > 0 ? (totalTP / target) * 100 : 0;
 
       return {
         userId: user._id,
@@ -267,7 +267,7 @@ const DealerSalesReport = () => {
         zone: user.zone,
         role: user.role,
         totalReports,
-        totalMRP,
+        totalTP,
         totalPrimary,
         totalOfficeReturn,
         totalMarketReturn,
@@ -281,7 +281,7 @@ const DealerSalesReport = () => {
   const {
     totalDealers,
     totalReports,
-    totalMRP,
+    totalTP,
     totalPrimary,
     totalOfficeReturn,
     totalMarketReturn,
@@ -297,7 +297,7 @@ const DealerSalesReport = () => {
         (sum, user) => sum + user.totalReports,
         0
       ),
-      totalMRP: aggregatedReports.reduce((sum, user) => sum + user.totalMRP, 0),
+      totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
       totalPrimary: uniqueOutlets.reduce(
         (sum, outlet) =>
           sum +
@@ -371,8 +371,8 @@ const DealerSalesReport = () => {
             <p className="text-xl font-bold">{totalReports}</p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total MRP Sales</h3>
-            <p className="text-xl font-bold">৳{totalMRP.toFixed(2)}</p>
+            <h3 className="text-lg font-semibold">Total TP Sales</h3>
+            <p className="text-xl font-bold">৳{totalTP.toFixed(2)}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -513,7 +513,7 @@ const DealerSalesReport = () => {
                   <th className="border p-2">Zone</th>
                   <th className="border p-2">Role</th>
                   <th className="border p-2">Target</th>
-                  <th className="border p-2">Total MRP</th>
+                  <th className="border p-2">Total TP</th>
                   <th className="border p-2">Primary</th>
                   <th className="border p-2">Office Return</th>
                   <th className="border p-2">Market Return</th>
@@ -530,7 +530,7 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
                     <td className="border p-2">৳{user.target}</td>
-                    <td className="border p-2">৳{user.totalMRP.toFixed(2)}</td>
+                    <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
                     <td className="border p-2">
                       ৳{user.totalPrimary.toFixed(2)}
                     </td>
