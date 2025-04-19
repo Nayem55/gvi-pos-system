@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, FileDown } from "lucide-react";
 import AdminSidebar from "../../Component/AdminSidebar";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const ProductWiseSalesReport = () => {
     const [salesData, setSalesData] = useState([]);
@@ -51,13 +53,32 @@ const ProductWiseSalesReport = () => {
     const handleResetFilters = () => {
         setStartDate("");
         setEndDate("");
-        setMonth(dayjs().format("YYYY-MM"));
-        fetchSalesData({ month: dayjs().format("YYYY-MM") });
+        const currentMonth = dayjs().format("YYYY-MM");
+        setMonth(currentMonth);
+        fetchSalesData({ month: currentMonth });
+    };
+
+    const handleExportToExcel = () => {
+        const dataToExport = salesData.map((product) => ({
+            "Product Name": product._id,
+            "Barcode": product.barcode || "N/A",
+            "Total Sold (PCS)": product.total_quantity,
+            "Total TP": product.total_tp,
+            "Total MRP": product.total_mrp,
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+
+        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        const fileData = new Blob([excelBuffer], { type: "application/octet-stream" });
+        saveAs(fileData, `ProductWiseSalesReport-${dayjs().format("YYYY-MM-DD")}.xlsx`);
     };
 
     return (
         <div className="flex">
-            <AdminSidebar />    
+            <AdminSidebar />
             <div className="p-6 bg-gray-100 min-h-screen w-full">
                 <div className="bg-white p-4 rounded-lg shadow-lg">
                     <div className="flex items-center gap-2 mb-4">
@@ -82,7 +103,7 @@ const ProductWiseSalesReport = () => {
                     </div>
 
                     {/* Filters */}
-                    <div className="mb-4 flex gap-4 items-end">
+                    <div className="mb-4 flex flex-wrap gap-4 items-end">
                         <div>
                             <label className="font-medium">Select Month: </label>
                             <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="border rounded p-2 ml-2" disabled={startDate && endDate} />
@@ -93,10 +114,13 @@ const ProductWiseSalesReport = () => {
                         </div>
                         <div>
                             <label className="font-medium">End Date: </label>
-                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded p-2 ml-2"/>
+                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded p-2 ml-2" />
                         </div>
                         <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2" onClick={handleFilter}>Filter Reports</button>
                         <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onClick={handleResetFilters}>Reset Filters</button>
+                        <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ml-auto" onClick={handleExportToExcel}>
+                            <FileDown size={18} /> Export to Excel
+                        </button>
                     </div>
 
                     {/* Sales Report Table */}
@@ -105,28 +129,30 @@ const ProductWiseSalesReport = () => {
                     ) : error ? (
                         <p className="text-center text-red-500">{error}</p>
                     ) : (
-                        <table className="w-full border-collapse border border-gray-300">
-                            <thead>
-                                <tr className="bg-gray-200">
-                                    <th className="border p-2 text-left">Product Name</th>
-                                    <th className="border p-2 text-left">Barcode</th>
-                                    <th className="border p-2 text-center">Total Sold (PCS)</th>
-                                    <th className="border p-2 text-center">Total TP</th>
-                                    <th className="border p-2 text-center">Total MRP</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {salesData.map((product) => (
-                                    <tr key={product._id} className="hover:bg-gray-50">
-                                        <td className="border p-2">{product._id}</td>
-                                        <td className="border p-2">{product.barcode || "N/A"}</td>
-                                        <td className="border p-2 text-center">{product.total_quantity}</td>
-                                        <td className="border p-2 text-center">৳{product.total_tp}</td>
-                                        <td className="border p-2 text-center">৳{product.total_mrp}</td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-gray-300">
+                                <thead>
+                                    <tr className="bg-gray-200">
+                                        <th className="border p-2 text-left">Product Name</th>
+                                        <th className="border p-2 text-left">Barcode</th>
+                                        <th className="border p-2 text-center">Total Sold (PCS)</th>
+                                        <th className="border p-2 text-center">Total TP</th>
+                                        <th className="border p-2 text-center">Total MRP</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {salesData.map((product) => (
+                                        <tr key={product._id} className="hover:bg-gray-50">
+                                            <td className="border p-2">{product._id}</td>
+                                            <td className="border p-2">{product.barcode || "N/A"}</td>
+                                            <td className="border p-2 text-center">{product.total_quantity}</td>
+                                            <td className="border p-2 text-center">৳{product.total_tp}</td>
+                                            <td className="border p-2 text-center">৳{product.total_mrp}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>
