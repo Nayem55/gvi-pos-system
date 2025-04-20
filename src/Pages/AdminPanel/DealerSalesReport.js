@@ -585,13 +585,13 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
                     <td className="border p-2">
-                      ৳{user.totalPrimary.toFixed(2)}
+                      ৳{user.totalPrimary>0 ? user.totalPrimary.toFixed(2):0}
                     </td>
                     <td className="border p-2">
-                      ৳{user.totalOfficeReturn.toFixed(2)}
+                      ৳{user.totalOfficeReturn>0 ? user.totalOfficeReturn.toFixed(2) : 0}
                     </td>
                     <td className="border p-2">
-                      ৳{user.totalMarketReturn.toFixed(2)}
+                      ৳{user.totalMarketReturn>0 ? user.totalMarketReturn.toFixed(2) : 0}
                     </td>
                     <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
