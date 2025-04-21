@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
+import { debounce } from "lodash";
+
+const API_CONFIG = {
+  baseURL: "https://gvi-pos-server.vercel.app",
+  timeout: 30000,
+};
+
+const api = axios.create({
+  baseURL: API_CONFIG.baseURL,
+  timeout: API_CONFIG.timeout,
+});
 
 const DealerSalesReport = () => {
   const [users, setUsers] = useState([]);
@@ -22,11 +33,11 @@ const DealerSalesReport = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // Memoized functions
   const getBeltFromZone = useCallback((zoneName) => {
     if (zoneName.includes("ZONE-01")) return "Belt-1";
     if (zoneName.includes("ZONE-03")) return "Belt-3";
@@ -40,16 +51,15 @@ const DealerSalesReport = () => {
     [targets]
   );
 
-  // Fetch data functions
   const fetchUsers = useCallback(async () => {
     try {
       setLoading((prev) => ({ ...prev, users: true }));
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/getAllUser"
-      );
+      setError(null);
+      const response = await api.get("/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
+      setError("Failed to load users. Please try again.");
     } finally {
       setLoading((prev) => ({ ...prev, users: false }));
     }
@@ -58,10 +68,8 @@ const DealerSalesReport = () => {
   const fetchTargets = useCallback(async () => {
     try {
       setLoading((prev) => ({ ...prev, targets: true }));
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/targets",
-        { params: { year, month } }
-      );
+      setError(null);
+      const response = await api.get("/targets", { params: { year, month } });
 
       const targetsMap = {};
       response.data.forEach((targetEntry) => {
@@ -75,6 +83,7 @@ const DealerSalesReport = () => {
       setTargets(targetsMap);
     } catch (error) {
       console.error("Error fetching targets:", error);
+      setError("Failed to load targets. Please try again.");
     } finally {
       setLoading((prev) => ({ ...prev, targets: false }));
     }
@@ -83,6 +92,7 @@ const DealerSalesReport = () => {
   const fetchSalesReports = useCallback(async () => {
     try {
       setLoading((prev) => ({ ...prev, sales: true }));
+      setError(null);
       setSalesReports({});
 
       let params = {};
@@ -94,11 +104,8 @@ const DealerSalesReport = () => {
       }
 
       const reportPromises = users.map((user) =>
-        axios
-          .get(`https://gvi-pos-server.vercel.app/sales-reports/${user._id}`, {
-            params,
-            timeout: 10000,
-          })
+        api
+          .get(`/sales-reports/${user._id}`, { params })
           .then((response) => ({ userId: user._id, reportData: response.data }))
           .catch(() => ({ userId: user._id, reportData: [] }))
       );
@@ -112,13 +119,13 @@ const DealerSalesReport = () => {
       setSalesReports(reportData);
     } catch (error) {
       console.error("Error fetching sales reports:", error);
+      setError("Failed to load sales reports. Please try again.");
     } finally {
       setLoading((prev) => ({ ...prev, sales: false }));
     }
   }, [users, selectedMonth, startDate, endDate]);
 
-  // Filter users
-  const filteredUsers = React.useMemo(() => {
+  const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const matchRole = selectedRole
         ? user.role === selectedRole
@@ -133,21 +140,35 @@ const DealerSalesReport = () => {
   const fetchStockMovementReports = useCallback(async () => {
     try {
       setLoading((prev) => ({ ...prev, stock: true }));
+      setError(null);
 
-      // Get unique outlets from filtered users
-      const uniqueOutlets = [
-        ...new Set(filteredUsers.map((user) => user.outlet)),
-      ];
+      // Get all unique outlets we need data for
+      const outletsToFetch = new Set();
 
-      const promises = uniqueOutlets.map(async (outlet) => {
+      // For regular users, add their own outlet
+      filteredUsers.forEach(user => {
+        if (user.outlet) {
+          outletsToFetch.add(user.outlet);
+        }
+      });
+
+      // For ASM/RSM/SOM, add outlets of their team members
+      const managers = filteredUsers.filter(user => ["ASM", "RSM", "SOM"].includes(user.role));
+      for (const manager of managers) {
+        const teamMembers = users.filter(u => u.zone.includes(manager.zone));
+        teamMembers.forEach(member => {
+          if (member.outlet) {
+            outletsToFetch.add(member.outlet);
+          }
+        });
+      }
+
+      // Fetch data for all needed outlets
+      const promises = Array.from(outletsToFetch).map(async (outlet) => {
         try {
-          const response = await axios.get(
-            "https://gvi-pos-server.vercel.app/stock-movement-report",
-            {
-              params: { outlet, month: selectedMonth },
-              timeout: 10000,
-            }
-          );
+          const response = await api.get("/stock-movement-report", {
+            params: { outlet, month: selectedMonth },
+          });
           return { outlet, data: response.data?.data || [] };
         } catch (error) {
           console.error(`Error fetching stock movement for ${outlet}:`, error);
@@ -164,22 +185,13 @@ const DealerSalesReport = () => {
       setStockMovementData(stockDataMap);
     } catch (error) {
       console.error("Error fetching stock movement reports:", error);
+      setError("Failed to load stock movement data. Please try again.");
     } finally {
       setLoading((prev) => ({ ...prev, stock: false }));
     }
-  }, [filteredUsers, selectedMonth]);
+  }, [filteredUsers, users, selectedMonth]);
 
-  // Process reports data
-  const aggregatedReports = React.useMemo(() => {
-    // Create a map of outlet to users for quick lookup
-    const outletUsersMap = filteredUsers.reduce((acc, user) => {
-      if (!acc[user.outlet]) {
-        acc[user.outlet] = [];
-      }
-      acc[user.outlet].push(user);
-      return acc;
-    }, {});
-
+  const aggregatedReports = useMemo(() => {
     return filteredUsers.map((user) => {
       let totalReports = 0;
       let totalTP = 0;
@@ -188,74 +200,71 @@ const DealerSalesReport = () => {
       let totalMarketReturn = 0;
 
       if (["ASM", "RSM", "SOM"].includes(user.role)) {
+        // For managers, calculate based on their team
         const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
+        
+        // Sales data
         totalReports = assignedSOs.reduce(
           (sum, so) => sum + (salesReports[so._id]?.length || 0),
           0
         );
         totalTP = assignedSOs.reduce(
           (sum, so) =>
-            sum +
-            (salesReports[so._id]?.reduce(
+            sum + (salesReports[so._id]?.reduce(
               (subSum, report) => subSum + (report.total_tp || 0),
               0
             ) || 0),
           0
         );
 
-        // For managers, sum unique outlet stock data from their team
-        const managerOutlets = [...new Set(assignedSOs.map((so) => so.outlet))];
-        totalPrimary = managerOutlets.reduce(
-          (sum, outlet) =>
-            sum +
-            ((stockMovementData[outlet] || []).reduce(
-              (subSum, item) => subSum + (item.primary || 0),
-              0
-            ),
-            0)
-        );
-        totalOfficeReturn = managerOutlets.reduce(
-          (sum, outlet) =>
-            sum +
-            ((stockMovementData[outlet] || []).reduce(
-              (subSum, item) => subSum + (item.officeReturn || 0),
-              0
-            ),
-            0)
-        );
-        totalMarketReturn = managerOutlets.reduce(
-          (sum, outlet) =>
-            sum +
-            ((stockMovementData[outlet] || []).reduce(
-              (subSum, item) => subSum + (item.marketReturn || 0),
-              0
-            ),
-            0)
-        );
-      } else {
-        totalReports = salesReports[user._id]?.length || 0;
-        totalTP =
-          salesReports[user._id]?.reduce(
-            (sum, report) => sum + (report.total_tp || 0),
+        // Stock movement data - get all unique outlets from team members
+        const teamOutlets = [...new Set(assignedSOs.map(so => so.outlet).filter(Boolean))];
+        
+        totalPrimary = teamOutlets.reduce((sum, outlet) => {
+          const outletData = stockMovementData[outlet] || [];
+          return sum + outletData.reduce(
+            (subSum, item) => subSum + (item.primary || 0),
             0
-          ) || 0;
+          );
+        }, 0);
 
-        // For regular users, get their outlet's stock data
-        totalPrimary =
-          (stockMovementData[user.outlet] || []).reduce(
-            (sum, item) => sum + (item.primary || 0),
+        totalOfficeReturn = teamOutlets.reduce((sum, outlet) => {
+          const outletData = stockMovementData[outlet] || [];
+          return sum + outletData.reduce(
+            (subSum, item) => subSum + (item.officeReturn || 0),
             0
-          ) || 0;
-        totalOfficeReturn =
-          (stockMovementData[user.outlet] || []).reduce(
-            (sum, item) => sum + (item.officeReturn || 0),
+          );
+        }, 0);
+
+        totalMarketReturn = teamOutlets.reduce((sum, outlet) => {
+          const outletData = stockMovementData[outlet] || [];
+          return sum + outletData.reduce(
+            (subSum, item) => subSum + (item.marketReturn || 0),
             0
-          ) || 0;
-        totalMarketReturn =
-          (stockMovementData[user.outlet] || []).reduce(
-            (sum, item) => sum + (item.marketReturn || 0),
-            0
-          ) || 0;
+          );
+        }, 0);
+      } else {
+        // For regular users
+        totalReports = salesReports[user._id]?.length || 0;
+        totalTP = salesReports[user._id]?.reduce(
+          (sum, report) => sum + (report.total_tp || 0),
+          0
+        ) || 0;
+
+        // Stock movement data from their outlet
+        const outletData = stockMovementData[user.outlet] || [];
+        totalPrimary = outletData.reduce(
+          (sum, item) => sum + (item.primary || 0),
+          0
+        );
+        totalOfficeReturn = outletData.reduce(
+          (sum, item) => sum + (item.officeReturn || 0),
+          0
+        );
+        totalMarketReturn = outletData.reduce(
+          (sum, item) => sum + (item.marketReturn || 0),
+          0
+        );
       }
 
       const target = getUserTarget(user._id);
@@ -278,7 +287,6 @@ const DealerSalesReport = () => {
     });
   }, [filteredUsers, users, salesReports, stockMovementData, getUserTarget]);
 
-  // Calculate totals
   const {
     totalDealers,
     totalReports,
@@ -286,11 +294,19 @@ const DealerSalesReport = () => {
     totalPrimary,
     totalOfficeReturn,
     totalMarketReturn,
-  } = React.useMemo(() => {
-    // Get unique outlets to avoid duplicate counting
-    const uniqueOutlets = [
-      ...new Set(filteredUsers.map((user) => user.outlet)),
-    ];
+  } = useMemo(() => {
+    const uniqueOutlets = new Set(
+      filteredUsers
+        .map(user => {
+          if (["ASM", "RSM", "SOM"].includes(user.role)) {
+            const teamMembers = users.filter(u => u.zone.includes(user.zone));
+            return teamMembers.map(member => member.outlet).filter(Boolean);
+          }
+          return user.outlet;
+        })
+        .flat()
+        .filter(Boolean)
+    );
 
     return {
       totalDealers: filteredUsers.length,
@@ -299,37 +315,33 @@ const DealerSalesReport = () => {
         0
       ),
       totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
-      totalPrimary: uniqueOutlets.reduce(
+      totalPrimary: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum +
-          (stockMovementData[outlet] || []).reduce(
+          sum + (stockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.primary || 0),
             0
           ),
         0
       ),
-      totalOfficeReturn: uniqueOutlets.reduce(
+      totalOfficeReturn: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum +
-          (stockMovementData[outlet] || []).reduce(
+          sum + (stockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.officeReturn || 0),
             0
           ),
         0
       ),
-      totalMarketReturn: uniqueOutlets.reduce(
+      totalMarketReturn: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum +
-          (stockMovementData[outlet] || []).reduce(
+          sum + (stockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.marketReturn || 0),
             0
           ),
         0
       ),
     };
-  }, [filteredUsers, aggregatedReports, stockMovementData]);
+  }, [filteredUsers, users, aggregatedReports, stockMovementData]);
 
-  // Initial data load
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
@@ -350,13 +362,12 @@ const DealerSalesReport = () => {
     if (filteredUsers.length > 0 && selectedMonth) {
       fetchStockMovementReports();
     }
-  }, [filteredUsers, selectedMonth, fetchStockMovementReports]);
+  }, [filteredUsers, users, selectedMonth, fetchStockMovementReports]);
 
   const isLoading =
     loading.users || loading.targets || loading.sales || loading.stock;
 
   const exportToExcel = () => {
-    // Prepare the data for export
     const exportData = aggregatedReports.map((report) => ({
       "User Name": report.name,
       Outlet: report.outlet,
@@ -368,17 +379,12 @@ const DealerSalesReport = () => {
       Target: `৳${report.target}`,
       "Total TP": `৳${report.totalTP.toFixed(2)}`,
       "Achievement (%)": `${report.achievement.toFixed(1)}%`,
-      // "Total Reports": report.totalReports,
     }));
 
-    // Create a new workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Add the worksheet to the workbook
     XLSX.utils.book_append_sheet(wb, ws, "Dealer Sales Report");
 
-    // Generate the Excel file and trigger download
     const fileName = `Dealer_Sales_Report_${
       selectedMonth ||
       (startDate && endDate
@@ -386,6 +392,21 @@ const DealerSalesReport = () => {
         : dayjs().format("YYYY-MM"))
     }.xlsx`;
     XLSX.writeFile(wb, fileName);
+  };
+
+  const handleFilterChange = () => {
+    fetchSalesReports();
+    fetchStockMovementReports();
+  };
+
+  const handleResetFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setSelectedRole("");
+    setSelectedZone("");
+    setSelectedBelt("");
+    fetchSalesReports();
+    fetchStockMovementReports();
   };
 
   return (
@@ -399,23 +420,16 @@ const DealerSalesReport = () => {
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
             disabled={isLoading}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 mr-2"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
             Export to Excel
           </button>
         </div>
 
-        {/* Summary Cards - 2 rows with 3 columns each */}
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+            <p>{error}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Total Dealers</h3>
@@ -445,7 +459,6 @@ const DealerSalesReport = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="mb-4 flex flex-wrap gap-4 items-end">
           <div>
             <label className="font-medium">Select Month:</label>
@@ -529,25 +542,14 @@ const DealerSalesReport = () => {
 
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            onClick={() => {
-              fetchSalesReports();
-              fetchStockMovementReports();
-            }}
+            onClick={handleFilterChange}
             disabled={isLoading}
           >
             {isLoading ? "Loading..." : "Filter Reports"}
           </button>
           <button
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-              setSelectedRole("");
-              setSelectedZone("");
-              setSelectedBelt("");
-              fetchSalesReports();
-              fetchStockMovementReports();
-            }}
+            onClick={handleResetFilters}
             disabled={isLoading}
           >
             Reset Filters
@@ -573,25 +575,24 @@ const DealerSalesReport = () => {
                   <th className="border p-2">Target</th>
                   <th className="border p-2">Total TP</th>
                   <th className="border p-2">Achievement (%)</th>
-                  {/* <th className="border p-2">Total Reports</th> */}
                   <th className="border p-2">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {aggregatedReports.map((user) => (
-                  <tr key={user.userId} className="border">
+                  <tr key={user.userId} className="border hover:bg-gray-50">
                     <td className="border p-2">{user.name}</td>
-                    <td className="border p-2">{user.outlet}</td>
+                    <td className="border p-2">{user.outlet || "-"}</td>
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
                     <td className="border p-2">
-                      ৳{user.totalPrimary>0 ? user.totalPrimary.toFixed(2):0}
+                      ৳{user.totalPrimary > 0 ? user.totalPrimary.toFixed(2) : 0}
                     </td>
                     <td className="border p-2">
-                      ৳{user.totalOfficeReturn>0 ? user.totalOfficeReturn.toFixed(2) : 0}
+                      ৳{user.totalOfficeReturn > 0 ? user.totalOfficeReturn.toFixed(2) : 0}
                     </td>
                     <td className="border p-2">
-                      ৳{user.totalMarketReturn>0 ? user.totalMarketReturn.toFixed(2) : 0}
+                      ৳{user.totalMarketReturn > 0 ? user.totalMarketReturn.toFixed(2) : 0}
                     </td>
                     <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
@@ -614,14 +615,11 @@ const DealerSalesReport = () => {
                         ></div>
                         {user.target > 0 && (
                           <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
-                            {user.target > 0
-                              ? `${user.achievement.toFixed(1)}%`
-                              : "-"}
+                            {user.achievement.toFixed(1)}%
                           </span>
                         )}
                       </div>
                     </td>
-                    {/* <td className="border p-2">{user.totalReports}</td> */}
                     <td className="border p-2">
                       <button
                         className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
