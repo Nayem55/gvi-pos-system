@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
-import { debounce } from "lodash";
 
 const API_CONFIG = {
   baseURL: "https://gvi-pos-server.vercel.app",
@@ -17,84 +16,86 @@ const api = axios.create({
 });
 
 const DealerSalesReport = () => {
-  const [users, setUsers] = useState([]);
-  const [salesReports, setSalesReports] = useState({});
-  const [stockMovementData, setStockMovementData] = useState({});
-  const [targets, setTargets] = useState({});
+  // State for all raw data
+  const [allUsers, setAllUsers] = useState([]);
+  const [allSalesReports, setAllSalesReports] = useState({});
+  const [allStockMovementData, setAllStockMovementData] = useState({});
+  const [allTargets, setAllTargets] = useState({});
+  
+  // Filter and display state
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState({
-    users: false,
-    targets: false,
-    sales: false,
-    stock: false,
-  });
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
+  
+  // Loading and error states
+  const [loading, setLoading] = useState({
+    initialLoad: true,
+    sales: false,
+    stock: false,
+    targets: false
+  });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  const [year, month] = selectedMonth.split("-").map(Number);
-
-  const getBeltFromZone = useCallback((zoneName) => {
-    if (zoneName.includes("ZONE-01")) return "Belt-1";
-    if (zoneName.includes("ZONE-03")) return "Belt-3";
-    return "";
-  }, []);
-
-  const getUserTarget = useCallback(
-    (userId) => {
-      return targets[userId] || 0;
-    },
-    [targets]
-  );
-
-  const fetchUsers = useCallback(async () => {
+  // Fetch all initial data
+  const fetchInitialData = useCallback(async () => {
     try {
-      setLoading((prev) => ({ ...prev, users: true }));
+      setLoading(prev => ({ ...prev, initialLoad: true }));
       setError(null);
-      const response = await api.get("/getAllUser");
-      setUsers(response.data);
+
+      // Fetch all users
+      const usersResponse = await api.get("/getAllUser");
+      setAllUsers(usersResponse.data);
+
     } catch (error) {
-      console.error("Error fetching users:", error);
-      setError("Failed to load users. Please try again.");
+      console.error("Error fetching initial data:", error);
+      setError("Failed to load initial data. Please try again.");
     } finally {
-      setLoading((prev) => ({ ...prev, users: false }));
+      setLoading(prev => ({ ...prev, initialLoad: false }));
     }
   }, []);
 
+  // Fetch targets for the selected month
   const fetchTargets = useCallback(async () => {
     try {
-      setLoading((prev) => ({ ...prev, targets: true }));
+      setLoading(prev => ({ ...prev, targets: true }));
       setError(null);
-      const response = await api.get("/targets", { params: { year, month } });
 
+      const [year, month] = selectedMonth.split("-").map(Number);
+      const targetsResponse = await api.get("/targets", { 
+        params: { year, month } 
+      });
+      
       const targetsMap = {};
-      response.data.forEach((targetEntry) => {
+      targetsResponse.data.forEach((targetEntry) => {
         targetEntry.targets.forEach((target) => {
           if (target.year === year && target.month === month) {
             targetsMap[targetEntry.userID] = target.tp;
           }
         });
       });
+      setAllTargets(targetsMap);
 
-      setTargets(targetsMap);
     } catch (error) {
       console.error("Error fetching targets:", error);
       setError("Failed to load targets. Please try again.");
     } finally {
-      setLoading((prev) => ({ ...prev, targets: false }));
+      setLoading(prev => ({ ...prev, targets: false }));
     }
-  }, [year, month]);
+  }, [selectedMonth]);
 
-  const fetchSalesReports = useCallback(async () => {
+  // Fetch sales and stock data when month/date range changes
+  const fetchReportData = useCallback(async () => {
+    if (allUsers.length === 0) return;
+
     try {
-      setLoading((prev) => ({ ...prev, sales: true }));
+      setLoading(prev => ({ ...prev, sales: true, stock: true }));
       setError(null);
-      setSalesReports({});
 
+      // Prepare date parameters
       let params = {};
       if (startDate && endDate) {
         params.startDate = startDate;
@@ -103,30 +104,56 @@ const DealerSalesReport = () => {
         params.month = selectedMonth;
       }
 
-      const reportPromises = users.map((user) =>
-        api
-          .get(`/sales-reports/${user._id}`, { params })
-          .then((response) => ({ userId: user._id, reportData: response.data }))
-          .catch(() => ({ userId: user._id, reportData: [] }))
-      );
+      // Fetch sales reports for all users
+      const salesPromises = allUsers.map(user =>
+        api.get(`/sales-reports/${user._id}`, { params })
+          .then(response => ({ userId: user._id, reportData: response.data }))
+          .catch(() => ({ userId: user._id, reportData: [] })))
 
-      const reports = await Promise.all(reportPromises);
-      const reportData = reports.reduce((acc, { userId, reportData }) => {
+      const salesResults = await Promise.all(salesPromises);
+      const salesData = salesResults.reduce((acc, { userId, reportData }) => {
         acc[userId] = reportData;
         return acc;
       }, {});
+      setAllSalesReports(salesData);
 
-      setSalesReports(reportData);
+      // Fetch stock movement data for all outlets
+      const allOutlets = [...new Set(allUsers.map(u => u.outlet).filter(Boolean))]
+      const stockPromises = allOutlets.map(outlet =>
+        api.get("/stock-movement-report", { params: { outlet, month: selectedMonth } })
+          .then(response => ({ outlet, data: response.data?.data || [] }))
+          .catch(() => ({ outlet, data: [] })))
+
+      const stockResults = await Promise.all(stockPromises);
+      const stockData = stockResults.reduce((acc, { outlet, data }) => {
+        acc[outlet] = data;
+        return acc;
+      }, {});
+      setAllStockMovementData(stockData);
+
     } catch (error) {
-      console.error("Error fetching sales reports:", error);
-      setError("Failed to load sales reports. Please try again.");
+      console.error("Error fetching report data:", error);
+      setError("Failed to load report data. Please try again.");
     } finally {
-      setLoading((prev) => ({ ...prev, sales: false }));
+      setLoading(prev => ({ ...prev, sales: false, stock: false }));
     }
-  }, [users, selectedMonth, startDate, endDate]);
+  }, [allUsers, selectedMonth, startDate, endDate]);
 
+  // Get belt from zone name
+  const getBeltFromZone = useCallback((zoneName) => {
+    if (zoneName.includes("ZONE-01")) return "Belt-1";
+    if (zoneName.includes("ZONE-03")) return "Belt-3";
+    return "";
+  }, []);
+
+  // Get target for a user in the selected period
+  const getUserTarget = useCallback((userId) => {
+    return allTargets[userId] || 0;
+  }, [allTargets]);
+
+  // Apply all filters to get the users to display
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
+    return allUsers.filter((user) => {
       const matchRole = selectedRole
         ? user.role === selectedRole
         : !["ASM", "RSM", "SOM"].includes(user.role);
@@ -135,62 +162,9 @@ const DealerSalesReport = () => {
       const matchBelt = selectedBelt ? belt === selectedBelt : true;
       return matchRole && matchZone && matchBelt;
     });
-  }, [users, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
+  }, [allUsers, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
 
-  const fetchStockMovementReports = useCallback(async () => {
-    try {
-      setLoading((prev) => ({ ...prev, stock: true }));
-      setError(null);
-
-      // Get all unique outlets we need data for
-      const outletsToFetch = new Set();
-
-      // For regular users, add their own outlet
-      filteredUsers.forEach(user => {
-        if (user.outlet) {
-          outletsToFetch.add(user.outlet);
-        }
-      });
-
-      // For ASM/RSM/SOM, add outlets of their team members
-      const managers = filteredUsers.filter(user => ["ASM", "RSM", "SOM"].includes(user.role));
-      for (const manager of managers) {
-        const teamMembers = users.filter(u => u.zone.includes(manager.zone));
-        teamMembers.forEach(member => {
-          if (member.outlet) {
-            outletsToFetch.add(member.outlet);
-          }
-        });
-      }
-
-      // Fetch data for all needed outlets
-      const promises = Array.from(outletsToFetch).map(async (outlet) => {
-        try {
-          const response = await api.get("/stock-movement-report", {
-            params: { outlet, month: selectedMonth },
-          });
-          return { outlet, data: response.data?.data || [] };
-        } catch (error) {
-          console.error(`Error fetching stock movement for ${outlet}:`, error);
-          return { outlet, data: [] };
-        }
-      });
-
-      const results = await Promise.all(promises);
-      const stockDataMap = results.reduce((acc, { outlet, data }) => {
-        acc[outlet] = data;
-        return acc;
-      }, {});
-
-      setStockMovementData(stockDataMap);
-    } catch (error) {
-      console.error("Error fetching stock movement reports:", error);
-      setError("Failed to load stock movement data. Please try again.");
-    } finally {
-      setLoading((prev) => ({ ...prev, stock: false }));
-    }
-  }, [filteredUsers, users, selectedMonth]);
-
+  // Aggregate reports data with proper calculations
   const aggregatedReports = useMemo(() => {
     return filteredUsers.map((user) => {
       let totalReports = 0;
@@ -201,27 +175,26 @@ const DealerSalesReport = () => {
 
       if (["ASM", "RSM", "SOM"].includes(user.role)) {
         // For managers, calculate based on their team
-        const assignedSOs = users.filter((u) => u.zone.includes(user.zone));
+        const teamMembers = allUsers.filter(u => u.zone.includes(user.zone));
         
         // Sales data
-        totalReports = assignedSOs.reduce(
-          (sum, so) => sum + (salesReports[so._id]?.length || 0),
+        totalReports = teamMembers.reduce(
+          (sum, member) => sum + (allSalesReports[member._id]?.length || 0),
           0
         );
-        totalTP = assignedSOs.reduce(
-          (sum, so) =>
-            sum + (salesReports[so._id]?.reduce(
-              (subSum, report) => subSum + (report.total_tp || 0),
-              0
-            ) || 0),
+        totalTP = teamMembers.reduce(
+          (sum, member) => sum + (allSalesReports[member._id]?.reduce(
+            (subSum, report) => subSum + (report.total_tp || 0),
+            0
+          ) || 0),
           0
         );
 
         // Stock movement data - get all unique outlets from team members
-        const teamOutlets = [...new Set(assignedSOs.map(so => so.outlet).filter(Boolean))];
+        const teamOutlets = [...new Set(teamMembers.map(m => m.outlet).filter(Boolean))];
         
         totalPrimary = teamOutlets.reduce((sum, outlet) => {
-          const outletData = stockMovementData[outlet] || [];
+          const outletData = allStockMovementData[outlet] || [];
           return sum + outletData.reduce(
             (subSum, item) => subSum + (item.primary || 0),
             0
@@ -229,7 +202,7 @@ const DealerSalesReport = () => {
         }, 0);
 
         totalOfficeReturn = teamOutlets.reduce((sum, outlet) => {
-          const outletData = stockMovementData[outlet] || [];
+          const outletData = allStockMovementData[outlet] || [];
           return sum + outletData.reduce(
             (subSum, item) => subSum + (item.officeReturn || 0),
             0
@@ -237,7 +210,7 @@ const DealerSalesReport = () => {
         }, 0);
 
         totalMarketReturn = teamOutlets.reduce((sum, outlet) => {
-          const outletData = stockMovementData[outlet] || [];
+          const outletData = allStockMovementData[outlet] || [];
           return sum + outletData.reduce(
             (subSum, item) => subSum + (item.marketReturn || 0),
             0
@@ -245,14 +218,14 @@ const DealerSalesReport = () => {
         }, 0);
       } else {
         // For regular users
-        totalReports = salesReports[user._id]?.length || 0;
-        totalTP = salesReports[user._id]?.reduce(
+        totalReports = allSalesReports[user._id]?.length || 0;
+        totalTP = allSalesReports[user._id]?.reduce(
           (sum, report) => sum + (report.total_tp || 0),
           0
         ) || 0;
 
         // Stock movement data from their outlet
-        const outletData = stockMovementData[user.outlet] || [];
+        const outletData = allStockMovementData[user.outlet] || [];
         totalPrimary = outletData.reduce(
           (sum, item) => sum + (item.primary || 0),
           0
@@ -285,8 +258,9 @@ const DealerSalesReport = () => {
         achievement,
       };
     });
-  }, [filteredUsers, users, salesReports, stockMovementData, getUserTarget]);
+  }, [filteredUsers, allUsers, allSalesReports, allStockMovementData, getUserTarget]);
 
+  // Calculate totals
   const {
     totalDealers,
     totalReports,
@@ -299,7 +273,7 @@ const DealerSalesReport = () => {
       filteredUsers
         .map(user => {
           if (["ASM", "RSM", "SOM"].includes(user.role)) {
-            const teamMembers = users.filter(u => u.zone.includes(user.zone));
+            const teamMembers = allUsers.filter(u => u.zone.includes(user.zone));
             return teamMembers.map(member => member.outlet).filter(Boolean);
           }
           return user.outlet;
@@ -317,7 +291,7 @@ const DealerSalesReport = () => {
       totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
       totalPrimary: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum + (stockMovementData[outlet] || []).reduce(
+          sum + (allStockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.primary || 0),
             0
           ),
@@ -325,7 +299,7 @@ const DealerSalesReport = () => {
       ),
       totalOfficeReturn: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum + (stockMovementData[outlet] || []).reduce(
+          sum + (allStockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.officeReturn || 0),
             0
           ),
@@ -333,39 +307,33 @@ const DealerSalesReport = () => {
       ),
       totalMarketReturn: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum + (stockMovementData[outlet] || []).reduce(
+          sum + (allStockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.marketReturn || 0),
             0
           ),
         0
       ),
     };
-  }, [filteredUsers, users, aggregatedReports, stockMovementData]);
+  }, [filteredUsers, allUsers, aggregatedReports, allStockMovementData]);
 
+  // Initial data load
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
+  // Fetch targets when month changes
   useEffect(() => {
     if (selectedMonth) {
       fetchTargets();
     }
   }, [selectedMonth, fetchTargets]);
 
+  // Fetch report data when month/date range changes
   useEffect(() => {
-    if (users.length > 0) {
-      fetchSalesReports();
-    }
-  }, [users, selectedMonth, startDate, endDate, fetchSalesReports]);
+    fetchReportData();
+  }, [fetchReportData]);
 
-  useEffect(() => {
-    if (filteredUsers.length > 0 && selectedMonth) {
-      fetchStockMovementReports();
-    }
-  }, [filteredUsers, users, selectedMonth, fetchStockMovementReports]);
-
-  const isLoading =
-    loading.users || loading.targets || loading.sales || loading.stock;
+  const isLoading = loading.initialLoad || loading.sales || loading.stock || loading.targets;
 
   const exportToExcel = () => {
     const exportData = aggregatedReports.map((report) => ({
@@ -394,19 +362,12 @@ const DealerSalesReport = () => {
     XLSX.writeFile(wb, fileName);
   };
 
-  const handleFilterChange = () => {
-    fetchSalesReports();
-    fetchStockMovementReports();
-  };
-
   const handleResetFilters = () => {
     setStartDate("");
     setEndDate("");
     setSelectedRole("");
     setSelectedZone("");
     setSelectedBelt("");
-    fetchSalesReports();
-    fetchStockMovementReports();
   };
 
   return (
@@ -540,13 +501,6 @@ const DealerSalesReport = () => {
             </select>
           </div>
 
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            onClick={handleFilterChange}
-            disabled={isLoading}
-          >
-            {isLoading ? "Loading..." : "Filter Reports"}
-          </button>
           <button
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
             onClick={handleResetFilters}
