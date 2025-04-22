@@ -166,6 +166,7 @@ export default function Secondary({stock,setStock}) {
         sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"), // Use selected date
         total_tp: cart.reduce((sum, item) => sum + item.promoTP * item.pcs, 0),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
+        total_dp: cart.reduce((sum, item) => sum + item.promoDP * item.pcs, 0),
         products: cart.map((item) => ({
           product_name: item.name,
           category: item.category,
@@ -173,6 +174,7 @@ export default function Secondary({stock,setStock}) {
           quantity: item.pcs,
           tp: item.promoTP * item.pcs,
           mrp: item.mrp * item.pcs,
+          dp: item.promoDP * item.pcs,
         })),
       };
 

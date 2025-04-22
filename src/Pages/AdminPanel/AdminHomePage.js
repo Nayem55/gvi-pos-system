@@ -64,6 +64,7 @@ const AdminHomePage = () => {
       setLoading(false);
     }
   };
+  console.log(salesData)
 
   const calculateSummary = (data) => {
     const totalSold = data.reduce(
@@ -72,6 +73,7 @@ const AdminHomePage = () => {
     );
     const totalTP = data.reduce((sum, item) => sum + (item.total_tp || 0), 0);
     const totalMRP = data.reduce((sum, item) => sum + (item.total_mrp || 0), 0);
+    // const totalDP = data.reduce((sum, item) => sum + (item.total_dp || 0), 0);
     setSummary({ totalSold, totalTP, totalMRP });
   };
 
