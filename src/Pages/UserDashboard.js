@@ -93,9 +93,13 @@ const UserDashboard = () => {
               <span className="text-gray-600">Total Products Sold :</span>
               <span className="font-semibold text-gray-800">{totalProductsSold}</span>
             </div>
-            <div className="flex gap-2">
+            {/* <div className="flex gap-2">
               <span className="text-gray-600">Total MRP :</span>
               <span className="font-semibold text-gray-800">৳{totalMRP.toFixed(2)}</span>
+            </div> */}
+            <div className="flex gap-2">
+              <span className="text-gray-600">Monthly Target :</span>
+              <span className="font-semibold text-gray-800">৳{target}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-gray-600">Total TP :</span>
@@ -118,7 +122,7 @@ const UserDashboard = () => {
                   <tr>
                     <th className="p-4 text-left font-medium text-gray-700">Date</th>
                     <th className="p-4 text-left font-medium text-gray-700">Products Sold</th>
-                    <th className="p-4 text-left font-medium text-gray-700">Total MRP</th>
+                    {/* <th className="p-4 text-left font-medium text-gray-700">Total MRP</th> */}
                     <th className="p-4 text-left font-medium text-gray-700">Total TP</th>
                   </tr>
                 </thead>
@@ -133,7 +137,7 @@ const UserDashboard = () => {
                           </div>
                         ))}
                       </td>
-                      <td className="p-4 text-gray-800">৳{report.total_mrp.toFixed(2)}</td>
+                      {/* <td className="p-4 text-gray-800">৳{report.total_mrp.toFixed(2)}</td> */}
                       <td className="p-4 text-gray-800">৳{report.total_tp.toFixed(2)}</td>
                     </tr>
                   ))}

@@ -28,7 +28,7 @@ export default function Home() {
       console.error("Error fetching stock value:", error);
     }
   };
-
+  
   return (
     <div>
       {/* Dropdown for Stock Operations */}

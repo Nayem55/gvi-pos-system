@@ -52,6 +52,10 @@ const router = createBrowserRouter([
         element: <UserDashboard/>,
       },
       {
+        path: "/stock-movement",
+        element: <StockMovementReport/>,
+      },
+      {
         path: "/manage-stock",
         element: <ManageUserStock/>,
       },

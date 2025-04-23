@@ -4,7 +4,7 @@ import logo from "../Images/RL Logo.png";
 import application from "../Images/Application2.png";
 import admin from "../Images/admin-panel.png";
 import dashboard from "../Images/dashboard.png";
-import { Layers } from "lucide-react";
+import { Box, Layers } from "lucide-react";
 
 const Header = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -121,9 +121,19 @@ const Header = () => {
           >
             <img className="w-[32px]" alt="" src={dashboard} />
 
-            <p className="font-bold">Dashboard</p>
+            <p className="font-bold">Sales Report</p>
           </Link>
-          {(user?.role !== "MR") && (
+          <Link
+            to={"/stock-movement"}
+            className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"
+            onClick={toggleSidebar}
+          >
+
+            <Box size={32} />
+            <p className="font-bold">Stock Movement</p>
+
+          </Link>
+          {(user?.role !== "SO") && (
             <Link
               to={"/admin"}
               className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"

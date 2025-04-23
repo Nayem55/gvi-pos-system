@@ -4,7 +4,9 @@ import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 
 const StockMovementReport = () => {
-  const [selectedOutlet, setSelectedOutlet] = useState("");
+  const user = JSON.parse(localStorage.getItem("pos-user"));
+
+  const [selectedOutlet, setSelectedOutlet] = useState(user.outlet || "");
   const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState([]);
@@ -149,7 +151,7 @@ const StockMovementReport = () => {
             outlet: selectedOutlet,
             month: month,
           },
-          timeout: 10000,
+          timeout: 30000,
         }
       );
 
@@ -166,38 +168,52 @@ const StockMovementReport = () => {
       setLoading(false);
     }
   };
-
   // Calculate totals
-  const totalPrimary = reportData.reduce((sum, item) => sum + (item.primary || 0), 0);
-  const totalMarketReturn = reportData.reduce((sum, item) => sum + (item.marketReturn || 0), 0);
-  const totalOfficeReturn = reportData.reduce((sum, item) => sum + (item.officeReturn || 0), 0);
+  const totalPrimary = reportData.reduce(
+    (sum, item) => sum + (item.primary*parseFloat(item.priceDP).toFixed(2) || 0),
+    0
+  );
+  const totalMarketReturn = reportData.reduce(
+    (sum, item) => sum + (item.marketReturn*parseFloat(item.priceDP).toFixed(2) || 0),
+    0
+  );
+  const totalOfficeReturn = reportData.reduce(
+    (sum, item) => sum + (item.officeReturn*parseFloat(item.priceDP).toFixed(2) || 0),
+    0
+  );
 
   return (
     <div className="flex">
-      <div>
-        <AdminSidebar />
-      </div>
+      {!user?.outlet && (
+        <div>
+          <AdminSidebar />
+        </div>
+      )}
 
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">Stock Movement Report</h2>
+        <h2 className="text-3xl font-bold mb-6 text-gray-800">
+          Stock Movement Report
+        </h2>
 
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <select
-            value={selectedOutlet}
-            onChange={(e) => setSelectedOutlet(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Outlet</option>
-            {outlets.map((outlet, index) => (
-              <option key={index} value={outlet}>
-                {outlet}
-              </option>
-            ))}
-          </select>
+          {!user?.outlet && (
+            <select
+              value={selectedOutlet}
+              onChange={(e) => setSelectedOutlet(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Outlet</option>
+              {outlets.map((outlet, index) => (
+                <option key={index} value={outlet}>
+                  {outlet}
+                </option>
+              ))}
+            </select>
+          )}
 
           <div className="flex items-center">
-            <label className="font-medium mr-2">Select Month:</label>
+            {/* <label className="font-medium mr-2">Select Month:</label> */}
             <input
               type="month"
               value={month}
@@ -219,16 +235,22 @@ const StockMovementReport = () => {
         {!loading && reportData.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white border-l-4 border-green-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Primary (PC)</p>
-              <p className="text-2xl font-semibold text-green-700">{totalPrimary}</p>
+              <p className="text-sm text-gray-600">Total Primary (DP)</p>
+              <p className="text-2xl font-semibold text-green-700">
+                {(totalPrimary).toFixed(2)}
+              </p>
             </div>
             <div className="bg-white border-l-4 border-red-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Market Return (PC)</p>
-              <p className="text-2xl font-semibold text-red-700">{totalMarketReturn}</p>
+              <p className="text-sm text-gray-600">Total Market Return (DP)</p>
+              <p className="text-2xl font-semibold text-red-700">
+                {(totalMarketReturn).toFixed(2)}
+              </p>
             </div>
             <div className="bg-white border-l-4 border-yellow-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Office Return (PC)</p>
-              <p className="text-2xl font-semibold text-yellow-700">{totalOfficeReturn}</p>
+              <p className="text-sm text-gray-600">Total Office Return (DP)</p>
+              <p className="text-2xl font-semibold text-yellow-700">
+                {(totalOfficeReturn).toFixed(2)}
+              </p>
             </div>
           </div>
         )}
@@ -250,13 +272,13 @@ const StockMovementReport = () => {
                     Barcode
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Primary (PC)
+                    Primary (DP)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Market Return (PC)
+                    Market Return (DP)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Office Return (PC)
+                    Office Return (DP)
                   </th>
                 </tr>
               </thead>
@@ -266,11 +288,21 @@ const StockMovementReport = () => {
                     key={`${item.barcode}-${index}`}
                     className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                   >
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.productName || "N/A"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.barcode}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.primary}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.marketReturn}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.officeReturn}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.productName || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {item.barcode}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(item.primary*parseFloat(item.priceDP)).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(item.marketReturn*parseFloat(item.priceDP)).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(item.officeReturn*parseFloat(item.priceDP)).toFixed(2)}
+                    </td>
                   </tr>
                 ))}
 
@@ -278,9 +310,15 @@ const StockMovementReport = () => {
                   <tr className="bg-blue-50 font-semibold">
                     <td className="px-6 py-4 text-sm text-gray-900">Total</td>
                     <td className="px-6 py-4 text-sm text-gray-500">—</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{totalPrimary}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{totalMarketReturn}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{totalOfficeReturn}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(totalPrimary).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(totalMarketReturn).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(totalOfficeReturn).toFixed(2)}
+                    </td>
                   </tr>
                 )}
               </tbody>
