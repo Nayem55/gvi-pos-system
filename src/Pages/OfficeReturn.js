@@ -6,201 +6,280 @@ import dayjs from "dayjs";
 export default function OfficeReturn({ user, stock, setStock }) {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [officeReturnItems, setOfficeReturnItems] = useState({});
+  const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [updating, setUpdating] = useState({}); // Track updating state for each product
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD")); // Added date state
 
-  // Fetch search results
+  // Handle product search
   const handleSearch = async (query) => {
+    setSearch(query);
     if (query.length > 2) {
       setLoading(true);
       try {
         const response = await axios.get(
           "https://gvi-pos-server.vercel.app/search-product",
-          {
-            params: { search: query, type: "name" },
-          }
+          { params: { search: query, type: "name" } }
         );
         setSearchResults(response.data);
-
-        // Fetch current stock for each product in search results
-        const stockData = {};
-        const stockRequests = response.data.map(async (product) => {
-          try {
-            const stockResponse = await axios.get(
-              `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
-            );
-            stockData[product.barcode] = {
-              openingStock: stockResponse.data.stock || 0, // Current stock
-              officeReturn: 0, // Stock to deduct
-            };
-          } catch (error) {
-            stockData[product.barcode] = {
-              openingStock: 0,
-              officeReturn: 0,
-            };
-          }
-        });
-
-        await Promise.all(stockRequests);
-        setOfficeReturnItems((prev) => ({ ...prev, ...stockData }));
       } catch (error) {
-        console.error("Error fetching search results:", error);
+        console.error("Search error:", error);
+        toast.error("Failed to search products");
       } finally {
         setLoading(false);
       }
     } else {
-      setSearchResults([]); // Clear search results if query is too short
+      setSearchResults([]);
     }
   };
 
-  // Handle office return input change
-  const handleOfficeReturnChange = (barcode, value) => {
-    setOfficeReturnItems((prev) => ({
-      ...prev,
-      [barcode]: {
-        ...prev[barcode],
-        officeReturn: parseInt(value) || 0, // Ensure value is a number
-      },
-    }));
+  // Add product to cart with current stock
+  const addToCart = async (product) => {
+    const alreadyAdded = cartItems.find(
+      (item) => item.barcode === product.barcode
+    );
+    if (alreadyAdded) {
+      toast.error("Already added to cart!");
+      return;
+    }
+
+    try {
+      const stockRes = await axios.get(
+        `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+      );
+      const currentStock = stockRes.data.stock || 0;
+
+      setCartItems((prev) => [
+        ...prev,
+        {
+          ...product,
+          openingStock: currentStock,
+          officeReturn: 0,
+        },
+      ]);
+    } catch (err) {
+      console.error("Stock fetch error:", err);
+      toast.error("Failed to fetch stock.");
+    }
   };
 
-  // Update office return stock and create a transaction report
-  const handleUpdateStock = async (barcode) => {
-    setUpdating((prev) => ({ ...prev, [barcode]: true })); // Start loading
+  // Update office return value in cart
+  const updateOfficeReturnValue = (barcode, value) => {
+    const returnValue = parseInt(value) || 0;
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.barcode === barcode
+          ? { ...item, officeReturn: returnValue }
+          : item
+      )
+    );
+  };
+
+  // Remove item from cart
+  const removeFromCart = (barcode) => {
+    setCartItems((prev) => prev.filter((item) => item.barcode !== barcode));
+  };
+
+  // Submit all office returns at once
+  const handleSubmit = async () => {
+    if (cartItems.length === 0) return;
+
+    // Validate all office return quantities
+    const hasInvalid = cartItems.some(
+      (item) => item.officeReturn <= 0 || item.officeReturn > item.openingStock
+    );
+    
+    if (hasInvalid) {
+      toast.error("All items must have valid return quantity (greater than 0 and not exceeding current stock)");
+      return;
+    }
+
+    setSubmitting(true);
+
+    // Combine selected date with current time
+    const formattedDateTime = dayjs(
+      selectedDate + " " + dayjs().format("HH:mm:ss")
+    ).format("YYYY-MM-DD HH:mm:ss");
+
     try {
-      const { openingStock, officeReturn } = officeReturnItems[barcode];
-      const newStock = openingStock - officeReturn; // Deduct office return from opening stock
+      const requests = cartItems.map(async (item) => {
+        const newStock = item.openingStock - item.officeReturn;
 
-      // Update the stock in the database
-      await axios.put("https://gvi-pos-server.vercel.app/update-outlet-stock", {
-        barcode,
-        outlet: user.outlet,
-        newStock,
+        // Update stock
+        await axios.put(
+          "https://gvi-pos-server.vercel.app/update-outlet-stock",
+          {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            newStock,
+          }
+        );
+
+        // Log transaction with selected date
+        await axios.post(
+          "https://gvi-pos-server.vercel.app/stock-transactions",
+          {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            type: "office return",
+            quantity: item.officeReturn,
+            date: formattedDateTime,
+            user: user.name,
+          }
+        );
       });
 
-      // Create a new transaction report in the transaction collection
-      await axios.post("https://gvi-pos-server.vercel.app/stock-transactions", {
-        barcode,
-        outlet: user.outlet,
-        type: "office return",
-        quantity: officeReturn,
-        date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        user: user.name,
-      });
-
-      toast.success("Office return updated successfully!");
-      setOfficeReturnItems((prev) => ({
-        ...prev,
-        [barcode]: {
-          openingStock: newStock, // Update opening stock to reflect the new total
-          officeReturn: 0, // Reset office return input
-        },
-      }));
-    } catch (error) {
-      console.error("Error updating office return:", error);
-      toast.error("Failed to update office return.");
+      await Promise.all(requests);
+      toast.success("All office returns processed successfully!");
+      setCartItems([]);
+      setSearch("");
+      setSearchResults([]);
+    } catch (err) {
+      console.error("Bulk update error:", err);
+      toast.error("Failed to process office returns.");
     } finally {
-      setUpdating((prev) => ({ ...prev, [barcode]: false })); // Stop loading
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
-      <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4">
-        <span className="text-sm font-semibold">
-          {dayjs().format("DD MMM, YYYY")}
-        </span>
-        {user && user.outlet && (
+    <div className="p-4 w-full max-w-xl mx-auto bg-gray-100 min-h-screen">
+      {/* Header with date picker */}
+      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg mb-4">
+        <div className="flex items-center">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+            max={dayjs().format("YYYY-MM-DD")} // Prevent future dates
+          />
+        </div>
+        {user?.outlet && (
           <span className="text-sm font-semibold">
-            Stock (DP) : {stock.toLocaleString()}
+            Stock (DP): {stock.toLocaleString()}
           </span>
         )}
       </div>
 
-      <div className="bg-white p-4 shadow rounded-lg mb-4">
-        <h2 className="text-xl font-semibold mb-4">Office Return</h2>
-
-        {/* Search Box */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by product name"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              handleSearch(e.target.value);
-            }}
-            className="border p-2 rounded w-full"
-          />
-        </div>
+      {/* Search */}
+      <div className="rounded-lg mb-4">
+        <input
+          type="text"
+          placeholder="Search product name"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2">Product Name</th>
-                <th className="border p-2">Opening Stock</th>
-                <th className="border p-2">Value (DP)</th>
-                <th className="border p-2">Office Return</th>
-                <th className="border p-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {searchResults.map((product) => (
-                <tr key={product.barcode} className="border">
-                  <td className="border p-2">{product.name}</td>
-                  <td className="border p-2">
-                    {officeReturnItems[product.barcode]?.openingStock || 0}
-                  </td>
-                  <td className="border p-2">
-                    {officeReturnItems[product.barcode]?.openingStock *
-                      (product.promoDP || product.dp)}
-                  </td>
-                  <td className="border p-2">
-                    <input
-                      type="number"
-                      value={
-                        officeReturnItems[product.barcode]?.officeReturn || 0
-                      }
-                      onChange={(e) =>
-                        handleOfficeReturnChange(
-                          product.barcode,
-                          e.target.value
-                        )
-                      }
-                      className="border p-1 w-full text-center"
-                    />
-                  </td>
-                  <td className="border p-2">
-                    <button
-                      onClick={() => handleUpdateStock(product.barcode)}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md w-full"
-                    >
-                      {updating[product.barcode] ? (
-                        <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div>
-                      ) : (
-                        "Update"
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-
-        )}
-
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="flex justify-center items-center my-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
-          </div>
+          <ul className="mt-2 border rounded max-h-48 overflow-y-auto">
+            {searchResults.map((product) => (
+              <li
+                key={product.barcode}
+                onClick={() => addToCart(product)}
+                className="p-2 hover:bg-gray-100 cursor-pointer border-b"
+              >
+                {product.name}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
+
+      {/* Cart Table */}
+      {cartItems.length > 0 && (
+        <div className="bg-white p-4 shadow-md mb-6 overflow-x-auto">
+          <h2 className="text-lg font-bold mb-4 text-gray-800">
+            Office Return Voucher
+          </h2>
+          <div className="w-full overflow-x-auto">
+            <table className="max-w-[640px] table-auto border-collapse border border-gray-200">
+              <thead className="bg-gray-100 text-sm text-gray-700">
+                <tr>
+                  <th className="border p-2 font-medium">Product</th>
+                  <th className="border p-2 font-medium">Current Stock</th>
+                  <th className="border p-2 font-medium">Return Qty</th>
+                  <th className="border p-2 font-medium">New Stock</th>
+                  <th className="border p-2 font-medium">Return (DP)</th>
+                  <th className="border p-2 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm text-gray-800">
+                {cartItems.map((item) => (
+                  <tr key={item.barcode} className="hover:bg-gray-50">
+                    <td className="border p-2">{item.name}</td>
+                    <td className="border p-2 text-center">
+                      {item.openingStock}
+                    </td>
+                    <td className="border p-2 text-center">
+                      <input
+                        type="number"
+                        value={item.officeReturn}
+                        onChange={(e) =>
+                          updateOfficeReturnValue(item.barcode, e.target.value)
+                        }
+                        className="border rounded px-2 py-1 w-20 text-center"
+                        min="0"
+                        max={item.openingStock}
+                      />
+                    </td>
+                    <td className="border p-2 text-center">
+                      {item.openingStock - item.officeReturn}
+                    </td>
+                    <td className="border p-2 text-center">
+                      {(item.officeReturn * (item.promoDP || item.dp)).toFixed(2)}
+                    </td>
+                    <td className="border p-2 text-center">
+                      <button
+                        onClick={() => removeFromCart(item.barcode)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove"
+                      >
+                        <svg
+                          className="w-4 h-4 inline"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 448 512"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                          />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Total DP Value */}
+          <div className="text-right font-semibold text-gray-700 mt-4">
+            Total Return (DP) :{" "}
+            {cartItems
+              .reduce(
+                (acc, item) => acc + item.officeReturn * (item.promoDP || item.dp),
+                0
+              )
+              .toFixed(2)}
+          </div>
+
+          {/* Submit Button */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className={`mt-6 w-full py-2 text-white rounded-lg font-semibold transition ${
+              submitting
+                ? "bg-green-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {submitting ? "Processing..." : "Process Office Returns"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

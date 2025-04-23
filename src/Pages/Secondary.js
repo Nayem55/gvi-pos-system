@@ -284,7 +284,7 @@ export default function Secondary({stock,setStock}) {
             <tr className="border-b bg-gray-200">
               <th className="p-2 w-2/6 text-left">Product</th>
               <th className="p-2 w-1/6">Pcs</th>
-              <th className="p-2 w-1/6">MRP</th>
+              {/* <th className="p-2 w-1/6">MRP</th> */}
               <th className="p-2 w-1/6">TP</th>
               <th className="p-2 w-1/6">Total</th>
               <th className="p-2 w-1/6"></th>
@@ -313,7 +313,7 @@ export default function Secondary({stock,setStock}) {
                     </button>
                   </div>
                 </td>
-                <td className="p-2 w-1/6 text-center">{item.mrp} BDT</td>
+                {/* <td className="p-2 w-1/6 text-center">{item.mrp} BDT</td> */}
                 <td className="p-2 w-1/6 text-center">{item.promoTP} BDT</td>
                 <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
                 <td className="p-2 w-1/6 text-center">

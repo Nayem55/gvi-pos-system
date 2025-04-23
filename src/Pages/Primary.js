@@ -9,7 +9,9 @@ export default function Primary({ user, stock, setStock }) {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
 
   // Search for products
   const handleSearch = async (query) => {
@@ -91,7 +93,9 @@ export default function Primary({ user, stock, setStock }) {
 
     setSubmitting(true);
 
-    const formattedDateTime = dayjs(selectedDate + " " + dayjs().format("HH:mm:ss")).format("YYYY-MM-DD HH:mm:ss");
+    const formattedDateTime = dayjs(
+      selectedDate + " " + dayjs().format("HH:mm:ss")
+    ).format("YYYY-MM-DD HH:mm:ss");
 
     try {
       const requests = cartItems.map(async (item) => {
@@ -182,61 +186,69 @@ export default function Primary({ user, stock, setStock }) {
 
       {/* Cart Table */}
       {cartItems.length > 0 && (
-        <div className="bg-white p-4 shadow rounded-lg mb-4 overflow-x-auto">
-          <h2 className="text-xl font-semibold mb-4">Primary Voucher</h2>
-          <table className="w-full border border-gray-300">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border p-2">Product</th>
-                <th className="border p-2">Opening</th>
-                <th className="border p-2">DP Value</th>
-                <th className="border p-2">Primary</th>
-                <th className="border p-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cartItems.map((item) => (
-                <tr key={item.barcode}>
-                  <td className="border p-2">{item.name}</td>
-                  <td className="border p-2">{item.openingStock}</td>
-                  <td className="border p-2">
-                    {(item.openingStock * (item.promoDP || item.dp)).toFixed(2)}
-                  </td>
-                  <td className="border p-2">
-                    <input
-                      type="number"
-                      value={item.primary}
-                      onChange={(e) =>
-                        updatePrimaryValue(item.barcode, e.target.value)
-                      }
-                      className="border p-1 w-full text-center"
-                    />
-                  </td>
-                  <td className="border p-2 text-center">
-                    <button
-                      onClick={() => removeFromCart(item.barcode)}
-                      className="text-red-500 text-lg"
-                      title="Remove"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 448 512"
-                      >
-                        <path
-                          fill="#FD0032"
-                          d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
-                        />
-                      </svg>
-                    </button>
-                  </td>
+        <div className="bg-white p-4 shadow-md mb-6 overflow-x-auto">
+          <h2 className="text-lg font-bold mb-4 text-gray-800">
+            Primary Voucher
+          </h2>
+          <div className="w-full overflow-x-auto">
+            <table className="max-w-[640px] table-auto border-collapse border border-gray-200">
+              <thead className="bg-gray-100 text-sm text-gray-700">
+                <tr>
+                  <th className="border p-2 font-medium">Product</th>
+                  <th className="border p-2 font-medium">Opening</th>
+                  <th className="border p-2 font-medium">DP Value</th>
+                  <th className="border p-2 font-medium">Primary</th>
+                  <th className="border p-2 font-medium">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-sm text-gray-800">
+                {cartItems.map((item) => (
+                  <tr key={item.barcode} className="hover:bg-gray-50">
+                    <td className="border p-2">{item.name}</td>
+                    <td className="border p-2 text-center">
+                      {item.openingStock}
+                    </td>
+                    <td className="border p-2 text-center">
+                      {(item.openingStock * (item.promoDP || item.dp)).toFixed(
+                        2
+                      )}
+                    </td>
+                    <td className="border p-2 text-center">
+                      <input
+                        type="number"
+                        value={item.primary}
+                        onChange={(e) =>
+                          updatePrimaryValue(item.barcode, e.target.value)
+                        }
+                        className="border rounded px-2 py-1 w-20 text-center"
+                      />
+                    </td>
+                    <td className="border p-2 text-center">
+                      <button
+                        onClick={() => removeFromCart(item.barcode)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove"
+                      >
+                        <svg
+                          className="w-4 h-4 inline"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 448 512"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                          />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Total DP Value */}
-          <div className="text-right font-semibold mt-4">
+          <div className="text-right font-semibold text-gray-700 mt-4">
             Total DP:{" "}
             {cartItems
               .reduce(
@@ -246,11 +258,15 @@ export default function Primary({ user, stock, setStock }) {
               .toFixed(2)}
           </div>
 
-          {/* Submit All */}
+          {/* Submit Button */}
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="mt-4 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+            className={`mt-6 w-full py-2 text-white rounded-lg font-semibold transition ${
+              submitting
+                ? "bg-green-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
           >
             {submitting ? "Processing..." : "Add Primary"}
           </button>

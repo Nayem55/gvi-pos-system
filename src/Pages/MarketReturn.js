@@ -6,184 +6,247 @@ import dayjs from "dayjs";
 export default function MarketReturn({ user, stock, setStock }) {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [marketReturnItems, setMarketReturnItems] = useState({});
+  const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [updating, setUpdating] = useState({}); // Track updating state for each product
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD")); // Added date state
 
-  // Fetch search results
+  // Handle product search
   const handleSearch = async (query) => {
+    setSearch(query);
     if (query.length > 2) {
       setLoading(true);
       try {
         const response = await axios.get(
           "https://gvi-pos-server.vercel.app/search-product",
-          {
-            params: { search: query, type: "name" },
-          }
+          { params: { search: query, type: "name" } }
         );
         setSearchResults(response.data);
-
-        // Fetch current stock for each product in search results
-        const stockData = {};
-        const stockRequests = response.data.map(async (product) => {
-          try {
-            const stockResponse = await axios.get(
-              `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
-            );
-            stockData[product.barcode] = {
-              openingStock: stockResponse.data.stock || 0, // Current stock
-              marketReturn: 0, // Stock to deduct
-            };
-          } catch (error) {
-            stockData[product.barcode] = {
-              openingStock: 0,
-              marketReturn: 0,
-            };
-          }
-        });
-
-        await Promise.all(stockRequests);
-        setMarketReturnItems((prev) => ({ ...prev, ...stockData }));
       } catch (error) {
-        console.error("Error fetching search results:", error);
+        console.error("Search error:", error);
+        toast.error("Failed to search products");
       } finally {
         setLoading(false);
       }
     } else {
-      setSearchResults([]); // Clear search results if query is too short
+      setSearchResults([]);
     }
   };
 
-  // Handle market return input change
-  const handleMarketReturnChange = (barcode, value) => {
-    setMarketReturnItems((prev) => ({
-      ...prev,
-      [barcode]: {
-        ...prev[barcode],
-        marketReturn: parseInt(value) || 0, // Ensure value is a number
-      },
-    }));
+  // Add product to cart with current stock
+  const addToCart = async (product) => {
+    const alreadyAdded = cartItems.find(
+      (item) => item.barcode === product.barcode
+    );
+    if (alreadyAdded) {
+      toast.error("Already added to cart!");
+      return;
+    }
+
+    try {
+      const stockRes = await axios.get(
+        `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+      );
+      const currentStock = stockRes.data.stock || 0;
+
+      setCartItems((prev) => [
+        ...prev,
+        {
+          ...product,
+          openingStock: currentStock,
+          marketReturn: 0,
+        },
+      ]);
+    } catch (err) {
+      console.error("Stock fetch error:", err);
+      toast.error("Failed to fetch stock.");
+    }
   };
 
-  // Update market return stock and create a transaction report
-  const handleUpdateStock = async (barcode) => {
-    setUpdating((prev) => ({ ...prev, [barcode]: true })); // Start loading
+  // Update market return value in cart
+  const updateMarketReturnValue = (barcode, value) => {
+    const returnValue = parseInt(value) || 0;
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.barcode === barcode
+          ? { ...item, marketReturn: returnValue }
+          : item
+      )
+    );
+  };
+
+  // Remove item from cart
+  const removeFromCart = (barcode) => {
+    setCartItems((prev) => prev.filter((item) => item.barcode !== barcode));
+  };
+
+  // Submit all market returns at once
+  const handleSubmit = async () => {
+    if (cartItems.length === 0) return;
+
+    // Validate all market return quantities
+    const hasInvalid = cartItems.some(
+      (item) => item.marketReturn <= 0 || item.marketReturn > item.openingStock
+    );
+    
+    if (hasInvalid) {
+      toast.error("All items must have valid return quantity (greater than 0 and not exceeding current stock)");
+      return;
+    }
+
+    setSubmitting(true);
+
+    // Combine selected date with current time
+    const formattedDateTime = dayjs(
+      selectedDate + " " + dayjs().format("HH:mm:ss")
+    ).format("YYYY-MM-DD HH:mm:ss");
+
     try {
-      const { openingStock, marketReturn } = marketReturnItems[barcode];
-      const newStock = openingStock - marketReturn; // Deduct market return from opening stock
+      const requests = cartItems.map(async (item) => {
+        const newStock = item.openingStock - item.marketReturn;
 
-      // Update the stock in the database
-      await axios.put("https://gvi-pos-server.vercel.app/update-outlet-stock", {
-        barcode,
-        outlet: user.outlet,
-        newStock,
+        // Update stock
+        await axios.put(
+          "https://gvi-pos-server.vercel.app/update-outlet-stock",
+          {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            newStock,
+          }
+        );
+
+        // Log transaction with selected date
+        await axios.post(
+          "https://gvi-pos-server.vercel.app/stock-transactions",
+          {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            type: "market return",
+            quantity: item.marketReturn,
+            date: formattedDateTime,
+            user: user.name,
+          }
+        );
       });
 
-      // Create a new transaction report in the transaction collection
-      await axios.post("https://gvi-pos-server.vercel.app/stock-transactions", {
-        barcode,
-        outlet: user.outlet,
-        type: "market return",
-        quantity: marketReturn,
-        date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        user: user.name,
-      });
-
-      toast.success("Market return updated successfully!");
-      setMarketReturnItems((prev) => ({
-        ...prev,
-        [barcode]: {
-          openingStock: newStock, // Update opening stock to reflect the new total
-          marketReturn: 0, // Reset market return input
-        },
-      }));
-    } catch (error) {
-      console.error("Error updating market return:", error);
-      toast.error("Failed to update market return.");
+      await Promise.all(requests);
+      toast.success("All market returns processed successfully!");
+      setCartItems([]);
+      setSearch("");
+      setSearchResults([]);
+    } catch (err) {
+      console.error("Bulk update error:", err);
+      toast.error("Failed to process market returns.");
     } finally {
-      setUpdating((prev) => ({ ...prev, [barcode]: false })); // Stop loading
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
-      <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4">
-        <span className="text-sm font-semibold">
-          {dayjs().format("DD MMM, YYYY")}
-        </span>
-        {user && user.outlet && (
+    <div className="p-4 w-full max-w-xl mx-auto bg-gray-100 min-h-screen">
+      {/* Header with date picker */}
+      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg mb-4">
+        <div className="flex items-center">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+            max={dayjs().format("YYYY-MM-DD")} // Prevent future dates
+          />
+        </div>
+        {user?.outlet && (
           <span className="text-sm font-semibold">
-            Stock (DP) : {stock.toLocaleString()}
+            Stock (DP): {stock.toLocaleString()}
           </span>
         )}
       </div>
 
-      <div className="bg-white p-4 shadow rounded-lg mb-4">
-        <h2 className="text-xl font-semibold mb-4">Market Return</h2>
-
-        {/* Search Box */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by product name"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              handleSearch(e.target.value);
-            }}
-            className="border p-2 rounded w-full"
-          />
-        </div>
+      {/* Search */}
+      <div className="rounded-lg mb-4">
+        <input
+          type="text"
+          placeholder="Search product name"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border p-2">Product Name</th>
-                  <th className="border p-2">Opening Stock</th>
-                  <th className="border p-2">Value (TP)</th>
-                  <th className="border p-2">Market Return</th>
-                  <th className="border p-2">Action</th>
+          <ul className="mt-2 border rounded max-h-48 overflow-y-auto">
+            {searchResults.map((product) => (
+              <li
+                key={product.barcode}
+                onClick={() => addToCart(product)}
+                className="p-2 hover:bg-gray-100 cursor-pointer border-b"
+              >
+                {product.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Cart Table */}
+      {cartItems.length > 0 && (
+        <div className="bg-white p-4 shadow-md mb-6 overflow-x-auto">
+          <h2 className="text-lg font-bold mb-4 text-gray-800">
+            Market Return Voucher
+          </h2>
+          <div className="w-full overflow-x-auto">
+            <table className="max-w-[640px] table-auto border-collapse border border-gray-200">
+              <thead className="bg-gray-100 text-sm text-gray-700">
+                <tr>
+                  <th className="border p-2 font-medium">Product</th>
+                  <th className="border p-2 font-medium">Current Stock</th>
+                  <th className="border p-2 font-medium">Return Qty</th>
+                  <th className="border p-2 font-medium">New Stock</th>
+                  <th className="border p-2 font-medium">Return (TP)</th>
+                  <th className="border p-2 font-medium">Action</th>
                 </tr>
               </thead>
-              <tbody>
-                {searchResults.map((product) => (
-                  <tr key={product.barcode} className="border">
-                    <td className="border p-2">{product.name}</td>
-                    <td className="border p-2">
-                      {marketReturnItems[product.barcode]?.openingStock || 0}
+              <tbody className="text-sm text-gray-800">
+                {cartItems.map((item) => (
+                  <tr key={item.barcode} className="hover:bg-gray-50">
+                    <td className="border p-2">{item.name}</td>
+                    <td className="border p-2 text-center">
+                      {item.openingStock}
                     </td>
-                    <td className="border p-2">
-                      {marketReturnItems[product.barcode]?.openingStock *
-                        (product.promoDP || product.dp) || 0}
-                    </td>
-                    <td className="border p-2">
+                    <td className="border p-2 text-center">
                       <input
                         type="number"
-                        value={
-                          marketReturnItems[product.barcode]?.marketReturn || 0
-                        }
+                        value={item.marketReturn}
                         onChange={(e) =>
-                          handleMarketReturnChange(
-                            product.barcode,
-                            e.target.value
-                          )
+                          updateMarketReturnValue(item.barcode, e.target.value)
                         }
-                        className="border p-1 w-full text-center"
+                        className="border rounded px-2 py-1 w-20 text-center"
+                        min="0"
+                        max={item.openingStock}
                       />
                     </td>
-                    <td className="border p-2">
+                    <td className="border p-2 text-center">
+                      {item.openingStock - item.marketReturn}
+                    </td>
+                    <td className="border p-2 text-center">
+                      {(item.marketReturn * (item.promoDP || item.dp)).toFixed(2)}
+                    </td>
+                    <td className="border p-2 text-center">
                       <button
-                        onClick={() => handleUpdateStock(product.barcode)}
-                        className="bg-green-500 text-white px-3 py-1 rounded-md w-full"
+                        onClick={() => removeFromCart(item.barcode)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove"
                       >
-                        {updating[product.barcode] ? (
-                          <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full mx-auto"></div>
-                        ) : (
-                          "Update"
-                        )}
+                        <svg
+                          className="w-4 h-4 inline"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 448 512"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                          />
+                        </svg>
                       </button>
                     </td>
                   </tr>
@@ -191,15 +254,32 @@ export default function MarketReturn({ user, stock, setStock }) {
               </tbody>
             </table>
           </div>
-        )}
 
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="flex justify-center items-center my-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
+          {/* Total TP Value */}
+          <div className="text-right font-semibold text-gray-700 mt-4">
+            Total Return (TP) :{" "}
+            {cartItems
+              .reduce(
+                (acc, item) => acc + item.marketReturn * (item.promoDP || item.dp),
+                0
+              )
+              .toFixed(2)}
           </div>
-        )}
-      </div>
+
+          {/* Submit Button */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className={`mt-6 w-full py-2 text-white rounded-lg font-semibold transition ${
+              submitting
+                ? "bg-green-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {submitting ? "Processing..." : "Process Market Returns"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
