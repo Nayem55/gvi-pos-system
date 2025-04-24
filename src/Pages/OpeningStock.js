@@ -3,7 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 
-export default function OpeningStock({ user, stock, setStock }) {
+export default function OpeningStock({ user, stock, getStockValue }) {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [cartItems, setCartItems] = useState([]);
@@ -114,6 +114,7 @@ export default function OpeningStock({ user, stock, setStock }) {
 
       await Promise.all(requests);
       toast.success("Opening stocks updated!");
+      getStockValue(user.outlet);
       setCartItems([]);
       setSearch("");
       setSearchResults([]);

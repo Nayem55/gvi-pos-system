@@ -48,19 +48,19 @@ export default function Home() {
 
       {/* Render Selected Tab */}
       {selectedTab === "opening" && (
-        <OpeningStock user={user} stock={stock} setStock={setStock} />
+        <OpeningStock user={user} stock={stock} setStock={setStock} getStockValue={getStockValue} />
       )}
       {selectedTab === "primary" && (
-        <Primary user={user} stock={stock} setStock={setStock} />
+        <Primary user={user} stock={stock} setStock={setStock} getStockValue={getStockValue}  />
       )}
       {selectedTab === "secondary" && (
-        <Secondary user={user} stock={stock} setStock={setStock} />
+        <Secondary user={user} stock={stock} setStock={setStock} getStockValue={getStockValue} />
       )}
       {selectedTab === "officeReturn" && (
-        <OfficeReturn user={user} stock={stock} setStock={setStock} />
+        <OfficeReturn user={user} stock={stock} setStock={setStock} getStockValue={getStockValue}  />
       )}
       {selectedTab === "marketReturn" && (
-        <MarketReturn user={user} stock={stock} setStock={setStock} />
+        <MarketReturn user={user} stock={stock} setStock={setStock} getStockValue={getStockValue}  />
       )}
     </div>
   );
