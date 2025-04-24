@@ -98,7 +98,7 @@ const UserDashboard = () => {
               <span className="font-semibold text-gray-800">৳{totalMRP.toFixed(2)}</span>
             </div> */}
             <div className="flex gap-2">
-              <span className="text-gray-600">Monthly Target :</span>
+              <span className="text-gray-600">Monthly Target (TP) :</span>
               <span className="font-semibold text-gray-800">৳{target}</span>
             </div>
             <div className="flex gap-2">

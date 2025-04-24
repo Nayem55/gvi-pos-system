@@ -6,16 +6,18 @@ import toast from "react-hot-toast";
 
 const MonthlyTargetPage = () => {
   const [users, setUsers] = useState([]);
-  const [targets, setTargets] = useState({}); // Store targets fetched from the database
-  const [tempTargets, setTempTargets] = useState({}); // Store temporary input values for both TP and DP
+  const [targets, setTargets] = useState({});
+  const [tempTargets, setTempTargets] = useState({});
   const [year, setYear] = useState(dayjs().year());
-  const [month, setMonth] = useState(dayjs().format("MM"));
+  const [month, setMonth] = useState(dayjs().month() + 1); // dayjs().month() is 0-indexed
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
+        const res = await axios.get(
+          "https://gvi-pos-server.vercel.app/getAllUser"
+        );
         setUsers(res.data);
       } catch (error) {
         console.error("Failed to fetch users");
@@ -24,15 +26,17 @@ const MonthlyTargetPage = () => {
     fetchUsers();
   }, []);
 
-
   useEffect(() => {
     const fetchTargets = async () => {
       if (!year || !month) return;
 
       try {
-        const res = await axios.get("https://gvi-pos-server.vercel.app/targets", {
-          params: { year, month },
-        });
+        const res = await axios.get(
+          "https://gvi-pos-server.vercel.app/targets",
+          {
+            params: { year, month },
+          }
+        );
 
         const targetsMap = {};
         res.data.forEach((targetEntry) => {
@@ -42,15 +46,15 @@ const MonthlyTargetPage = () => {
               target.month === parseInt(month)
             ) {
               targetsMap[targetEntry.userID] = {
-                tp: target.tp,
-                dp: target.dp, // Store DP along with TP
+                dp: target.dp,
+                tp: (target.dp * 1.07).toFixed(2), // Auto calculate TP here too for display
               };
             }
           });
         });
 
         setTargets(targetsMap);
-        setTempTargets(targetsMap); // Initialize tempTargets with fetched targets
+        setTempTargets(targetsMap);
       } catch (error) {
         console.error("Failed to fetch targets");
       }
@@ -60,20 +64,24 @@ const MonthlyTargetPage = () => {
   }, [year, month]);
 
   const handleTargetChange = (userID, value, field) => {
-    setTempTargets((prev) => ({
-      ...prev,
-      [userID]: {
-        ...prev[userID],
-        [field]: value,
-      },
-    }));
+    if (field === "dp") {
+      const dp = parseFloat(value);
+      const tp = isNaN(dp) ? "" : (dp * 1.07).toFixed(2);
+      setTempTargets((prev) => ({
+        ...prev,
+        [userID]: {
+          dp: value,
+          tp,
+        },
+      }));
+    }
   };
 
   const handleUserTargetSaveOrUpdate = async (userID) => {
     const { tp, dp } = tempTargets[userID];
 
     if (tp === undefined || dp === undefined || tp === "" || dp === "") {
-      return alert("Please enter valid TP and DP values");
+      return alert("Please enter a valid DP value");
     }
 
     setLoading(true);
@@ -86,14 +94,14 @@ const MonthlyTargetPage = () => {
           year: parseInt(year),
           month: parseInt(month),
           tp,
-          dp, // Send DP value along with TP
+          dp,
         });
         toast.success("Target updated successfully");
       } else {
         await axios.post("https://gvi-pos-server.vercel.app/targets", {
           year: parseInt(year),
           month: parseInt(month),
-          targets: [{ userID, tp, dp }], // Include both TP and DP in the POST request
+          targets: [{ userID, tp, dp }],
         });
         toast.success("Target created successfully");
       }
@@ -110,17 +118,20 @@ const MonthlyTargetPage = () => {
             target.month === parseInt(month)
           ) {
             updatedTargetsMap[targetEntry.userID] = {
-              tp: target.tp,
-              dp: target.dp, // Store DP alongside TP in the updated state
+              dp: target.dp,
+              tp: (target.dp * 1.07).toFixed(2),
             };
           }
         });
       });
 
       setTargets(updatedTargetsMap);
-      setTempTargets(updatedTargetsMap); // Sync tempTargets with the updated targets
+      setTempTargets(updatedTargetsMap);
     } catch (error) {
-      console.error("Failed to save or update target", error.response?.data || error);
+      console.error(
+        "Failed to save or update target",
+        error.response?.data || error
+      );
       toast.error("Error saving or updating target");
     } finally {
       setLoading(false);
@@ -173,7 +184,7 @@ const MonthlyTargetPage = () => {
                       type="number"
                       className="border p-2 rounded w-32"
                       value={tempTargets[user._id]?.tp || ""}
-                      onChange={(e) => handleTargetChange(user._id, e.target.value, 'tp')}
+                      disabled
                     />
                   </td>
                   <td className="border p-3 text-center">
@@ -181,7 +192,9 @@ const MonthlyTargetPage = () => {
                       type="number"
                       className="border p-2 rounded w-32"
                       value={tempTargets[user._id]?.dp || ""}
-                      onChange={(e) => handleTargetChange(user._id, e.target.value, 'dp')}
+                      onChange={(e) =>
+                        handleTargetChange(user._id, e.target.value, "dp")
+                      }
                     />
                   </td>
                   <td className="border p-3 text-center">
