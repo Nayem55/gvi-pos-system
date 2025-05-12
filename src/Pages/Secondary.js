@@ -6,17 +6,16 @@ import { useNavigate } from "react-router-dom";
 
 export default function Secondary({stock,setStock}) {
   const [search, setSearch] = useState("");
-  const [searchType, setSearchType] = useState("name"); // Default search type is 'name'
+  const [searchType, setSearchType] = useState("name");
   const [cart, setCart] = useState(
     () => JSON.parse(localStorage.getItem("cart")) || []
   );
-  // const [stock, setStock] = useState(0);
   const [route, setRoute] = useState("");
   const [menu, setMenu] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD")); // Default to today's date
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -31,28 +30,30 @@ export default function Secondary({stock,setStock}) {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  // useEffect(() => {
-  //   if (user && user.outlet) {
-  //     getStockValue(user.outlet); // Pass outlet name from the user object
-  //   }
-  // }, [user]);
+  // Check if promo price is valid based on current date
+  const isPromoValid = (product) => {
+    if (!product.promoStartDate || !product.promoEndDate) return false;
+    
+    const today = dayjs();
+    const startDate = dayjs(product.promoStartDate);
+    const endDate = dayjs(product.promoEndDate);
+    
+    return today.isAfter(startDate) && today.isBefore(endDate);
+  };
 
-  // const getStockValue = async (outletName) => {
-  //   try {
-  //     const response = await axios.get(
-  //       `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
-  //     );
-  //     const stockValue = response.data.totalStockValue;
-  //     setStock(stockValue); // Update the stock state with the received value
-  //   } catch (error) {
-  //     console.error("Error fetching stock value:", error);
-  //   }
-  // };
+  // Get the appropriate TP price based on promo validity
+  const getCurrentTP = (product) => {
+    return isPromoValid(product) ? product.promoTP : product.tp;
+  };
+
+  // Get the appropriate DP price based on promo validity
+  const getCurrentDP = (product) => {
+    return isPromoValid(product) ? product.promoDP : product.dp;
+  };
 
   // Search products from the backend based on search type
   const handleSearch = async (query) => {
     if (query.length > 2) {
-      // Search only if input has more than 2 characters
       setIsLoading(true);
       try {
         const response = await axios.get(
@@ -68,13 +69,12 @@ export default function Secondary({stock,setStock}) {
         setIsLoading(false);
       }
     } else {
-      setSearchResults([]); // Clear search results if less than 3 characters
+      setSearchResults([]);
     }
   };
 
   const addToCart = async (product) => {
     try {
-      // Fetch outlet stock for this product using its barcode and outlet name
       const stockResponse = await axios.get(
         "https://gvi-pos-server.vercel.app/outlet-stock",
         {
@@ -83,14 +83,22 @@ export default function Secondary({stock,setStock}) {
       );
       const outletStock = stockResponse.data.stock;
 
-      // Check if stock is 0, and if so, show an error toast and return
       if (outletStock === 0) {
         toast.error(`${product.name} is out of stock!`);
         return;
       }
 
-      // Append the outlet stock to the product data as a new property
-      const productWithStock = { ...product, stock: outletStock };
+      // Get current prices based on promo validity
+      const currentTP = getCurrentTP(product);
+      const currentDP = getCurrentDP(product);
+      
+      const productWithStock = { 
+        ...product, 
+        stock: outletStock,
+        currentTP: currentTP,
+        currentDP: currentDP
+      };
+      
       const existingItem = cart.find(
         (item) => item._id === productWithStock._id
       );
@@ -103,7 +111,7 @@ export default function Secondary({stock,setStock}) {
                 ? {
                     ...item,
                     pcs: item.pcs + 1,
-                    total: (item.pcs + 1) * parseFloat(item.promoTP),
+                    total: (item.pcs + 1) * parseFloat(item.currentTP),
                   }
                 : item
             )
@@ -119,15 +127,15 @@ export default function Secondary({stock,setStock}) {
           {
             ...productWithStock,
             pcs: 1,
-            total: parseFloat(productWithStock.promoTP),
+            total: parseFloat(currentTP),
           },
         ]);
       }
     } catch (error) {
       console.error("Error fetching outlet stock:", error);
     }
-    setSearch(""); // Clear search when product is added to cart
-    setSearchResults([]); // Clear search results
+    setSearch("");
+    setSearchResults([]);
   };
 
   const updateQuantity = (id, change) => {
@@ -136,9 +144,9 @@ export default function Secondary({stock,setStock}) {
         item._id === id
           ? {
               ...item,
-              pcs: Math.max(1, Math.min(item.pcs + change, item.stock)), // Ensure pcs is within available stock
+              pcs: Math.max(1, Math.min(item.pcs + change, item.stock)),
               total:
-                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.promoTP,
+                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.currentTP,
             }
           : item
       )
@@ -157,34 +165,31 @@ export default function Secondary({stock,setStock}) {
     try {
       setIsSubmitting(true);
 
-      // Create a single sale entry with all cart items as an array of products
       const saleEntry = {
         user: user._id,
         outlet: user.outlet,
         route: route,
         menu: menu,
-        sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"), // Use selected date
-        total_tp: cart.reduce((sum, item) => sum + item.promoTP * item.pcs, 0),
+        sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+        total_tp: cart.reduce((sum, item) => sum + item.currentTP * item.pcs, 0),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
-        total_dp: cart.reduce((sum, item) => sum + item.promoDP * item.pcs, 0),
+        total_dp: cart.reduce((sum, item) => sum + item.currentDP * item.pcs, 0),
         products: cart.map((item) => ({
           product_name: item.name,
           category: item.category,
           barcode: item.barcode,
           quantity: item.pcs,
-          tp: item.promoTP * item.pcs,
+          tp: item.currentTP * item.pcs,
           mrp: item.mrp * item.pcs,
-          dp: item.promoDP * item.pcs,
+          dp: item.currentDP * item.pcs,
         })),
       };
 
-      // Send the sale entry to the backend
       await axios.post(
         "https://gvi-pos-server.vercel.app/add-sale-report",
         saleEntry
       );
 
-      // Optionally update the stock in the UI
       const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
 
@@ -245,7 +250,7 @@ export default function Secondary({stock,setStock}) {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            handleSearch(e.target.value); // Trigger search on input change
+            handleSearch(e.target.value);
           }}
           placeholder="Search product..."
           className="w-full p-2 border rounded-lg"
@@ -269,7 +274,7 @@ export default function Secondary({stock,setStock}) {
                   onClick={() => addToCart(p)}
                   className="p-2 cursor-pointer hover:bg-gray-200"
                 >
-                  {p.name}
+                  {p.name} {isPromoValid(p) && "(Promo)"}
                 </li>
               ))
             )}
@@ -284,7 +289,6 @@ export default function Secondary({stock,setStock}) {
             <tr className="border-b bg-gray-200">
               <th className="p-2 w-2/6 text-left">Product</th>
               <th className="p-2 w-1/6">Pcs</th>
-              {/* <th className="p-2 w-1/6">MRP</th> */}
               <th className="p-2 w-1/6">TP</th>
               <th className="p-2 w-1/6">Total</th>
               <th className="p-2 w-1/6"></th>
@@ -313,8 +317,7 @@ export default function Secondary({stock,setStock}) {
                     </button>
                   </div>
                 </td>
-                {/* <td className="p-2 w-1/6 text-center">{item.mrp} BDT</td> */}
-                <td className="p-2 w-1/6 text-center">{item.promoTP} BDT</td>
+                <td className="p-2 w-1/6 text-center">{item.currentTP} BDT</td>
                 <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
                 <td className="p-2 w-1/6 text-center">
                   <button
