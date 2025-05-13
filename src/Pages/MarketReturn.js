@@ -9,7 +9,23 @@ export default function MarketReturn({ user, stock, getStockValue }) {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD")); // Added date state
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+
+  // Check if promo price is valid based on current date
+  const isPromoValid = (product) => {
+    if (!product.promoStartDate || !product.promoEndDate) return false;
+    
+    const today = dayjs();
+    const startDate = dayjs(product.promoStartDate);
+    const endDate = dayjs(product.promoEndDate);
+    
+    return today.isAfter(startDate) && today.isBefore(endDate);
+  };
+
+  // Get the appropriate DP price based on promo validity
+  const getCurrentDP = (product) => {
+    return isPromoValid(product) ? product.promoDP : product.dp;
+  };
 
   // Handle product search
   const handleSearch = async (query) => {
@@ -48,6 +64,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
         `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
       const currentStock = stockRes.data.stock || 0;
+      const currentDP = getCurrentDP(product);
 
       setCartItems((prev) => [
         ...prev,
@@ -55,6 +72,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           ...product,
           openingStock: currentStock,
           marketReturn: 0,
+          currentDP, // Store the current DP price
         },
       ]);
     } catch (err) {
@@ -125,13 +143,14 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             quantity: item.marketReturn,
             date: formattedDateTime,
             user: user.name,
+            dp: item.currentDP, // Include current DP in transaction
           }
         );
       });
 
       await Promise.all(requests);
       toast.success("All market returns processed successfully!");
-      getStockValue(user.outlet)
+      getStockValue(user.outlet);
       setCartItems([]);
       setSearch("");
       setSearchResults([]);
@@ -182,7 +201,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
                 onClick={() => addToCart(product)}
                 className="p-2 hover:bg-gray-100 cursor-pointer border-b"
               >
-                {product.name}
+                {product.name} {isPromoValid(product) && "(Promo)"}
               </li>
             ))}
           </ul>
@@ -230,7 +249,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
                       {item.openingStock - item.marketReturn}
                     </td>
                     <td className="border p-2 text-center">
-                      {(item.marketReturn * (item.promoDP || item.dp)).toFixed(2)}
+                      {(item.marketReturn * item.currentDP).toFixed(2)}
                     </td>
                     <td className="border p-2 text-center">
                       <button
@@ -258,10 +277,10 @@ export default function MarketReturn({ user, stock, getStockValue }) {
 
           {/* Total TP Value */}
           <div className="text-right font-semibold text-gray-700 mt-4">
-            Total Return (TP) :{" "}
+            Total Return (TP):{" "}
             {cartItems
               .reduce(
-                (acc, item) => acc + item.marketReturn * (item.promoDP || item.dp),
+                (acc, item) => acc + item.marketReturn * item.currentDP,
                 0
               )
               .toFixed(2)}
