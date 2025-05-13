@@ -13,6 +13,22 @@ export default function Primary({ user, stock, getStockValue }) {
     dayjs().format("YYYY-MM-DD")
   );
 
+  // Check if promo price is valid based on current date
+  const isPromoValid = (product) => {
+    if (!product.promoStartDate || !product.promoEndDate) return false;
+    
+    const today = dayjs();
+    const startDate = dayjs(product.promoStartDate);
+    const endDate = dayjs(product.promoEndDate);
+    
+    return today.isAfter(startDate) && today.isBefore(endDate);
+  };
+
+  // Get the appropriate DP price based on promo validity
+  const getCurrentDP = (product) => {
+    return isPromoValid(product) ? product.promoDP : product.dp;
+  };
+
   // Search for products
   const handleSearch = async (query) => {
     setSearch(query);
@@ -50,12 +66,14 @@ export default function Primary({ user, stock, getStockValue }) {
       );
 
       const openingStock = stockRes.data.stock || 0;
+      const currentDP = getCurrentDP(product);
 
       setCartItems((prev) => [
         ...prev,
         {
           ...product,
           openingStock,
+          currentDP, // Store the current DP price
           primary: 0,
         },
       ]);
@@ -121,13 +139,14 @@ export default function Primary({ user, stock, getStockValue }) {
             quantity: item.primary,
             date: formattedDateTime,
             user: user.name,
+            dp: item.currentDP, // Include current DP in transaction
           }
         );
       });
 
       await Promise.all(requests);
       toast.success("All primary stocks updated!");
-      getStockValue(user.outlet)
+      getStockValue(user.outlet);
       setCartItems([]);
       setSearch("");
       setSearchResults([]);
@@ -144,7 +163,6 @@ export default function Primary({ user, stock, getStockValue }) {
       {/* Header */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg mb-4">
         <div className="flex items-center">
-          {/* <label className="font-semibold">Date</label> */}
           <input
             type="date"
             value={selectedDate}
@@ -178,7 +196,7 @@ export default function Primary({ user, stock, getStockValue }) {
                 onClick={() => addToCart(product)}
                 className="p-2 hover:bg-gray-100 cursor-pointer border-b"
               >
-                {product.name}
+                {product.name} {isPromoValid(product) && "(Promo)"}
               </li>
             ))}
           </ul>
@@ -210,9 +228,7 @@ export default function Primary({ user, stock, getStockValue }) {
                       {item.openingStock}
                     </td>
                     <td className="border p-2 text-center">
-                      {(item.openingStock * (item.promoDP || item.dp)).toFixed(
-                        2
-                      )}
+                      {(item.openingStock * item.currentDP).toFixed(2)}
                     </td>
                     <td className="border p-2 text-center">
                       <input
@@ -253,7 +269,7 @@ export default function Primary({ user, stock, getStockValue }) {
             Total DP:{" "}
             {cartItems
               .reduce(
-                (acc, item) => acc + item.primary * (item.promoDP || item.dp),
+                (acc, item) => acc + item.primary * item.currentDP,
                 0
               )
               .toFixed(2)}

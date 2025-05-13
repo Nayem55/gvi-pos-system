@@ -10,6 +10,22 @@ export default function OpeningStock({ user, stock, getStockValue }) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Check if promo price is valid based on current date
+  const isPromoValid = (product) => {
+    if (!product.promoStartDate || !product.promoEndDate) return false;
+    
+    const today = dayjs();
+    const startDate = dayjs(product.promoStartDate);
+    const endDate = dayjs(product.promoEndDate);
+    
+    return today.isAfter(startDate) && today.isBefore(endDate);
+  };
+
+  // Get the appropriate DP price based on promo validity
+  const getCurrentDP = (product) => {
+    return isPromoValid(product) ? product.promoDP : product.dp;
+  };
+
   // Handle product search
   const handleSearch = async (query) => {
     setSearch(query);
@@ -46,6 +62,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
         `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
       const currentStock = stockRes.data.stock || 0;
+      const currentDP = getCurrentDP(product);
 
       setCartItems((prev) => [
         ...prev,
@@ -53,6 +70,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           ...product,
           openingStock: currentStock,
           newStock: currentStock,
+          currentDP, // Store the current DP price
           canEdit: currentStock === 0, // Only editable if current stock is 0
         },
       ]);
@@ -107,6 +125,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               quantity: item.newStock,
               date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
               user: user.name,
+              dp: item.currentDP, // Include current DP in transaction
             }
           );
         }
@@ -159,7 +178,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
                 onClick={() => addToCart(product)}
                 className="p-2 hover:bg-gray-100 cursor-pointer border-b"
               >
-                {product.name}
+                {product.name} {isPromoValid(product) && "(Promo)"}
               </li>
             ))}
           </ul>
@@ -200,7 +219,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
                       />
                     </td>
                     <td className="border p-2 text-center">
-                      {(item.newStock * (item.promoDP || item.dp)).toFixed(2)}
+                      {(item.newStock * item.currentDP).toFixed(2)}
                     </td>
                     <td className="border p-2 text-center">
                       <button
@@ -231,7 +250,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
             Total DP:{" "}
             {cartItems
               .reduce(
-                (acc, item) => acc + item.newStock * (item.promoDP || item.dp),
+                (acc, item) => acc + item.newStock * item.currentDP,
                 0
               )
               .toFixed(2)}
