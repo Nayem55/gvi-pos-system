@@ -15,15 +15,15 @@ export default function Home() {
     if (user && user.outlet) {
       getStockValue(user.outlet); // Pass outlet name from the user object
     }
-  }, [user]);
+  }, []);
 
   const getStockValue = async (outletName) => {
     try {
       const response = await axios.get(
         `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
       );
-      const stockValue = response.data.totalStockValue;
-      setStock(stockValue); // Update the stock state with the received value
+      const stockValue = response.data.totalCurrentDP;
+      setStock({dp:response.data.totalCurrentDP,tp:response.data.totalCurrentTP}); // Update the stock state with the received value
     } catch (error) {
       console.error("Error fetching stock value:", error);
     }

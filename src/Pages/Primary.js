@@ -16,11 +16,11 @@ export default function Primary({ user, stock, getStockValue }) {
   // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
-    
+
     const today = dayjs();
     const startDate = dayjs(product.promoStartDate);
     const endDate = dayjs(product.promoEndDate);
-    
+
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
@@ -171,8 +171,9 @@ export default function Primary({ user, stock, getStockValue }) {
           />
         </div>
         {user?.outlet && (
-          <span className="text-sm font-semibold ">
-            Stock (DP): {stock.toLocaleString()}
+          <span className="text-sm font-semibold">
+            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
+            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
           </span>
         )}
       </div>
@@ -268,10 +269,7 @@ export default function Primary({ user, stock, getStockValue }) {
           <div className="text-right font-semibold text-gray-700 mt-4">
             Total DP:{" "}
             {cartItems
-              .reduce(
-                (acc, item) => acc + item.primary * item.currentDP,
-                0
-              )
+              .reduce((acc, item) => acc + item.primary * item.currentDP, 0)
               .toFixed(2)}
           </div>
 

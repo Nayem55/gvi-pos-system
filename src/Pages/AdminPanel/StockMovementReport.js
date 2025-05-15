@@ -5,7 +5,6 @@ import AdminSidebar from "../../Component/AdminSidebar";
 
 const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
-
   const [selectedOutlet, setSelectedOutlet] = useState(user.outlet || "");
   const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
   const [loading, setLoading] = useState(false);
@@ -146,49 +145,44 @@ const StockMovementReport = () => {
     try {
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/stock-movement-report",
-        {
-          params: {
-            outlet: selectedOutlet,
-            month: month,
-          },
-          timeout: 30000,
-        }
+        { params: { outlet: selectedOutlet, month } }
       );
 
-      if (response.data && response.data.success) {
+      if (response.data?.success) {
         setReportData(response.data.data);
       } else {
-        throw new Error(response.data?.message || "Invalid response format");
+        throw new Error("Invalid response format");
       }
     } catch (error) {
-      console.error("API error:", error);
-      setError(error.message || "Failed to fetch stock movement report");
+      console.error("Fetch error:", error);
+      setError(error.message);
       setReportData([]);
     } finally {
       setLoading(false);
     }
   };
+
   // Calculate totals
   const totalPrimary = reportData.reduce(
-    (sum, item) => sum + (item.primary*parseFloat(item.priceDP).toFixed(2) || 0),
+    (sum, item) => sum + (item.primary * item.priceDP || 0),
+    0
+  );
+  const totalSecondary = reportData.reduce(
+    (sum, item) => sum + (item.secondary * item.priceDP || 0),
     0
   );
   const totalMarketReturn = reportData.reduce(
-    (sum, item) => sum + (item.marketReturn*parseFloat(item.priceDP).toFixed(2) || 0),
+    (sum, item) => sum + (item.marketReturn * item.priceDP || 0),
     0
   );
   const totalOfficeReturn = reportData.reduce(
-    (sum, item) => sum + (item.officeReturn*parseFloat(item.priceDP).toFixed(2) || 0),
+    (sum, item) => sum + (item.officeReturn * item.priceDP || 0),
     0
   );
 
   return (
     <div className="flex">
-      {!user?.outlet && (
-        <div>
-          <AdminSidebar />
-        </div>
-      )}
+      {!user?.outlet && <AdminSidebar />}
 
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
         <h2 className="text-3xl font-bold mb-6 text-gray-800">
@@ -201,7 +195,7 @@ const StockMovementReport = () => {
             <select
               value={selectedOutlet}
               onChange={(e) => setSelectedOutlet(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border rounded-md shadow-sm"
             >
               <option value="">Select Outlet</option>
               {outlets.map((outlet, index) => (
@@ -211,122 +205,130 @@ const StockMovementReport = () => {
               ))}
             </select>
           )}
-
-          <div className="flex items-center">
-            {/* <label className="font-medium mr-2">Select Month:</label> */}
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="border rounded px-4 py-2"
+          />
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
-            <p>{error}</p>
-            <p className="text-sm mt-1">Check console for more details</p>
+          <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500">
+            <p className="text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Summary Section */}
+        {/* Summary Cards */}
         {!loading && reportData.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white border-l-4 border-green-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Primary (DP)</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Primary Stock (DP)</p>
               <p className="text-2xl font-semibold text-green-700">
-                {(totalPrimary).toFixed(2)}
+                {totalPrimary.toFixed(2)}
               </p>
             </div>
-            <div className="bg-white border-l-4 border-red-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Market Return (DP)</p>
+            <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Secondary Sales (DP)</p>
+              <p className="text-2xl font-semibold text-blue-700">
+                {totalSecondary.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white border-l-4 border-red-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Market Returns (DP)</p>
               <p className="text-2xl font-semibold text-red-700">
-                {(totalMarketReturn).toFixed(2)}
+                {totalMarketReturn.toFixed(2)}
               </p>
             </div>
-            <div className="bg-white border-l-4 border-yellow-600 rounded shadow p-4">
-              <p className="text-sm text-gray-600">Total Office Return (DP)</p>
+            <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Office Returns (DP)</p>
               <p className="text-2xl font-semibold text-yellow-700">
-                {(totalOfficeReturn).toFixed(2)}
+                {totalOfficeReturn.toFixed(2)}
               </p>
             </div>
           </div>
         )}
 
-        {/* Loading Spinner */}
-        {loading ? (
-          <div className="flex justify-center items-center h-32">
+        {/* Loading */}
+        {loading && (
+          <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 shadow rounded">
+        )}
+
+        {/* Report Table */}
+        {!loading && (
+          <div className="overflow-x-auto shadow rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Product Name
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Product
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
                     Barcode
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Primary (DP)
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Primary
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Market Return (DP)
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Secondary
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Office Return (DP)
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Market Return
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Office Return
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {reportData.map((item, index) => (
-                  <tr
-                    key={`${item.barcode}-${index}`}
-                    className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                  >
+                {reportData.map((item) => (
+                  <tr key={item.barcode}>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {item.productName || "N/A"}
+                      {item.productName}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {item.barcode}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.primary*parseFloat(item.priceDP)).toFixed(2)}
+                      {(item.primary * item.priceDP).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.marketReturn*parseFloat(item.priceDP)).toFixed(2)}
+                      {(item.secondary * item.priceDP).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.officeReturn*parseFloat(item.priceDP)).toFixed(2)}
+                      {(item.marketReturn * item.priceDP).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(item.officeReturn * item.priceDP).toFixed(2)}
                     </td>
                   </tr>
                 ))}
-
                 {reportData.length > 0 && (
-                  <tr className="bg-blue-50 font-semibold">
-                    <td className="px-6 py-4 text-sm text-gray-900">Total</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">—</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {(totalPrimary).toFixed(2)}
+                  <tr className="bg-gray-50 font-semibold">
+                    <td className="px-6 py-4">Total</td>
+                    <td className="px-6 py-4">-</td>
+                    <td className="px-6 py-4 text-blue-700">
+                      {totalPrimary.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {(totalMarketReturn).toFixed(2)}
+                    <td className="px-6 py-4 text-blue-700">
+                      {totalSecondary.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {(totalOfficeReturn).toFixed(2)}
+                    <td className="px-6 py-4 text-blue-700">
+                      {totalMarketReturn.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-blue-700">
+                      {totalOfficeReturn.toFixed(2)}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-
-            {reportData.length === 0 && !loading && !error && (
+            {reportData.length === 0 && !loading && (
               <div className="text-center py-8 text-gray-500">
-                No data available for the selected criteria
+                No data available for selected period
               </div>
             )}
           </div>

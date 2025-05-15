@@ -9,16 +9,18 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
 
   // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
-    
+
     const today = dayjs();
     const startDate = dayjs(product.promoStartDate);
     const endDate = dayjs(product.promoEndDate);
-    
+
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
@@ -48,7 +50,7 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
       setSearchResults([]);
     }
   };
-
+  
   // Add product to cart with current stock
   const addToCart = async (product) => {
     const alreadyAdded = cartItems.find(
@@ -86,9 +88,7 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
     const returnValue = parseInt(value) || 0;
     setCartItems((prev) =>
       prev.map((item) =>
-        item.barcode === barcode
-          ? { ...item, officeReturn: returnValue }
-          : item
+        item.barcode === barcode ? { ...item, officeReturn: returnValue } : item
       )
     );
   };
@@ -106,9 +106,11 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
     const hasInvalid = cartItems.some(
       (item) => item.officeReturn <= 0 || item.officeReturn > item.openingStock
     );
-    
+
     if (hasInvalid) {
-      toast.error("All items must have valid return quantity (greater than 0 and not exceeding current stock)");
+      toast.error(
+        "All items must have valid return quantity (greater than 0 and not exceeding current stock)"
+      );
       return;
     }
 
@@ -177,7 +179,8 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
         </div>
         {user?.outlet && (
           <span className="text-sm font-semibold">
-            Stock (DP): {stock.toLocaleString()}
+            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
+            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
           </span>
         )}
       </div>

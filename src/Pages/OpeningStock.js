@@ -154,7 +154,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
         </span>
         {user?.outlet && (
           <span className="text-sm font-semibold">
-            Stock (DP): {stock.toLocaleString()}
+            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
+            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
           </span>
         )}
       </div>

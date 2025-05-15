@@ -4,7 +4,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-export default function Secondary({stock,setStock}) {
+export default function Secondary({ stock, setStock }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [cart, setCart] = useState(
@@ -15,7 +15,9 @@ export default function Secondary({stock,setStock}) {
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -33,11 +35,11 @@ export default function Secondary({stock,setStock}) {
   // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
-    
+
     const today = dayjs();
     const startDate = dayjs(product.promoStartDate);
     const endDate = dayjs(product.promoEndDate);
-    
+
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
@@ -91,14 +93,14 @@ export default function Secondary({stock,setStock}) {
       // Get current prices based on promo validity
       const currentTP = getCurrentTP(product);
       const currentDP = getCurrentDP(product);
-      
-      const productWithStock = { 
-        ...product, 
+
+      const productWithStock = {
+        ...product,
         stock: outletStock,
         currentTP: currentTP,
-        currentDP: currentDP
+        currentDP: currentDP,
       };
-      
+
       const existingItem = cart.find(
         (item) => item._id === productWithStock._id
       );
@@ -146,7 +148,8 @@ export default function Secondary({stock,setStock}) {
               ...item,
               pcs: Math.max(1, Math.min(item.pcs + change, item.stock)),
               total:
-                Math.max(1, Math.min(item.pcs + change, item.stock)) * item.currentTP,
+                Math.max(1, Math.min(item.pcs + change, item.stock)) *
+                item.currentTP,
             }
           : item
       )
@@ -171,9 +174,15 @@ export default function Secondary({stock,setStock}) {
         route: route,
         menu: menu,
         sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
-        total_tp: cart.reduce((sum, item) => sum + item.currentTP * item.pcs, 0),
+        total_tp: cart.reduce(
+          (sum, item) => sum + item.currentTP * item.pcs,
+          0
+        ),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
-        total_dp: cart.reduce((sum, item) => sum + item.currentDP * item.pcs, 0),
+        total_dp: cart.reduce(
+          (sum, item) => sum + item.currentDP * item.pcs,
+          0
+        ),
         products: cart.map((item) => ({
           product_name: item.name,
           category: item.category,
@@ -189,6 +198,25 @@ export default function Secondary({stock,setStock}) {
         "https://gvi-pos-server.vercel.app/add-sale-report",
         saleEntry
       );
+
+      // Update stock transactions
+      const updatePromises = cart.map(async (item) => {
+        // Log stock transaction
+        await axios.post(
+          "https://gvi-pos-server.vercel.app/stock-transactions",
+          {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            type: "secondary",
+            quantity: item.pcs,
+            date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            user: user.name,
+            dp: item.currentDP,
+          }
+        );
+      });
+
+      await Promise.all(updatePromises);
 
       const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
@@ -216,7 +244,8 @@ export default function Secondary({stock,setStock}) {
         />
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-          Stock (DP) : {stock.toLocaleString()}
+            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
+            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
           </span>
         )}
       </div>
