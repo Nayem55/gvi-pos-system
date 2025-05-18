@@ -154,8 +154,8 @@ const StockMovementReport = () => {
       // Format dates properly
       const params = {
         outlet: selectedOutlet,
-        startDate: dayjs(dateRange.start).format("YYYY-MM-DD"),
-        endDate: dayjs(dateRange.end).format("YYYY-MM-DD"),
+        startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
+        endDate: dayjs(dateRange.end).format("YYYY-MM-DD HH:mm:ss"),
       };
 
       const response = await axios.get(
