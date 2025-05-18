@@ -28,6 +28,9 @@ export default function Primary({ user, stock, getStockValue }) {
   const getCurrentDP = (product) => {
     return isPromoValid(product) ? product.promoDP : product.dp;
   };
+  const getCurrentTP = (product) => {
+    return isPromoValid(product) ? product.promoTP : product.tp;
+  };
 
   // Search for products
   const handleSearch = async (query) => {
@@ -65,16 +68,18 @@ export default function Primary({ user, stock, getStockValue }) {
         `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
 
-      const openingStock = stockRes.data.stock || 0;
+      const currentStock = stockRes.data.stock || 0;
       const currentDP = getCurrentDP(product);
+      const currentTP = getCurrentTP(product);
 
       setCartItems((prev) => [
         ...prev,
         {
           ...product,
-          openingStock,
-          currentDP, // Store the current DP price
-          primary: 0,
+          openingStock: currentStock,
+          marketReturn: 0,
+          currentDP,
+          currentTP,
         },
       ]);
     } catch (err) {
@@ -102,34 +107,30 @@ export default function Primary({ user, stock, getStockValue }) {
   // Submit all items at once
   const handleSubmit = async () => {
     if (cartItems.length === 0) return;
-
-    const hasInvalid = cartItems.some((item) => item.primary <= 0);
-    if (hasInvalid) {
-      toast.error("All items must have valid quantity.");
-      return;
-    }
-
     setSubmitting(true);
 
+    // Combine selected date with current time
     const formattedDateTime = dayjs(
       selectedDate + " " + dayjs().format("HH:mm:ss")
     ).format("YYYY-MM-DD HH:mm:ss");
 
     try {
       const requests = cartItems.map(async (item) => {
-        const newStock = item.openingStock + item.primary;
-
-        // Update stock
+        // Update stock for market returns
         await axios.put(
           "https://gvi-pos-server.vercel.app/update-outlet-stock",
           {
             barcode: item.barcode,
             outlet: user.outlet,
-            newStock,
+            newStock: item.openingStock + item.primary, // Add returned quantity to stock
+            currentStockValueDP:
+              (item.openingStock + item.primary) * item.currentDP,
+            currentStockValueTP:
+              (item.openingStock + item.primary) * item.currentTP,
           }
         );
 
-        // Log transaction
+        // Log transaction with selected date
         await axios.post(
           "https://gvi-pos-server.vercel.app/stock-transactions",
           {
@@ -139,20 +140,21 @@ export default function Primary({ user, stock, getStockValue }) {
             quantity: item.primary,
             date: formattedDateTime,
             user: user.name,
-            dp: item.currentDP, // Include current DP in transaction
+            dp: item.currentDP,
+            tp: item.currentTP,
           }
         );
       });
 
       await Promise.all(requests);
-      toast.success("All primary stocks updated!");
+      toast.success("All market returns processed successfully!");
       getStockValue(user.outlet);
       setCartItems([]);
       setSearch("");
       setSearchResults([]);
     } catch (err) {
       console.error("Bulk update error:", err);
-      toast.error("Failed to update stock.");
+      toast.error("Failed to process market returns.");
     } finally {
       setSubmitting(false);
     }

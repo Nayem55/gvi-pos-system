@@ -28,6 +28,9 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
   const getCurrentDP = (product) => {
     return isPromoValid(product) ? product.promoDP : product.dp;
   };
+  const getCurrentTP = (product) => {
+    return isPromoValid(product) ? product.promoTP : product.tp;
+  };
 
   // Handle product search
   const handleSearch = async (query) => {
@@ -50,7 +53,7 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
       setSearchResults([]);
     }
   };
-  
+
   // Add product to cart with current stock
   const addToCart = async (product) => {
     const alreadyAdded = cartItems.find(
@@ -67,6 +70,7 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
       );
       const currentStock = stockRes.data.stock || 0;
       const currentDP = getCurrentDP(product);
+      const currentTP = getCurrentTP(product);
 
       setCartItems((prev) => [
         ...prev,
@@ -74,7 +78,8 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
           ...product,
           openingStock: currentStock,
           officeReturn: 0,
-          currentDP, // Store the current DP price
+          currentDP,
+          currentTP,
         },
       ]);
     } catch (err) {
@@ -102,18 +107,6 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
   const handleSubmit = async () => {
     if (cartItems.length === 0) return;
 
-    // Validate all office return quantities
-    const hasInvalid = cartItems.some(
-      (item) => item.officeReturn <= 0 || item.officeReturn > item.openingStock
-    );
-
-    if (hasInvalid) {
-      toast.error(
-        "All items must have valid return quantity (greater than 0 and not exceeding current stock)"
-      );
-      return;
-    }
-
     setSubmitting(true);
 
     // Combine selected date with current time
@@ -123,7 +116,6 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
 
     try {
       const requests = cartItems.map(async (item) => {
-        const newStock = item.openingStock - item.officeReturn;
 
         // Update stock
         await axios.put(
@@ -131,7 +123,11 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
           {
             barcode: item.barcode,
             outlet: user.outlet,
-            newStock,
+            newStock: item.openingStock - item.officeReturn, // Add returned quantity to stock
+            currentStockValueDP:
+              (item.openingStock - item.officeReturn) * item.currentDP,
+            currentStockValueTP:
+              (item.openingStock - item.officeReturn) * item.currentTP,
           }
         );
 
@@ -145,7 +141,8 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
             quantity: item.officeReturn,
             date: formattedDateTime,
             user: user.name,
-            dp: item.currentDP, // Include current DP in transaction
+            dp: item.currentDP,
+            tp: item.currentTP,
           }
         );
       });

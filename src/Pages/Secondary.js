@@ -209,9 +209,10 @@ export default function Secondary({ stock, setStock }) {
             outlet: user.outlet,
             type: "secondary",
             quantity: item.pcs,
-            date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
             user: user.name,
             dp: item.currentDP,
+            tp: item.currentTP,
           }
         );
       });

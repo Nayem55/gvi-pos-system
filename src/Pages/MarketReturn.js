@@ -28,6 +28,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
   const getCurrentDP = (product) => {
     return isPromoValid(product) ? product.promoDP : product.dp;
   };
+  const getCurrentTP = (product) => {
+    return isPromoValid(product) ? product.promoTP : product.tp;
+  };
 
   // Handle product search
   const handleSearch = async (query) => {
@@ -67,6 +70,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
       );
       const currentStock = stockRes.data.stock || 0;
       const currentDP = getCurrentDP(product);
+      const currentTP = getCurrentTP(product);
 
       setCartItems((prev) => [
         ...prev,
@@ -74,7 +78,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           ...product,
           openingStock: currentStock,
           marketReturn: 0,
-          currentDP, // Store the current DP price
+          currentDP,
+          currentTP,
         },
       ]);
     } catch (err) {
@@ -123,15 +128,17 @@ export default function MarketReturn({ user, stock, getStockValue }) {
 
     try {
       const requests = cartItems.map(async (item) => {
-        const newStock = item.openingStock - item.marketReturn;
-
-        // Update stock
+        // Update stock for market returns
         await axios.put(
           "https://gvi-pos-server.vercel.app/update-outlet-stock",
           {
             barcode: item.barcode,
             outlet: user.outlet,
-            newStock,
+            newStock: item.openingStock + item.marketReturn, // Add returned quantity to stock
+            currentStockValueDP:
+              (item.openingStock + item.marketReturn) * item.currentDP,
+            currentStockValueTP:
+              (item.openingStock + item.marketReturn) * item.currentTP,
           }
         );
 
@@ -145,7 +152,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             quantity: item.marketReturn,
             date: formattedDateTime,
             user: user.name,
-            dp: item.currentDP, // Include current DP in transaction
+            dp: item.currentDP,
+            tp: item.currentTP,
           }
         );
       });

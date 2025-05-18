@@ -6,7 +6,10 @@ import AdminSidebar from "../../Component/AdminSidebar";
 const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const [selectedOutlet, setSelectedOutlet] = useState(user.outlet || "");
-  const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
+  const [dateRange, setDateRange] = useState({
+    start: dayjs().startOf("month").format("YYYY-MM-DD"),
+    end: dayjs().endOf("month").format("YYYY-MM-DD"),
+  });
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
@@ -133,29 +136,56 @@ const StockMovementReport = () => {
   ];
 
   useEffect(() => {
-    if (selectedOutlet && month) {
+    if (selectedOutlet && dateRange.start && dateRange.end) {
       fetchReportData();
     }
-  }, [selectedOutlet, month]);
+  }, [selectedOutlet, dateRange]);
 
   const fetchReportData = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // Validate dates
+      if (!dateRange.start || !dateRange.end) {
+        throw new Error("Please select both start and end dates");
+      }
+
+      // Format dates properly
+      const params = {
+        outlet: selectedOutlet,
+        startDate: dayjs(dateRange.start).format("YYYY-MM-DD"),
+        endDate: dayjs(dateRange.end).format("YYYY-MM-DD"),
+      };
+
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/stock-movement-report",
-        { params: { outlet: selectedOutlet, month } }
+        "https://gvi-pos-server.vercel.app/api/stock-movement",
+        {
+          params,
+        }
       );
 
       if (response.data?.success) {
         setReportData(response.data.data);
       } else {
-        throw new Error("Invalid response format");
+        throw new Error(response.data?.message || "Invalid response format");
       }
     } catch (error) {
       console.error("Fetch error:", error);
-      setError(error.message);
+
+      // Handle different error types
+      let errorMessage = "Failed to load report data";
+      if (error.response) {
+        // Server responded with error status
+        errorMessage =
+          error.response.data?.message ||
+          `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request was made but no response
+        errorMessage = "No response from server. Please try again.";
+      }
+
+      setError(errorMessage);
       setReportData([]);
     } finally {
       setLoading(false);
@@ -163,21 +193,24 @@ const StockMovementReport = () => {
   };
 
   // Calculate totals
-  const totalPrimary = reportData.reduce(
-    (sum, item) => sum + (item.primary * item.priceDP || 0),
-    0
-  );
-  const totalSecondary = reportData.reduce(
-    (sum, item) => sum + (item.secondary * item.priceDP || 0),
-    0
-  );
-  const totalMarketReturn = reportData.reduce(
-    (sum, item) => sum + (item.marketReturn * item.priceDP || 0),
-    0
-  );
-  const totalOfficeReturn = reportData.reduce(
-    (sum, item) => sum + (item.officeReturn * item.priceDP || 0),
-    0
+  const totals = reportData.reduce(
+    (acc, item) => {
+      acc.opening += item.openingValueDP || 0;
+      acc.primary += item.primary * item.priceDP || 0;
+      acc.secondary += item.secondary * item.priceDP || 0;
+      acc.marketReturn += item.marketReturn * item.priceDP || 0;
+      acc.officeReturn += item.officeReturn * item.priceDP || 0;
+      acc.closing += (item.openingValueDP+(item.primary * item.priceDP)+(item.marketReturn * item.priceDP )-(item.secondary * item.priceDP)-(item.officeReturn * item.priceDP))  || 0;
+      return acc;
+    },
+    {
+      opening: 0,
+      primary: 0,
+      secondary: 0,
+      marketReturn: 0,
+      officeReturn: 0,
+      closing: 0,
+    }
   );
 
   return (
@@ -205,12 +238,30 @@ const StockMovementReport = () => {
               ))}
             </select>
           )}
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="border rounded px-4 py-2"
-          />
+          <div className="flex flex-col md:flex-row gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-sm">From:</label>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) =>
+                  setDateRange({ ...dateRange, start: e.target.value })
+                }
+                className="border rounded px-4 py-2"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm">To:</label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) =>
+                  setDateRange({ ...dateRange, end: e.target.value })
+                }
+                className="border rounded px-4 py-2"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -222,29 +273,41 @@ const StockMovementReport = () => {
 
         {/* Summary Cards */}
         {!loading && reportData.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+            <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Opening Stock (DP)</p>
+              <p className="text-2xl font-semibold text-purple-700">
+                {totals.opening?.toFixed(2)}
+              </p>
+            </div>
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Primary Stock (DP)</p>
               <p className="text-2xl font-semibold text-green-700">
-                {totalPrimary.toFixed(2)}
+                {totals.primary?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Secondary Sales (DP)</p>
               <p className="text-2xl font-semibold text-blue-700">
-                {totalSecondary.toFixed(2)}
+                {totals.secondary?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-red-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Market Returns (DP)</p>
               <p className="text-2xl font-semibold text-red-700">
-                {totalMarketReturn.toFixed(2)}
+                {totals.marketReturn?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Office Returns (DP)</p>
               <p className="text-2xl font-semibold text-yellow-700">
-                {totalOfficeReturn.toFixed(2)}
+                {totals.officeReturn?.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Closing Stock (DP)</p>
+              <p className="text-2xl font-semibold text-indigo-700">
+                {totals.closing?.toFixed(2)}
               </p>
             </div>
           </div>
@@ -270,16 +333,22 @@ const StockMovementReport = () => {
                     Barcode
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Primary
+                    Opening (DP)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Secondary
+                    Primary (DP)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Market Return
+                    Secondary (DP)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Office Return
+                    Market Return (DP)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Office Return (DP)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
+                    Closing (DP)
                   </th>
                 </tr>
               </thead>
@@ -293,16 +362,22 @@ const StockMovementReport = () => {
                       {item.barcode}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.primary * item.priceDP).toFixed(2)}
+                      {item.openingValueDP?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.secondary * item.priceDP).toFixed(2)}
+                      {(item.primary * item.priceDP)?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.marketReturn * item.priceDP).toFixed(2)}
+                      {(item.secondary * item.priceDP)?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.officeReturn * item.priceDP).toFixed(2)}
+                      {(item.marketReturn * item.priceDP)?.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(item.officeReturn * item.priceDP)?.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.closingValueDP||item.openingValueDP?.toFixed(2)}
                     </td>
                   </tr>
                 ))}
@@ -311,16 +386,22 @@ const StockMovementReport = () => {
                     <td className="px-6 py-4">Total</td>
                     <td className="px-6 py-4">-</td>
                     <td className="px-6 py-4 text-blue-700">
-                      {totalPrimary.toFixed(2)}
+                      {totals.opening?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-blue-700">
-                      {totalSecondary.toFixed(2)}
+                      {totals.primary?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-blue-700">
-                      {totalMarketReturn.toFixed(2)}
+                      {totals.secondary?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-blue-700">
-                      {totalOfficeReturn.toFixed(2)}
+                      {totals.marketReturn?.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-blue-700">
+                      {totals.officeReturn?.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-blue-700">
+                      {totals.closing?.toFixed(2)}
                     </td>
                   </tr>
                 )}

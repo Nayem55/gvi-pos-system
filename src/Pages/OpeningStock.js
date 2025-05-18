@@ -25,6 +25,9 @@ export default function OpeningStock({ user, stock, getStockValue }) {
   const getCurrentDP = (product) => {
     return isPromoValid(product) ? product.promoDP : product.dp;
   };
+  const getCurrentTP = (product) => {
+    return isPromoValid(product) ? product.promoTP : product.tp;
+  };
 
   // Handle product search
   const handleSearch = async (query) => {
@@ -63,6 +66,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       );
       const currentStock = stockRes.data.stock || 0;
       const currentDP = getCurrentDP(product);
+      const currentTP = getCurrentTP(product);
 
       setCartItems((prev) => [
         ...prev,
@@ -71,6 +75,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           openingStock: currentStock,
           newStock: currentStock,
           currentDP, // Store the current DP price
+          currentTP, // Store the current DP price
           canEdit: currentStock === 0, // Only editable if current stock is 0
         },
       ]);
@@ -125,7 +130,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               quantity: item.newStock,
               date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
               user: user.name,
-              dp: item.currentDP, // Include current DP in transaction
+              dp: item.currentDP, 
+              tp: item.currentTP, 
             }
           );
         }
