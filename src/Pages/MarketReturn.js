@@ -122,9 +122,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     setSubmitting(true);
 
     // Combine selected date with current time
-    const formattedDateTime = dayjs(
-      selectedDate + " " + dayjs().format("HH:mm:ss")
-    ).format("YYYY-MM-DD HH:mm:ss");
+    const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
 
     try {
       const requests = cartItems.map(async (item) => {

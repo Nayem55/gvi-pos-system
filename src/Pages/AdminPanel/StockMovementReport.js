@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
+import * as XLSX from "xlsx";
 
 const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -192,24 +193,156 @@ const StockMovementReport = () => {
     }
   };
 
+  const exportToExcel = () => {
+    // Prepare Excel data
+    const excelData = [
+      [
+        `Distributor Name: ${selectedOutlet}`,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        `Period: ${dayjs(dateRange.start).format("YYYY-MM-DD") +" to "+ dayjs(dateRange.end).format("YYYY-MM-DD")}`,
+      ],
+      ["", "", "", "", "", "", "", "", ""],
+      // ["Name Of Sales Person:", "", "", "", "", "", "", "", "Area:"],
+      [
+        "Sl",
+        "Products Name",
+        "Opening Stock",
+        "",
+        "Primary",
+        "",
+        "Market Return",
+        "",
+        "Office Return",
+        "",
+        "Secondary",
+        "",
+        "Closing Stock",
+        "",
+      ],
+      [
+        "",
+        "",
+        "Qty",
+        "Value",
+        "Qty",
+        "Value",
+        "Qty",
+        "Value",
+        "Qty",
+        "Value",
+        "Qty",
+        "Value",
+        "Qty",
+        "Value",
+      ],
+      ...reportData.map((item, index) => [
+        index + 1,
+        item.productName,
+        item.openingStock,
+        item.openingValueDP?.toFixed(2),
+        item.primary,
+        (item.primary * item.priceDP)?.toFixed(2),
+        item.marketReturn,
+        (item.marketReturn * item.priceDP)?.toFixed(2),
+        item.officeReturn,
+        (item.officeReturn * item.priceDP)?.toFixed(2),
+        item.secondary,
+        (item.secondary * item.priceDP)?.toFixed(2),
+        item.closingStock ||
+          item.openingStock +
+            item.primary +
+            item.marketReturn -
+            item.secondary -
+            item.officeReturn,
+        item.closingValueDP?.toFixed(2) ||
+          (
+            (item.openingStock +
+              item.primary +
+              item.marketReturn -
+              item.secondary -
+              item.officeReturn) *
+            item.priceDP
+          )?.toFixed(2),
+      ]),
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+    // Merge header cells
+    ws["!merges"] = [
+      // Merge distributor name
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+      // Merge month
+      { s: { r: 0, c: 8 }, e: { r: 0, c: 13 } },
+      // Merge sales person
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+      // Merge area
+      { s: { r: 1, c: 8 }, e: { r: 1, c: 13 } },
+      // Merge headers
+      { s: { r: 2, c: 2 }, e: { r: 2, c: 3 } }, // Opening Stock
+      { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } }, // Primary
+      { s: { r: 2, c: 6 }, e: { r: 2, c: 7 } }, // Market Return
+      { s: { r: 2, c: 8 }, e: { r: 2, c: 9 } }, // Office Return
+      { s: { r: 2, c: 10 }, e: { r: 2, c: 11 } }, // Secondary
+      { s: { r: 2, c: 12 }, e: { r: 2, c: 13 } }, // Closing Stock
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
+    XLSX.writeFile(
+      wb,
+      `Stock_Movement_${selectedOutlet}_${dateRange.start}.xlsx`
+    );
+  };
+
   // Calculate totals
   const totals = reportData.reduce(
     (acc, item) => {
-      acc.opening += item.openingValueDP || 0;
-      acc.primary += item.primary * item.priceDP || 0;
-      acc.secondary += item.secondary * item.priceDP || 0;
-      acc.marketReturn += item.marketReturn * item.priceDP || 0;
-      acc.officeReturn += item.officeReturn * item.priceDP || 0;
-      acc.closing += (item.openingValueDP+(item.primary * item.priceDP)+(item.marketReturn * item.priceDP )-(item.secondary * item.priceDP)-(item.officeReturn * item.priceDP))  || 0;
+      acc.openingQty += item.openingStock || 0;
+      acc.openingValue += item.openingValueDP || 0;
+      acc.primaryQty += item.primary || 0;
+      acc.primaryValue += item.primary * item.priceDP || 0;
+      acc.marketReturnQty += item.marketReturn || 0;
+      acc.marketReturnValue += item.marketReturn * item.priceDP || 0;
+      acc.officeReturnQty += item.officeReturn || 0;
+      acc.officeReturnValue += item.officeReturn * item.priceDP || 0;
+      acc.secondaryQty += item.secondary || 0;
+      acc.secondaryValue += item.secondary * item.priceDP || 0;
+      acc.closingQty +=
+        item.openingStock +
+          item.primary +
+          item.marketReturn -
+          item.secondary -
+          item.officeReturn || 0;
+      acc.closingValue +=
+        (item.openingStock +
+          item.primary +
+          item.marketReturn -
+          item.secondary -
+          item.officeReturn) *
+          item.priceDP || 0;
       return acc;
     },
     {
-      opening: 0,
-      primary: 0,
-      secondary: 0,
-      marketReturn: 0,
-      officeReturn: 0,
-      closing: 0,
+      openingQty: 0,
+      openingValue: 0,
+      primaryQty: 0,
+      primaryValue: 0,
+      marketReturnQty: 0,
+      marketReturnValue: 0,
+      officeReturnQty: 0,
+      officeReturnValue: 0,
+      secondaryQty: 0,
+      secondaryValue: 0,
+      closingQty: 0,
+      closingValue: 0,
     }
   );
 
@@ -218,9 +351,18 @@ const StockMovementReport = () => {
       {!user?.outlet && <AdminSidebar />}
 
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">
-          Stock Movement Report
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-gray-800">
+            Stock Movement Report
+          </h2>
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            disabled={reportData.length === 0}
+          >
+            Export to Excel
+          </button>
+        </div>
 
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -277,37 +419,37 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Stock (DP)</p>
               <p className="text-2xl font-semibold text-purple-700">
-                {totals.opening?.toFixed(2)}
+                {totals.openingValue?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Primary Stock (DP)</p>
               <p className="text-2xl font-semibold text-green-700">
-                {totals.primary?.toFixed(2)}
+                {totals.primaryValue?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Secondary Sales (DP)</p>
               <p className="text-2xl font-semibold text-blue-700">
-                {totals.secondary?.toFixed(2)}
+                {totals.secondaryValue?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-red-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Market Returns (DP)</p>
               <p className="text-2xl font-semibold text-red-700">
-                {totals.marketReturn?.toFixed(2)}
+                {totals.marketReturnValue?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Office Returns (DP)</p>
               <p className="text-2xl font-semibold text-yellow-700">
-                {totals.officeReturn?.toFixed(2)}
+                {totals.officeReturnValue?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Closing Stock (DP)</p>
               <p className="text-2xl font-semibold text-indigo-700">
-                {totals.closing?.toFixed(2)}
+                {totals.closingValue?.toFixed(2)}
               </p>
             </div>
           </div>
@@ -321,97 +463,161 @@ const StockMovementReport = () => {
         )}
 
         {/* Report Table */}
-        {!loading && (
+        {!loading && reportData.length > 0 && (
           <div className="overflow-x-auto shadow rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
+            <table className="min-w-full border">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Barcode
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Opening (DP)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Primary (DP)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Secondary (DP)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Market Return (DP)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Office Return (DP)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">
-                    Closing (DP)
+                  <th colSpan="14" className="bg-gray-200 p-2 text-left">
+                    Distributor Name: {selectedOutlet}
                   </th>
                 </tr>
+                {/* <tr>
+                  <th colSpan="14" className="bg-gray-200 p-2 text-left">
+                    Name Of Sales Person:
+                  </th>
+                </tr> */}
+                <tr>
+                  <th colSpan="14" className="bg-gray-200 p-2 text-left">
+                    Period: {dayjs(dateRange.start).format("YYYY-MM-DD") + " to " + dayjs(dateRange.end).format("YYYY-MM-DD")}
+                  </th>
+                </tr>
+                <tr className="bg-gray-100">
+                  <th rowSpan="2" className="border p-2">
+                    Sl
+                  </th>
+                  <th rowSpan="2" className="border p-2">
+                    Products Name
+                  </th>
+                  <th colSpan="2" className="border p-2 text-center">
+                    Opening Stock
+                  </th>
+                  <th colSpan="2" className="border p-2 text-center">
+                    Primary
+                  </th>
+                  <th colSpan="2" className="border p-2 text-center">
+                    Market Return
+                  </th>
+                  <th colSpan="2" className="border p-2 text-center">
+                    Office Return
+                  </th>
+                  <th colSpan="2" className="border p-2 text-center">
+                    Secondary
+                  </th>
+                  <th colSpan="2" className="border p-2 text-center">
+                    Closing Stock
+                  </th>
+                </tr>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
+                </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {reportData.map((item) => (
-                  <tr key={item.barcode}>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {item.productName}
+              <tbody>
+                {reportData.map((item, index) => (
+                  <tr key={item.barcode} className="hover:bg-gray-50">
+                    <td className="border p-2">{index + 1}</td>
+                    <td className="border p-2">{item.productName}</td>
+                    <td className="border p-2 text-right">
+                      {item.openingStock}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {item.barcode}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="border p-2 text-right">{item.primary}</td>
+                    <td className="border p-2 text-right">
                       {(item.primary * item.priceDP)?.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {(item.secondary * item.priceDP)?.toFixed(2)}
+                    <td className="border p-2 text-right">
+                      {item.marketReturn}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="border p-2 text-right">
                       {(item.marketReturn * item.priceDP)?.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="border p-2 text-right">
+                      {item.officeReturn}
+                    </td>
+                    <td className="border p-2 text-right">
                       {(item.officeReturn * item.priceDP)?.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {item.closingValueDP||item.openingValueDP?.toFixed(2)}
+                    <td className="border p-2 text-right">{item.secondary}</td>
+                    <td className="border p-2 text-right">
+                      {(item.secondary * item.priceDP)?.toFixed(2)}
+                    </td>
+                    <td className="border p-2 text-right">
+                      {item.closingStock ||
+                        item.openingStock +
+                          item.primary +
+                          item.marketReturn -
+                          item.secondary -
+                          item.officeReturn}
+                    </td>
+                    <td className="border p-2 text-right">
+                      {item.closingValueDP?.toFixed(2) ||
+                        (
+                          (item.openingStock +
+                            item.primary +
+                            item.marketReturn -
+                            item.secondary -
+                            item.officeReturn) *
+                          item.priceDP
+                        )?.toFixed(2)}
                     </td>
                   </tr>
                 ))}
-                {reportData.length > 0 && (
-                  <tr className="bg-gray-50 font-semibold">
-                    <td className="px-6 py-4">Total</td>
-                    <td className="px-6 py-4">-</td>
-                    <td className="px-6 py-4 text-blue-700">
-                      {totals.opening?.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-blue-700">
-                      {totals.primary?.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-blue-700">
-                      {totals.secondary?.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-blue-700">
-                      {totals.marketReturn?.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-blue-700">
-                      {totals.officeReturn?.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-blue-700">
-                      {totals.closing?.toFixed(2)}
-                    </td>
-                  </tr>
-                )}
+                <tr className="bg-gray-100 font-bold">
+                  <td className="border p-2" colSpan="2">
+                    Total
+                  </td>
+                  <td className="border p-2 text-right">{totals.openingQty}</td>
+                  <td className="border p-2 text-right">
+                    {totals.openingValue.toFixed(2)}
+                  </td>
+                  <td className="border p-2 text-right">{totals.primaryQty}</td>
+                  <td className="border p-2 text-right">
+                    {totals.primaryValue.toFixed(2)}
+                  </td>
+                  <td className="border p-2 text-right">
+                    {totals.marketReturnQty}
+                  </td>
+                  <td className="border p-2 text-right">
+                    {totals.marketReturnValue.toFixed(2)}
+                  </td>
+                  <td className="border p-2 text-right">
+                    {totals.officeReturnQty}
+                  </td>
+                  <td className="border p-2 text-right">
+                    {totals.officeReturnValue.toFixed(2)}
+                  </td>
+                  <td className="border p-2 text-right">
+                    {totals.secondaryQty}
+                  </td>
+                  <td className="border p-2 text-right">
+                    {totals.secondaryValue.toFixed(2)}
+                  </td>
+                  <td className="border p-2 text-right">{totals.closingQty}</td>
+                  <td className="border p-2 text-right">
+                    {totals.closingValue.toFixed(2)}
+                  </td>
+                </tr>
               </tbody>
             </table>
-            {reportData.length === 0 && !loading && (
-              <div className="text-center py-8 text-gray-500">
-                No data available for selected period
-              </div>
-            )}
+          </div>
+        )}
+
+        {!loading && reportData.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No data available for selected period
           </div>
         )}
       </div>
