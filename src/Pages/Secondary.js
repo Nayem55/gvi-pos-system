@@ -339,7 +339,7 @@ export default function Secondary({ stock, setStock }) {
                 <th className="p-2 text-left w-1/3">Product</th>
                 <th className="p-2 w-[60px] text-center">Pcs</th>
                 <th className="p-2 w-[100px] text-center">Price</th>
-                <th className="p-2 w-[60px] text-center">Total</th>
+                <th className="p-2 w-[60px] text-center">Total (TP)</th>
                 <th className="p-2 w-[40px] text-center"></th>
               </tr>
             </thead>
@@ -430,7 +430,7 @@ export default function Secondary({ stock, setStock }) {
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total:{" "}
+          Total (TP) :{" "}
           {cart
             .reduce((sum, item) => sum + item.editableTP * item.pcs, 0)
             .toFixed(2)}{" "}
