@@ -140,7 +140,7 @@ const StockMovementReport = () => {
     if (selectedOutlet && dateRange.start && dateRange.end) {
       fetchReportData();
     }
-  }, [selectedOutlet, dateRange]);
+  }, []);
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -193,6 +193,10 @@ const StockMovementReport = () => {
     }
   };
 
+  const handleFilterClick = () => {
+    fetchReportData();
+  };
+
   const exportToExcel = () => {
     // Prepare Excel data
     const excelData = [
@@ -205,7 +209,11 @@ const StockMovementReport = () => {
         "",
         "",
         "",
-        `Period: ${dayjs(dateRange.start).format("YYYY-MM-DD") +" to "+ dayjs(dateRange.end).format("YYYY-MM-DD")}`,
+        `Period: ${
+          dayjs(dateRange.start).format("YYYY-MM-DD") +
+          " to " +
+          dayjs(dateRange.end).format("YYYY-MM-DD")
+        }`,
       ],
       ["", "", "", "", "", "", "", "", ""],
       // ["Name Of Sales Person:", "", "", "", "", "", "", "", "Area:"],
@@ -403,6 +411,12 @@ const StockMovementReport = () => {
                 className="border rounded px-4 py-2"
               />
             </div>
+            <button
+              onClick={handleFilterClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+              Apply Filter
+            </button>
           </div>
         </div>
 
@@ -461,54 +475,76 @@ const StockMovementReport = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         )}
-
         {/* Report Table */}
         {!loading && reportData.length > 0 && (
-          <div className="overflow-x-auto shadow rounded-lg">
+          <div
+            className="overflow-x-auto shadow rounded-lg"
+            style={{ maxHeight: "95vh" }}
+          >
             <table className="min-w-full border">
-              <thead>
+              <thead className="sticky top-[-1px] bg-white z-10">
                 <tr>
-                  <th colSpan="14" className="bg-gray-200 p-2 text-left">
+                  <th colSpan="14" className="bg-gray-200 px-4 py-2 text-left">
                     Distributor Name: {selectedOutlet}
                   </th>
                 </tr>
-                {/* <tr>
-                  <th colSpan="14" className="bg-gray-200 p-2 text-left">
-                    Name Of Sales Person:
-                  </th>
-                </tr> */}
                 <tr>
-                  <th colSpan="14" className="bg-gray-200 p-2 text-left">
-                    Period: {dayjs(dateRange.start).format("YYYY-MM-DD") + " to " + dayjs(dateRange.end).format("YYYY-MM-DD")}
+                  <th colSpan="14" className="bg-gray-200 px-4 py-3 text-left">
+                    Period: {dayjs(dateRange.start).format("YYYY-MM-DD")} to{" "}
+                    {dayjs(dateRange.end).format("YYYY-MM-DD")}
                   </th>
                 </tr>
                 <tr className="bg-gray-100">
-                  <th rowSpan="2" className="border p-2">
+                  <th
+                    rowSpan="2"
+                    className=" p-2 sticky top-22 bg-gray-100"
+                  >
                     Sl
                   </th>
-                  <th rowSpan="2" className="border p-2">
+                  <th
+                    rowSpan="2"
+                    className="p-2 sticky top-22 bg-gray-100"
+                  >
                     Products Name
                   </th>
-                  <th colSpan="2" className="border p-2 text-center">
+                  <th
+                    colSpan="2"
+                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                  >
                     Opening Stock
                   </th>
-                  <th colSpan="2" className="border p-2 text-center">
+                  <th
+                    colSpan="2"
+                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                  >
                     Primary
                   </th>
-                  <th colSpan="2" className="border p-2 text-center">
+                  <th
+                    colSpan="2"
+                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                  >
                     Market Return
                   </th>
-                  <th colSpan="2" className="border p-2 text-center">
+                  <th
+                    colSpan="2"
+                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                  >
                     Office Return
                   </th>
-                  <th colSpan="2" className="border p-2 text-center">
+                  <th
+                    colSpan="2"
+                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                  >
                     Secondary
                   </th>
-                  <th colSpan="2" className="border p-2 text-center">
+                  <th
+                    colSpan="2"
+                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                  >
                     Closing Stock
                   </th>
                 </tr>
-                <tr className="bg-gray-100">
+                <tr className="bg-gray-100 sticky top-32">
                   <th className="border p-2">Qty</th>
                   <th className="border p-2">Value</th>
                   <th className="border p-2">Qty</th>
@@ -575,7 +611,9 @@ const StockMovementReport = () => {
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-gray-100 font-bold">
+              </tbody>
+              <tfoot className="sticky bottom-0 bg-gray-100">
+                <tr className="font-bold">
                   <td className="border p-2" colSpan="2">
                     Total
                   </td>
@@ -610,7 +648,7 @@ const StockMovementReport = () => {
                     {totals.closingValue.toFixed(2)}
                   </td>
                 </tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
         )}
