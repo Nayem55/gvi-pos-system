@@ -5,10 +5,14 @@ import dayjs from "dayjs";
 
 export default function OpeningStock({ user, stock, getStockValue }) {
   const [search, setSearch] = useState("");
+  const [searchType, setSearchType] = useState("name");
   const [searchResults, setSearchResults] = useState([]);
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
 
   // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
@@ -33,17 +37,18 @@ export default function OpeningStock({ user, stock, getStockValue }) {
   const handleSearch = async (query) => {
     setSearch(query);
     if (query.length > 2) {
-      setLoading(true);
+      setIsLoading(true);
       try {
         const response = await axios.get(
           "https://gvi-pos-server.vercel.app/search-product",
-          { params: { search: query, type: "name" } }
+          { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
       } catch (error) {
         console.error("Search error:", error);
+        toast.error("Failed to search products");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     } else {
       setSearchResults([]);
@@ -52,9 +57,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
   // Add product to cart with current stock
   const addToCart = async (product) => {
-    const alreadyAdded = cartItems.find(
-      (item) => item.barcode === product.barcode
-    );
+    const alreadyAdded = cart.find((item) => item.barcode === product.barcode);
     if (alreadyAdded) {
       toast.error("Already added to cart!");
       return;
@@ -68,17 +71,19 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
-      setCartItems((prev) => [
+      setCart((prev) => [
         ...prev,
         {
           ...product,
           openingStock: currentStock,
           newStock: currentStock,
-          currentDP, // Store the current DP price
-          currentTP, // Store the current DP price
-          canEdit: currentStock === 0, // Only editable if current stock is 0
+          currentDP,
+          currentTP,
+          canEdit: currentStock === 0,
+          total: currentStock * currentDP,
         },
       ]);
+      setSearch("")
     } catch (err) {
       console.error("Stock fetch error:", err);
       toast.error("Failed to fetch stock.");
@@ -87,10 +92,15 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
   // Update stock value in cart
   const updateStockValue = (barcode, value) => {
-    setCartItems((prev) =>
+    const newValue = parseInt(value) || 0;
+    setCart((prev) =>
       prev.map((item) =>
         item.barcode === barcode
-          ? { ...item, newStock: parseInt(value) || 0 }
+          ? {
+              ...item,
+              newStock: newValue,
+              total: newValue * item.currentDP,
+            }
           : item
       )
     );
@@ -98,17 +108,17 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
   // Remove item from cart
   const removeFromCart = (barcode) => {
-    setCartItems((prev) => prev.filter((item) => item.barcode !== barcode));
+    setCart((prev) => prev.filter((item) => item.barcode !== barcode));
   };
 
   // Update stock for all items in cart
   const handleSubmit = async () => {
-    if (cartItems.length === 0) return;
+    if (cart.length === 0) return;
 
-    setSubmitting(true);
+    setIsSubmitting(true);
 
     try {
-      const requests = cartItems.map(async (item) => {
+      const requests = cart.map(async (item) => {
         // Only update if the item is editable (opening stock was 0)
         if (item.canEdit) {
           await axios.put(
@@ -117,10 +127,12 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               barcode: item.barcode,
               outlet: user.outlet,
               newStock: item.newStock,
+              currentStockValueDP: item.newStock * item.currentDP,
+              currentStockValueTP: item.newStock * item.currentTP,
             }
           );
 
-          // Log transaction
+          // Log transaction with selected date
           await axios.post(
             "https://gvi-pos-server.vercel.app/stock-transactions",
             {
@@ -128,10 +140,10 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               outlet: user.outlet,
               type: "opening",
               quantity: item.newStock,
-              date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+              date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
               user: user.name,
-              dp: item.currentDP, 
-              tp: item.currentTP, 
+              dp: item.currentDP,
+              tp: item.currentTP,
             }
           );
         }
@@ -140,24 +152,28 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       await Promise.all(requests);
       toast.success("Opening stocks updated!");
       getStockValue(user.outlet);
-      setCartItems([]);
+      setCart([]);
       setSearch("");
       setSearchResults([]);
     } catch (err) {
       console.error("Bulk update error:", err);
       toast.error("Failed to update stocks.");
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="p-4 w-full max-w-xl mx-auto bg-gray-100 min-h-screen">
-      {/* Header */}
-      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg mb-4">
-        <span className="text-sm font-semibold">
-          {dayjs().format("DD MMM, YYYY")}
-        </span>
+    <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
+      {/* Date & Outlet Stock */}
+      <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4 items-center">
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="text-sm font-semibold border rounded p-1"
+          max={dayjs().format("YYYY-MM-DD")}
+        />
         {user?.outlet && (
           <span className="text-sm font-semibold">
             <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
@@ -166,117 +182,135 @@ export default function OpeningStock({ user, stock, getStockValue }) {
         )}
       </div>
 
-      {/* Search */}
-      <div className="rounded-lg mb-4">
+      {/* Search Box */}
+      <div className="relative mb-4">
         <input
           type="text"
-          placeholder="Search product name"
           value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="border p-2 rounded w-full"
+          onChange={(e) => {
+            setSearch(e.target.value);
+            handleSearch(e.target.value);
+          }}
+          placeholder="Search product..."
+          className="w-full p-2 border rounded-lg"
         />
-
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <ul className="mt-2 border rounded max-h-48 overflow-y-auto">
-            {searchResults.map((product) => (
-              <li
-                key={product.barcode}
-                onClick={() => addToCart(product)}
-                className="p-2 hover:bg-gray-100 cursor-pointer border-b"
-              >
-                {product.name} {isPromoValid(product) && "(Promo)"}
-              </li>
-            ))}
+        <select
+          value={searchType}
+          onChange={(e) => setSearchType(e.target.value)}
+          className="absolute right-[0px] top-[0px] p-[7px] mt-[1px] mr-[1px] bg-white border rounded-lg"
+        >
+          <option value="name">By Name</option>
+          <option value="barcode">By Barcode</option>
+        </select>
+        {search && (
+          <ul className="absolute bg-white w-full border rounded-lg mt-1 shadow">
+            {isLoading ? (
+              <li className="p-2">Loading...</li>
+            ) : (
+              searchResults.map((p) => (
+                <li
+                  key={p._id}
+                  onClick={() => addToCart(p)}
+                  className="p-2 cursor-pointer hover:bg-gray-200"
+                >
+                  {p.name} {isPromoValid(p) && "(Promo)"}
+                </li>
+              ))
+            )}
           </ul>
         )}
       </div>
 
-      {/* Cart Table */}
-      {cartItems.length > 0 && (
-        <div className="bg-white p-4 shadow-md mb-6 overflow-x-auto">
-          <h2 className="text-lg font-bold mb-4 text-gray-800">
-            Opening Stock Voucher
-          </h2>
-          <div className="w-full overflow-x-auto">
-            <table className="max-w-[640px] table-auto border-collapse border border-gray-200">
-              <thead className="bg-gray-100 text-sm text-gray-700">
-                <tr>
-                  <th className="border p-2 font-medium">Product</th>
-                  <th className="border p-2 font-medium">Opening Stock</th>
-                  <th className="border p-2 font-medium">Value (DP)</th>
-                  <th className="border p-2 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm text-gray-800">
-                {cartItems.map((item) => (
-                  <tr key={item.barcode} className="hover:bg-gray-50">
-                    <td className="border p-2">{item.name}</td>
-                    <td className="border p-2 text-center">
-                      <input
-                        type="number"
-                        value={item.newStock}
-                        onChange={(e) =>
-                          updateStockValue(item.barcode, e.target.value)
-                        }
-                        className={`border rounded px-2 py-1 w-20 text-center ${
-                          !item.canEdit ? "bg-gray-100" : ""
-                        }`}
-                        disabled={!item.canEdit}
-                      />
-                    </td>
-                    <td className="border p-2 text-center">
-                      {(item.newStock * item.currentDP).toFixed(2)}
-                    </td>
-                    <td className="border p-2 text-center">
-                      <button
-                        onClick={() => removeFromCart(item.barcode)}
-                        className="text-red-500 hover:text-red-700"
-                        title="Remove"
+      {/* Opening Stock Table */}
+        <div className="bg-white p-4 shadow rounded-lg mb-4">
+          <table className="w-full text-sm table-fixed border-collapse">
+            <thead>
+              <tr className="border-b bg-gray-200">
+                <th className="p-2 w-3/6 text-left">Product</th>
+                <th className="p-2 w-1/6">Current</th>
+                <th className="p-2 w-1/6">New</th>
+                <th className="p-2 w-1/6"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {cart.map((item) => (
+                <tr key={item.barcode} className="border-b">
+                  <td className="p-2 w-3/6 text-left break-words whitespace-normal">
+                    {item.name}
+                  </td>
+                  <td className="p-2 w-1/6 text-center">{item.openingStock}</td>
+                  <td className="p-2 w-1/6">
+                    <input
+                      type="number"
+                      value={item.newStock}
+                      onChange={(e) =>
+                        updateStockValue(item.barcode, e.target.value)
+                      }
+                      className={`w-full p-1 border rounded text-center ${
+                        !item.canEdit ? "bg-gray-100" : ""
+                      }`}
+                      disabled={!item.canEdit}
+                    />
+                  </td>
+                  <td className="p-2 w-1/6 text-center">
+                    <button
+                      onClick={() => removeFromCart(item.barcode)}
+                      className="mt-1 rounded"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 448 512"
                       >
-                        <svg
-                          className="w-4 h-4 inline"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 448 512"
-                        >
-                          <path
-                            fill="currentColor"
-                            d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
-                          />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <path
+                          fill="#FD0032"
+                          d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                        />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Total DP Value */}
-          <div className="text-right font-semibold text-gray-700 mt-4">
-            Total DP:{" "}
-            {cartItems
-              .reduce(
-                (acc, item) => acc + item.newStock * item.currentDP,
-                0
-              )
-              .toFixed(2)}
-          </div>
-
-          {/* Submit Button */}
+      {/* Overall Total & Submit Button */}
+        <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
+          <span className="text-lg font-bold">
+            Total: {cart.reduce((sum, item) => sum + item.total, 0)} BDT
+          </span>
           <button
             onClick={handleSubmit}
-            disabled={submitting}
-            className={`mt-6 w-full py-2 text-white rounded-lg font-semibold transition ${
-              submitting
-                ? "bg-green-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700"
-            }`}
+            disabled={isSubmitting}
+            className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
           >
-            {submitting ? "Processing..." : "Update Opening Stocks"}
+            {isSubmitting ? (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+            ) : (
+              "Submit"
+            )}
           </button>
         </div>
-      )}
     </div>
   );
 }

@@ -99,6 +99,8 @@ export default function Secondary({ stock, setStock }) {
         stock: outletStock,
         currentTP: currentTP,
         currentDP: currentDP,
+        editableTP: currentTP,
+        editableDP: currentDP,
       };
 
       const existingItem = cart.find(
@@ -113,7 +115,7 @@ export default function Secondary({ stock, setStock }) {
                 ? {
                     ...item,
                     pcs: item.pcs + 1,
-                    total: (item.pcs + 1) * parseFloat(item.currentTP),
+                    total: (item.pcs + 1) * parseFloat(item.editableTP),
                   }
                 : item
             )
@@ -149,7 +151,7 @@ export default function Secondary({ stock, setStock }) {
               pcs: Math.max(1, Math.min(item.pcs + change, item.stock)),
               total:
                 Math.max(1, Math.min(item.pcs + change, item.stock)) *
-                item.currentTP,
+                item.editableTP,
             }
           : item
       )
@@ -158,6 +160,22 @@ export default function Secondary({ stock, setStock }) {
 
   const removeFromCart = (id) => {
     setCart(cart.filter((item) => item._id !== id));
+  };
+
+  const handlePriceChange = (id, field, value) => {
+    setCart(
+      cart.map((item) => {
+        if (item._id === id) {
+          const newValue = parseFloat(value) || 0;
+          return {
+            ...item,
+            [field]: newValue,
+            total: field === "editableTP" ? newValue * item.pcs : item.total,
+          };
+        }
+        return item;
+      })
+    );
   };
 
   const handleSubmit = async () => {
@@ -175,12 +193,12 @@ export default function Secondary({ stock, setStock }) {
         menu: menu,
         sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
         total_tp: cart.reduce(
-          (sum, item) => sum + item.currentTP * item.pcs,
+          (sum, item) => sum + item.editableTP * item.pcs,
           0
         ),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
         total_dp: cart.reduce(
-          (sum, item) => sum + item.currentDP * item.pcs,
+          (sum, item) => sum + item.editableDP * item.pcs,
           0
         ),
         products: cart.map((item) => ({
@@ -188,9 +206,9 @@ export default function Secondary({ stock, setStock }) {
           category: item.category,
           barcode: item.barcode,
           quantity: item.pcs,
-          tp: item.currentTP * item.pcs,
+          tp: item.editableTP * item.pcs,
           mrp: item.mrp * item.pcs,
-          dp: item.currentDP * item.pcs,
+          dp: item.editableDP * item.pcs,
         })),
       };
 
@@ -211,8 +229,8 @@ export default function Secondary({ stock, setStock }) {
             quantity: item.pcs,
             date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
             user: user.name,
-            dp: item.currentDP,
-            tp: item.currentTP,
+            dp: item.editableDP,
+            tp: item.editableTP,
           }
         );
       });
@@ -317,21 +335,25 @@ export default function Secondary({ stock, setStock }) {
         <table className="w-full text-sm table-fixed border-collapse">
           <thead>
             <tr className="border-b bg-gray-200">
-              <th className="p-2 w-2/6 text-left">Product</th>
-              <th className="p-2 w-1/6">Pcs</th>
-              <th className="p-2 w-1/6">TP</th>
-              <th className="p-2 w-1/6">Total</th>
-              <th className="p-2 w-1/6"></th>
+              <th className="p-2 w-[100%] text-left">Product</th>
+              <th className="p-2 w-[100%]">Pcs</th>
+              <th className="p-2 w-[110%]">Price</th>
+              {/* <th className="p-2 w-1/6">DP</th> */}
+              <th className="p-2 w-[80%]">Total</th>
+              <th className="p-2 w-[20%] ps-4"></th>
             </tr>
           </thead>
           <tbody>
             {cart.map((item) => (
               <tr key={item._id} className="border-b">
-                <td className="p-2 w-2/6 text-left break-words whitespace-normal">
+                {/* Product Name */}
+                <td className="p-2 w-[20px] text-left break-words whitespace-normal text-[12px] flex items-center">
                   {item.name} {item.stock ? `(${item.stock})` : ""}
                 </td>
-                <td className="p-2 w-1/6">
-                  <div className="flex flex-col-reverse justify-center items-center gap-1">
+
+                {/* Quantity +/- */}
+                <td className="p-2 w-[20px]">
+                  <div className="flex flex-col-reverse justify-center items-center gap-1 h-full">
                     <button
                       onClick={() => updateQuantity(item._id, -1)}
                       className="bg-gray-900 text-white font-bold rounded h-6 w-6"
@@ -347,15 +369,52 @@ export default function Secondary({ stock, setStock }) {
                     </button>
                   </div>
                 </td>
-                <td className="p-2 w-1/6 text-center">{item.currentTP} BDT</td>
-                <td className="p-2 w-1/6 text-center">{item.total} BDT</td>
-                <td className="p-2 w-1/6 text-center">
+
+                {/* Editable TP and DP Inputs */}
+                <td className="p-1">
+                  <div className="flex flex-col justify-center items-center gap-2 h-full">
+                    <input
+                      type="number"
+                      value={item.editableTP}
+                      onChange={(e) =>
+                        handlePriceChange(
+                          item._id,
+                          "editableTP",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded p-1 text-center w-[70px]"
+                    />
+                    <input
+                      type="number"
+                      value={item.editableDP}
+                      onChange={(e) =>
+                        handlePriceChange(
+                          item._id,
+                          "editableDP",
+                          e.target.value
+                        )
+                      }
+                      className="text-center border rounded p-1 w-[70px]"
+                    />
+                  </div>
+                </td>
+
+                {/* Total TP */}
+                <td className="p-2 text-center align-middle">
+                  <span className="inline-block h-full">
+                    {(item.editableTP * item.pcs).toFixed(2)}
+                  </span>
+                </td>
+
+                {/* Delete Button */}
+                <td className="text-center align-middle">
                   <button
                     onClick={() => removeFromCart(item._id)}
-                    className="mt-1 rounded"
+                    className="rounded"
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-4 h-4 mx-auto"
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 448 512"
                     >
@@ -375,7 +434,10 @@ export default function Secondary({ stock, setStock }) {
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0)} BDT
+          Total:{" "}
+          {cart
+            .reduce((sum, item) => sum + item.editableTP * item.pcs, 0)
+            .toFixed(2)}{" "}
         </span>
         <button
           onClick={handleSubmit}
