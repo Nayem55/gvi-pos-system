@@ -263,8 +263,8 @@ export default function Secondary({ stock, setStock }) {
         />
         {user && user.outlet && (
           <span className="text-sm font-semibold">
-            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
-            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
+            <p>Stock (DP): {stock.dp?.toFixed(2)}</p>
+            <p>Stock (TP): {stock.tp?.toFixed(2)}</p>
           </span>
         )}
       </div>
@@ -332,103 +332,99 @@ export default function Secondary({ stock, setStock }) {
 
       {/* Sales Table */}
       <div className="bg-white p-4 shadow rounded-lg mb-4">
-        <table className="w-full text-sm table-fixed border-collapse">
-          <thead>
-            <tr className="border-b bg-gray-200">
-              <th className="p-2 w-[100%] text-left">Product</th>
-              <th className="p-2 w-[100%]">Pcs</th>
-              <th className="p-2 w-[110%]">Price</th>
-              {/* <th className="p-2 w-1/6">DP</th> */}
-              <th className="p-2 w-[80%]">Total</th>
-              <th className="p-2 w-[20%] ps-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {cart.map((item) => (
-              <tr key={item._id} className="border-b">
-                {/* Product Name */}
-                <td className="p-2 w-[20px] text-left break-words whitespace-normal text-[12px] flex items-center">
-                  {item.name} {item.stock ? `(${item.stock})` : ""}
-                </td>
-
-                {/* Quantity +/- */}
-                <td className="p-2 w-[20px]">
-                  <div className="flex flex-col-reverse justify-center items-center gap-1 h-full">
-                    <button
-                      onClick={() => updateQuantity(item._id, -1)}
-                      className="bg-gray-900 text-white font-bold rounded h-6 w-6"
-                    >
-                      -
-                    </button>
-                    <span className="px-2">{item.pcs}</span>
-                    <button
-                      onClick={() => updateQuantity(item._id, 1)}
-                      className="bg-[#F16F24] text-white font-bold rounded h-6 w-6"
-                    >
-                      +
-                    </button>
-                  </div>
-                </td>
-
-                {/* Editable TP and DP Inputs */}
-                <td className="p-1">
-                  <div className="flex flex-col justify-center items-center gap-2 h-full">
-                    <input
-                      type="number"
-                      value={item.editableTP}
-                      onChange={(e) =>
-                        handlePriceChange(
-                          item._id,
-                          "editableTP",
-                          e.target.value
-                        )
-                      }
-                      className="border rounded p-1 text-center w-[70px]"
-                    />
-                    <input
-                      type="number"
-                      value={item.editableDP}
-                      onChange={(e) =>
-                        handlePriceChange(
-                          item._id,
-                          "editableDP",
-                          e.target.value
-                        )
-                      }
-                      className="text-center border rounded p-1 w-[70px]"
-                    />
-                  </div>
-                </td>
-
-                {/* Total TP */}
-                <td className="p-2 text-center align-middle">
-                  <span className="inline-block h-full">
-                    {(item.editableTP * item.pcs).toFixed(2)}
-                  </span>
-                </td>
-
-                {/* Delete Button */}
-                <td className="text-center align-middle">
-                  <button
-                    onClick={() => removeFromCart(item._id)}
-                    className="rounded"
-                  >
-                    <svg
-                      className="w-4 h-4 mx-auto"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 448 512"
-                    >
-                      <path
-                        fill="#FD0032"
-                        d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
-                      />
-                    </svg>
-                  </button>
-                </td>
+        <div className="overflow-x-hidden w-full">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b bg-gray-200 text-xs">
+                <th className="p-2 text-left w-1/3">Product</th>
+                <th className="p-2 w-[60px] text-center">Pcs</th>
+                <th className="p-2 w-[100px] text-center">Price</th>
+                <th className="p-2 w-[60px] text-center">Total</th>
+                <th className="p-2 w-[40px] text-center"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {cart.map((item) => (
+                <tr key={item._id} className="border-b text-xs">
+                  {/* Product Name */}
+                  <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
+                    {item.name} {item.stock ? `(${item.stock})` : ""}
+                  </td>
+
+                  {/* Quantity +/- */}
+                  <td className="p-2 text-center">
+                    <div className="flex flex-col-reverse justify-center items-center gap-1">
+                      <button
+                        onClick={() => updateQuantity(item._id, -1)}
+                        className="bg-gray-900 text-white text-xs rounded h-5 w-5"
+                      >
+                        -
+                      </button>
+                      <span className="text-sm">{item.pcs}</span>
+                      <button
+                        onClick={() => updateQuantity(item._id, 1)}
+                        className="bg-[#F16F24] text-white text-xs rounded h-5 w-5"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </td>
+
+                  {/* Editable TP and DP Inputs */}
+                  <td className="p-1 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <input
+                        type="number"
+                        value={item.editableTP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item._id,
+                            "editableTP",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
+                      />
+                      <input
+                        type="number"
+                        value={item.editableDP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item._id,
+                            "editableDP",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
+                      />
+                    </div>
+                  </td>
+
+                  {/* Total TP */}
+                  <td className="p-2 text-center text-xs">
+                    {(item.editableTP * item.pcs).toFixed(2)}
+                  </td>
+
+                  {/* Delete Button */}
+                  <td className="text-center">
+                    <button onClick={() => removeFromCart(item._id)}>
+                      <svg
+                        className="w-4 h-4 mx-auto"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 448 512"
+                      >
+                        <path
+                          fill="#FD0032"
+                          d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                        />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Overall Total & Submit Button */}
