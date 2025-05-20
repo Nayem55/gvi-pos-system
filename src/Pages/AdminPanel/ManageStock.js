@@ -136,8 +136,8 @@ const ManageStock = () => {
   const [stock, setStock] = useState(0);
 
   useEffect(() => {
-    if (selectedOutlet) {
-      getStockValue(selectedOutlet);
+    if (user && selectedOutlet) {
+      getStockValue(selectedOutlet); // Pass outlet name from the user object
     }
   }, [selectedOutlet]);
 
@@ -146,8 +146,8 @@ const ManageStock = () => {
       const response = await axios.get(
         `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
       );
-      const stockValue = response.data.totalStockValue;
-      setStock(stockValue);
+      const stockValue = response.data.totalCurrentDP;
+      setStock({dp:response.data.totalCurrentDP,tp:response.data.totalCurrentTP}); // Update the stock state with the received value
     } catch (error) {
       console.error("Error fetching stock value:", error);
     }
@@ -166,15 +166,15 @@ const ManageStock = () => {
 
     switch (selectedTab) {
       case "opening":
-        return <OpeningStock user={outletUser} stock={stock} setStock={setStock} />;
+        return <OpeningStock user={outletUser} stock={stock} setStock={setStock} getStockValue={getStockValue} />;
       case "primary":
-        return <Primary user={outletUser} stock={stock} setStock={setStock} />;
+        return <Primary user={outletUser} stock={stock} setStock={setStock} getStockValue={getStockValue} />;
       case "secondary":
-        return <Secondary user={outletUser} stock={stock} setStock={setStock} />;
+        return <Secondary user={outletUser} stock={stock} setStock={setStock} getStockValue={getStockValue} />;
       case "officeReturn":
-        return <OfficeReturn user={outletUser} stock={stock} setStock={setStock} />;
+        return <OfficeReturn user={outletUser} stock={stock} setStock={setStock} getStockValue={getStockValue} />;
       case "marketReturn":
-        return <MarketReturn user={outletUser} stock={stock} setStock={setStock} />;
+        return <MarketReturn user={outletUser} stock={stock} setStock={setStock} getStockValue={getStockValue} />;
       default:
         return null;
     }
@@ -215,7 +215,7 @@ const ManageStock = () => {
             {selectedOutlet && (
               <>
                 <div className="mb-4 text-blue-600 font-semibold text-lg">
-                  Total Stock Value (DP): ৳ {stock.toFixed(2)}
+                  Total Stock Value (DP): ৳ {stock?.toFixed(2)}
                 </div>
 
                 <div className="mb-6">

@@ -255,7 +255,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
                       />
                     </td>
                     <td className="border p-2 text-center">
-                      {item.openingStock - item.marketReturn}
+                      {item.openingStock + item.marketReturn}
                     </td>
                     <td className="border p-2 text-center">
                       {(item.marketReturn * item.currentDP).toFixed(2)}
