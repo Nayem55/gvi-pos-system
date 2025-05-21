@@ -3,8 +3,9 @@ import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
-import "jspdf-autotable";
-// import jsPDF from "jspdf";
+
+
+
 
 const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -315,90 +316,7 @@ const StockMovementReport = () => {
     );
   };
 
-  // const exportToPDF = () => {
-  //   const doc = new jsPDF();
 
-  //   // Add title
-  //   doc.setFontSize(16);
-  //   doc.text(`Stock Movement Report - ${selectedOutlet}`, 14, 15);
-  //   doc.setFontSize(12);
-  //   doc.text(
-  //     `Period: ${dayjs(dateRange.start).format("YYYY-MM-DD")} to ${dayjs(
-  //       dateRange.end
-  //     ).format("YYYY-MM-DD")}`,
-  //     14,
-  //     22
-  //   );
-
-  //   // Prepare table data
-  //   const headers = [
-  //     "SL",
-  //     "Product Name",
-  //     ["Opening", "Qty", "Value (DP)"],
-  //     ["Primary", "Qty", "Value (DP)"],
-  //     ["Market Return", "Qty", "Value (DP)"],
-  //     ["Office Return", "Qty", "Value (DP)"],
-  //     ["Secondary", "Qty", "Value (DP)"],
-  //     ["Closing", "Qty", "Value (DP)"],
-  //   ];
-
-  //   const data = reportData.map((item, index) => [
-  //     index + 1,
-  //     item.productName,
-  //     item.openingStock,
-  //     item.openingValueDP?.toFixed(2),
-  //     item.primary,
-  //     item.primaryValueDP?.toFixed(2),
-  //     item.marketReturn,
-  //     item.marketReturnValueDP?.toFixed(2),
-  //     item.officeReturn,
-  //     item.officeReturnValueDP?.toFixed(2),
-  //     item.secondary,
-  //     item.secondaryValueDP?.toFixed(2),
-  //     item.closingStock,
-  //     item.closingValueDP?.toFixed(2),
-  //   ]);
-
-  //   // Add table
-  //   doc.autoTable({
-  //     head: [headers.flat()],
-  //     body: data,
-  //     startY: 30,
-  //     styles: { fontSize: 8 },
-  //     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-  //     columnStyles: {
-  //       0: { cellWidth: 10 },
-  //       1: { cellWidth: 40 },
-  //       // ... other column styles as needed
-  //     },
-  //   });
-
-  //   // Add totals
-  //   doc.autoTable({
-  //     body: [
-  //       [
-  //         "Total",
-  //         "",
-  //         totals.openingQty,
-  //         totals.openingValue.toFixed(2),
-  //         totals.primaryQty,
-  //         totals.primaryValue.toFixed(2),
-  //         totals.marketReturnQty,
-  //         totals.marketReturnValue.toFixed(2),
-  //         totals.officeReturnQty,
-  //         totals.officeReturnValue.toFixed(2),
-  //         totals.secondaryQty,
-  //         totals.secondaryValue.toFixed(2),
-  //         totals.closingQty,
-  //         totals.closingValue.toFixed(2),
-  //       ],
-  //     ],
-  //     startY: doc.lastAutoTable.finalY + 10,
-  //     styles: { fillColor: [230, 230, 230], fontStyle: "bold" },
-  //   });
-
-  //   doc.save(`Stock_Movement_${selectedOutlet}_${dateRange.start}.pdf`);
-  // };
 
   // Calculate totals
 

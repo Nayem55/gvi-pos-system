@@ -7,6 +7,7 @@
     "cra-template": "1.2.0",
     "dayjs": "^1.11.13",
     "file-saver": "^2.0.5",
+    "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.479.0",
