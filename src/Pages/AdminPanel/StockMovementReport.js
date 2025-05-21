@@ -15,6 +15,8 @@ const StockMovementReport = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
+  console.log(reportData)
+
   const outlets = [
     "Madina Trade International: New Market",
     "Shamima Akter: New Market",

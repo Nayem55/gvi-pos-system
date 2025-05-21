@@ -21,7 +21,7 @@ const DealerSalesReport = () => {
   const [allSalesReports, setAllSalesReports] = useState({});
   const [allStockMovementData, setAllStockMovementData] = useState({});
   const [allTargets, setAllTargets] = useState({});
-  
+
   // Filter and display state
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
@@ -29,13 +29,13 @@ const DealerSalesReport = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
-  
+
   // Loading and error states
   const [loading, setLoading] = useState({
     initialLoad: true,
     sales: false,
     stock: false,
-    targets: false
+    targets: false,
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -43,32 +43,31 @@ const DealerSalesReport = () => {
   // Fetch all initial data
   const fetchInitialData = useCallback(async () => {
     try {
-      setLoading(prev => ({ ...prev, initialLoad: true }));
+      setLoading((prev) => ({ ...prev, initialLoad: true }));
       setError(null);
 
       // Fetch all users
       const usersResponse = await api.get("/getAllUser");
       setAllUsers(usersResponse.data);
-
     } catch (error) {
       console.error("Error fetching initial data:", error);
       setError("Failed to load initial data. Please try again.");
     } finally {
-      setLoading(prev => ({ ...prev, initialLoad: false }));
+      setLoading((prev) => ({ ...prev, initialLoad: false }));
     }
   }, []);
 
   // Fetch targets for the selected month
   const fetchTargets = useCallback(async () => {
     try {
-      setLoading(prev => ({ ...prev, targets: true }));
+      setLoading((prev) => ({ ...prev, targets: true }));
       setError(null);
 
       const [year, month] = selectedMonth.split("-").map(Number);
-      const targetsResponse = await api.get("/targets", { 
-        params: { year, month } 
+      const targetsResponse = await api.get("/targets", {
+        params: { year, month },
       });
-      
+
       const targetsMap = {};
       targetsResponse.data.forEach((targetEntry) => {
         targetEntry.targets.forEach((target) => {
@@ -78,12 +77,11 @@ const DealerSalesReport = () => {
         });
       });
       setAllTargets(targetsMap);
-
     } catch (error) {
       console.error("Error fetching targets:", error);
       setError("Failed to load targets. Please try again.");
     } finally {
-      setLoading(prev => ({ ...prev, targets: false }));
+      setLoading((prev) => ({ ...prev, targets: false }));
     }
   }, [selectedMonth]);
 
@@ -92,7 +90,7 @@ const DealerSalesReport = () => {
     if (allUsers.length === 0) return;
 
     try {
-      setLoading(prev => ({ ...prev, sales: true, stock: true }));
+      setLoading((prev) => ({ ...prev, sales: true, stock: true }));
       setError(null);
 
       // Prepare date parameters
@@ -105,10 +103,12 @@ const DealerSalesReport = () => {
       }
 
       // Fetch sales reports for all users
-      const salesPromises = allUsers.map(user =>
-        api.get(`/sales-reports/${user._id}`, { params })
-          .then(response => ({ userId: user._id, reportData: response.data }))
-          .catch(() => ({ userId: user._id, reportData: [] })))
+      const salesPromises = allUsers.map((user) =>
+        api
+          .get(`/sales-reports/${user._id}`, { params })
+          .then((response) => ({ userId: user._id, reportData: response.data }))
+          .catch(() => ({ userId: user._id, reportData: [] }))
+      );
 
       const salesResults = await Promise.all(salesPromises);
       const salesData = salesResults.reduce((acc, { userId, reportData }) => {
@@ -118,11 +118,17 @@ const DealerSalesReport = () => {
       setAllSalesReports(salesData);
 
       // Fetch stock movement data for all outlets
-      const allOutlets = [...new Set(allUsers.map(u => u.outlet).filter(Boolean))]
-      const stockPromises = allOutlets.map(outlet =>
-        api.get("/stock-movement-report", { params: { outlet, month: selectedMonth } })
-          .then(response => ({ outlet, data: response.data?.data || [] }))
-          .catch(() => ({ outlet, data: [] })))
+      const allOutlets = [
+        ...new Set(allUsers.map((u) => u.outlet).filter(Boolean)),
+      ];
+      const stockPromises = allOutlets.map((outlet) =>
+        api
+          .get("/stock-movement-report", {
+            params: { outlet, month: selectedMonth },
+          })
+          .then((response) => ({ outlet, data: response.data?.data || [] }))
+          .catch(() => ({ outlet, data: [] }))
+      );
 
       const stockResults = await Promise.all(stockPromises);
       const stockData = stockResults.reduce((acc, { outlet, data }) => {
@@ -130,12 +136,11 @@ const DealerSalesReport = () => {
         return acc;
       }, {});
       setAllStockMovementData(stockData);
-
     } catch (error) {
       console.error("Error fetching report data:", error);
       setError("Failed to load report data. Please try again.");
     } finally {
-      setLoading(prev => ({ ...prev, sales: false, stock: false }));
+      setLoading((prev) => ({ ...prev, sales: false, stock: false }));
     }
   }, [allUsers, selectedMonth, startDate, endDate]);
 
@@ -147,9 +152,12 @@ const DealerSalesReport = () => {
   }, []);
 
   // Get target for a user in the selected period
-  const getUserTarget = useCallback((userId) => {
-    return allTargets[userId] || 0;
-  }, [allTargets]);
+  const getUserTarget = useCallback(
+    (userId) => {
+      return allTargets[userId] || 0;
+    },
+    [allTargets]
+  );
 
   // Apply all filters to get the users to display
   const filteredUsers = useMemo(() => {
@@ -175,54 +183,65 @@ const DealerSalesReport = () => {
 
       if (["ASM", "RSM", "SOM"].includes(user.role)) {
         // For managers, calculate based on their team
-        const teamMembers = allUsers.filter(u => u.zone.includes(user.zone));
-        
+        const teamMembers = allUsers.filter((u) => u.zone.includes(user.zone));
+
         // Sales data
         totalReports = teamMembers.reduce(
           (sum, member) => sum + (allSalesReports[member._id]?.length || 0),
           0
         );
         totalTP = teamMembers.reduce(
-          (sum, member) => sum + (allSalesReports[member._id]?.reduce(
-            (subSum, report) => subSum + (report.total_tp || 0),
-            0
-          ) || 0),
+          (sum, member) =>
+            sum +
+            (allSalesReports[member._id]?.reduce(
+              (subSum, report) => subSum + (report.total_tp || 0),
+              0
+            ) || 0),
           0
         );
 
         // Stock movement data - get all unique outlets from team members
-        const teamOutlets = [...new Set(teamMembers.map(m => m.outlet).filter(Boolean))];
-        
+        const teamOutlets = [
+          ...new Set(teamMembers.map((m) => m.outlet).filter(Boolean)),
+        ];
+
         totalPrimary = teamOutlets.reduce((sum, outlet) => {
           const outletData = allStockMovementData[outlet] || [];
-          return sum + outletData.reduce(
-            (subSum, item) => subSum + (item.primary || 0),
-            0
+          return (
+            sum +
+            outletData.reduce((subSum, item) => subSum + (item.primary || 0), 0)
           );
         }, 0);
 
         totalOfficeReturn = teamOutlets.reduce((sum, outlet) => {
           const outletData = allStockMovementData[outlet] || [];
-          return sum + outletData.reduce(
-            (subSum, item) => subSum + (item.officeReturn || 0),
-            0
+          return (
+            sum +
+            outletData.reduce(
+              (subSum, item) => subSum + (item.officeReturn || 0),
+              0
+            )
           );
         }, 0);
 
         totalMarketReturn = teamOutlets.reduce((sum, outlet) => {
           const outletData = allStockMovementData[outlet] || [];
-          return sum + outletData.reduce(
-            (subSum, item) => subSum + (item.marketReturn || 0),
-            0
+          return (
+            sum +
+            outletData.reduce(
+              (subSum, item) => subSum + (item.marketReturn || 0),
+              0
+            )
           );
         }, 0);
       } else {
         // For regular users
         totalReports = allSalesReports[user._id]?.length || 0;
-        totalTP = allSalesReports[user._id]?.reduce(
-          (sum, report) => sum + (report.total_tp || 0),
-          0
-        ) || 0;
+        totalTP =
+          allSalesReports[user._id]?.reduce(
+            (sum, report) => sum + (report.total_tp || 0),
+            0
+          ) || 0;
 
         // Stock movement data from their outlet
         const outletData = allStockMovementData[user.outlet] || [];
@@ -258,7 +277,13 @@ const DealerSalesReport = () => {
         achievement,
       };
     });
-  }, [filteredUsers, allUsers, allSalesReports, allStockMovementData, getUserTarget]);
+  }, [
+    filteredUsers,
+    allUsers,
+    allSalesReports,
+    allStockMovementData,
+    getUserTarget,
+  ]);
 
   // Calculate totals
   const {
@@ -271,10 +296,12 @@ const DealerSalesReport = () => {
   } = useMemo(() => {
     const uniqueOutlets = new Set(
       filteredUsers
-        .map(user => {
+        .map((user) => {
           if (["ASM", "RSM", "SOM"].includes(user.role)) {
-            const teamMembers = allUsers.filter(u => u.zone.includes(user.zone));
-            return teamMembers.map(member => member.outlet).filter(Boolean);
+            const teamMembers = allUsers.filter((u) =>
+              u.zone.includes(user.zone)
+            );
+            return teamMembers.map((member) => member.outlet).filter(Boolean);
           }
           return user.outlet;
         })
@@ -291,7 +318,8 @@ const DealerSalesReport = () => {
       totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
       totalPrimary: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum + (allStockMovementData[outlet] || []).reduce(
+          sum +
+          (allStockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.primary || 0),
             0
           ),
@@ -299,7 +327,8 @@ const DealerSalesReport = () => {
       ),
       totalOfficeReturn: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum + (allStockMovementData[outlet] || []).reduce(
+          sum +
+          (allStockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.officeReturn || 0),
             0
           ),
@@ -307,7 +336,8 @@ const DealerSalesReport = () => {
       ),
       totalMarketReturn: Array.from(uniqueOutlets).reduce(
         (sum, outlet) =>
-          sum + (allStockMovementData[outlet] || []).reduce(
+          sum +
+          (allStockMovementData[outlet] || []).reduce(
             (subSum, item) => subSum + (item.marketReturn || 0),
             0
           ),
@@ -333,7 +363,8 @@ const DealerSalesReport = () => {
     fetchReportData();
   }, [fetchReportData]);
 
-  const isLoading = loading.initialLoad || loading.sales || loading.stock || loading.targets;
+  const isLoading =
+    loading.initialLoad || loading.sales || loading.stock || loading.targets;
 
   const exportToExcel = () => {
     const exportData = aggregatedReports.map((report) => ({
@@ -515,21 +546,39 @@ const DealerSalesReport = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
+          <div className="relative overflow-auto max-h-[90vh]">
+            {" "}
+            {/* Adjust height as needed */}
+            <table className="w-full border-collapse ">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="border p-2">User</th>
-                  <th className="border p-2">Outlet</th>
-                  <th className="border p-2">Zone</th>
-                  <th className="border p-2">Role</th>
-                  <th className="border p-2">Primary</th>
-                  <th className="border p-2">Office Return</th>
-                  <th className="border p-2">Market Return</th>
-                  <th className="border p-2">Target</th>
-                  <th className="border p-2">Total TP</th>
-                  <th className="border p-2">Achievement (%)</th>
-                  <th className="border p-2">Action</th>
+                <tr className="bg-gray-100 sticky top-0 z-10">
+                  <th className=" p-2 sticky top-0 bg-gray-100">User</th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Outlet
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">Zone</th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">Role</th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Primary
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Office Return
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Market Return
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Target
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Total TP
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Achievement (%)
+                  </th>
+                  <th className=" p-2 sticky top-0 bg-gray-100">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -540,13 +589,17 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
                     <td className="border p-2">
-                      ৳{user.totalPrimary > 0 ? user.totalPrimary.toFixed(2) : 0}
+                      {user.totalPrimary > 0 ? user.totalPrimary.toFixed(2) : 0}
                     </td>
                     <td className="border p-2">
-                      ৳{user.totalOfficeReturn > 0 ? user.totalOfficeReturn.toFixed(2) : 0}
+                      {user.totalOfficeReturn > 0
+                        ? user.totalOfficeReturn.toFixed(2)
+                        : 0}
                     </td>
                     <td className="border p-2">
-                      ৳{user.totalMarketReturn > 0 ? user.totalMarketReturn.toFixed(2) : 0}
+                      {user.totalMarketReturn > 0
+                        ? user.totalMarketReturn.toFixed(2)
+                        : 0}
                     </td>
                     <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>

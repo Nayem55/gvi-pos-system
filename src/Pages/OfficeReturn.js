@@ -79,10 +79,12 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
           officeReturn: 0,
           currentDP,
           currentTP,
+          editableDP: currentDP,
+          editableTP: currentTP,
           total: 0,
         },
       ]);
-      setSearch("")
+      setSearch("");
     } catch (err) {
       console.error("Stock fetch error:", err);
       toast.error("Failed to fetch stock.");
@@ -98,10 +100,27 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
           ? {
               ...item,
               officeReturn: returnValue,
-              total: returnValue * item.currentDP,
+              total: returnValue * item.editableDP,
             }
           : item
       )
+    );
+  };
+
+  // Handle price changes
+  const handlePriceChange = (barcode, field, value) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.barcode === barcode) {
+          const newValue = parseFloat(value) || 0;
+          return {
+            ...item,
+            [field]: newValue,
+            total: field === "editableDP" ? newValue * item.officeReturn : item.total,
+          };
+        }
+        return item;
+      })
     );
   };
 
@@ -129,9 +148,9 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
             outlet: user.outlet,
             newStock: item.openingStock - item.officeReturn,
             currentStockValueDP:
-              (item.openingStock - item.officeReturn) * item.currentDP,
+              (item.openingStock - item.officeReturn) * item.editableDP,
             currentStockValueTP:
-              (item.openingStock - item.officeReturn) * item.currentTP,
+              (item.openingStock - item.officeReturn) * item.editableTP,
           }
         );
 
@@ -145,8 +164,8 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
             quantity: item.officeReturn,
             date: formattedDateTime,
             user: user.name,
-            dp: item.currentDP,
-            tp: item.currentTP,
+            dp: item.editableDP,
+            tp: item.editableTP,
           }
         );
       });
@@ -224,46 +243,86 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
       </div>
 
       {/* Office Return Table */}
-        <div className="bg-white p-4 shadow rounded-lg mb-4">
-          <table className="w-full text-sm table-fixed border-collapse">
+      <div className="bg-white p-4 shadow rounded-lg mb-4">
+        <div className="overflow-x-hidden w-full">
+          <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b bg-gray-200">
-                <th className="p-2 w-2/6 text-left">Product</th>
-                <th className="p-2 w-1/6">Stock</th>
-                <th className="p-2 w-1/6">Return</th>
-                <th className="p-2 w-1/6">New Stock</th>
-                <th className="p-2 w-1/6"></th>
+              <tr className="border-b bg-gray-200 text-xs">
+                <th className="p-2 text-left w-1/4">Product</th>
+                <th className="p-2 w-[50px] text-center">Stock</th>
+                <th className="p-2 w-[100px] text-center">Prices</th>
+                <th className="p-2 w-[70px] text-center">Return</th>
+                {/* <th className="p-2 w-[60px] text-center">New Stock</th> */}
+                <th className="p-2 w-[40px] text-center"></th>
               </tr>
             </thead>
             <tbody>
               {cart.map((item) => (
-                <tr key={item.barcode} className="border-b">
-                  <td className="p-2 w-2/6 text-left break-words whitespace-normal">
+                <tr key={item.barcode} className="border-b text-xs">
+                  {/* Product Name */}
+                  <td className="p-2 text-left break-words max-w-[100px] whitespace-normal">
                     {item.name}
                   </td>
-                  <td className="p-2 w-1/6 text-center">{item.openingStock}</td>
-                  <td className="p-2 w-1/6">
+
+                  {/* Opening Stock */}
+                  <td className="p-2 text-center">
+                    {item.openingStock}
+                  </td>
+
+                  {/* Editable DP and TP Inputs */}
+                  <td className="p-1 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <input
+                        type="number"
+                        value={item.editableDP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item.barcode,
+                            "editableDP",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
+                      />
+                      <input
+                        type="number"
+                        value={item.editableTP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item.barcode,
+                            "editableTP",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
+                      />
+                    </div>
+                  </td>
+
+                  {/* Return Input */}
+                  <td className="p-1 text-center">
                     <input
                       type="number"
                       value={item.officeReturn}
                       onChange={(e) =>
                         updateOfficeReturnValue(item.barcode, e.target.value)
                       }
-                      className="w-full p-1 border rounded text-center"
+                      className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[50px]"
                       min="0"
                       max={item.openingStock}
                     />
                   </td>
-                  <td className="p-2 w-1/6 text-center">
+
+                  {/* New Stock */}
+                  {/* <td className="p-2 text-center">
                     {item.openingStock - item.officeReturn}
-                  </td>
-                  <td className="p-2 w-1/6 text-center">
-                    <button
-                      onClick={() => removeFromCart(item.barcode)}
-                      className="mt-1 rounded"
-                    >
+                  </td> */}
+
+                  {/* Delete Button */}
+                  <td className="text-center">
+                    <button onClick={() => removeFromCart(item.barcode)}>
                       <svg
-                        className="w-4 h-4"
+                        className="w-4 h-4 mx-auto"
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 448 512"
                       >
@@ -279,43 +338,44 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
             </tbody>
           </table>
         </div>
+      </div>
 
       {/* Overall Total & Submit Button */}
-        <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
-          <span className="text-lg font-bold">
-            Total: {cart.reduce((sum, item) => sum + item.total, 0)} BDT
-          </span>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
-          >
-            {isSubmitting ? (
-              <svg
-                className="animate-spin h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                ></path>
-              </svg>
-            ) : (
-              "Submit"
-            )}
-          </button>
-        </div>
+      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
+        <span className="text-lg font-bold">
+          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)} BDT
+        </span>
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
+        >
+          {isSubmitting ? (
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
+          ) : (
+            "Submit"
+          )}
+        </button>
+      </div>
     </div>
   );
 }
