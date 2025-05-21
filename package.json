@@ -50,7 +50,10 @@
     ]
   },
   "devDependencies": {
+    "@babel/core": "^7.27.1",
+    "@babel/preset-env": "^7.27.2",
     "autoprefixer": "^10.4.20",
+    "babel-loader": "^10.0.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16"
   }

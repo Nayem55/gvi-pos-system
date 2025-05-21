@@ -3,9 +3,9 @@ import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
-
-
-
+import { jsPDF } from "jspdf/dist/jspdf.umd.min.js";
+import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -316,11 +316,170 @@ const StockMovementReport = () => {
     );
   };
 
+  const exportToPDF = () => {
+    try {
+      // Initialize PDF in landscape mode
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+      });
 
+      // Add distributor and sales person info at the top
+      doc.setFontSize(12);
+      doc.text(`Distributor Name: ${selectedOutlet || ""}`, 14, 15);
+      // Add month and area info at the top right
+      const pageWidth = doc.internal.pageSize.getWidth();
+      doc.text(
+        `Period: ${
+          dayjs(dateRange.start).format("YYYY-MM-DD") +
+          " to " +
+          dayjs(dateRange.end).format("YYYY-MM-DD")
+        }`,
+        pageWidth - 75,
+        15
+      );
+
+      // Prepare table data - match Excel structure exactly
+      const headers = [
+        [
+          "Sl",
+          "Products Name",
+          "Opening Stock",
+          "",
+          "Primary",
+          "",
+          "Market Return",
+          "",
+          "Office Return",
+          "",
+          "Secondary",
+          "",
+          "Closing Stock",
+          "",
+        ],
+        [
+          "",
+          "",
+          "Qty",
+          "Value",
+          "Qty",
+          "Value",
+          "Qty",
+          "Value",
+          "Qty",
+          "Value",
+          "Qty",
+          "Value",
+          "Qty",
+          "Value",
+        ],
+      ];
+
+      const data = reportData.map((item, index) => [
+        index + 1,
+        item.productName || "",
+        item.openingStock || 0,
+        item.openingValueDP?.toFixed(2) || "0.00",
+        item.primary || 0,
+        (item.primary * item.priceDP)?.toFixed(2) || "0.00",
+        item.marketReturn || 0,
+        (item.marketReturn * item.priceDP)?.toFixed(2) || "0.00",
+        item.officeReturn || 0,
+        (item.officeReturn * item.priceDP)?.toFixed(2) || "0.00",
+        item.secondary || 0,
+        (item.secondary * item.priceDP)?.toFixed(2) || "0.00",
+        item.closingStock ||
+          (item.openingStock || 0) +
+            (item.primary || 0) +
+            (item.marketReturn || 0) -
+            (item.secondary || 0) -
+            (item.officeReturn || 0),
+        item.closingValueDP?.toFixed(2) ||
+          (
+            ((item.openingStock || 0) +
+              (item.primary || 0) +
+              (item.marketReturn || 0) -
+              (item.secondary || 0) -
+              (item.officeReturn || 0)) *
+            item.priceDP
+          )?.toFixed(2) ||
+          "0.00",
+      ]);
+
+      // Add totals row if needed
+      if (totals) {
+        data.push([
+          "",
+          "TOTAL",
+          totals.openingQty || 0,
+          totals.openingValue?.toFixed(2) || "0.00",
+          totals.primaryQty || 0,
+          totals.primaryValue?.toFixed(2) || "0.00",
+          totals.marketReturnQty || 0,
+          totals.marketReturnValue?.toFixed(2) || "0.00",
+          totals.officeReturnQty || 0,
+          totals.officeReturnValue?.toFixed(2) || "0.00",
+          totals.secondaryQty || 0,
+          totals.secondaryValue?.toFixed(2) || "0.00",
+          totals.closingQty || 0,
+          totals.closingValue?.toFixed(2) || "0.00",
+        ]);
+      }
+
+      // Generate the table
+      autoTable(doc, {
+        head: headers,
+        body: data,
+        startY: 30,
+        margin: { horizontal: 10 },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          overflow: "linebreak",
+          halign: "center",
+        },
+        columnStyles: {
+          0: { cellWidth: 8, halign: "center" }, // SL column
+          1: { cellWidth: 30, halign: "left" }, // Product column
+          // Other columns will auto-size
+        },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        // Merge header cells to match Excel layout
+        didParseCell: function (data) {
+          if (data.section === "head" && data.row.index === 0) {
+            // Merge cells in the first header row
+            if (
+              data.column.dataKey === 2 ||
+              data.column.dataKey === 4 ||
+              data.column.dataKey === 6 ||
+              data.column.dataKey === 8 ||
+              data.column.dataKey === 10 ||
+              data.column.dataKey === 12
+            ) {
+              data.cell.colSpan = 2;
+            }
+          }
+        },
+      });
+
+      // Save the PDF
+      const fileName = `Stock_Report_${selectedOutlet || "all"}_${
+        dayjs(dateRange.start).format("YYYY-MM-DD") +
+          " to " +
+          dayjs(dateRange.end).format("YYYY-MM-DD") || dayjs().format("MMMM")
+      }_${dayjs().format("YYYYMMDD")}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
+  };
 
   // Calculate totals
-
-  // Update the totals calculation to use the new value fields
   const totals = reportData.reduce(
     (acc, item) => {
       acc.openingQty += item.openingStock || 0;
@@ -352,7 +511,7 @@ const StockMovementReport = () => {
       closingValue: 0,
     }
   );
-  console.log(reportData);
+
   return (
     <div className="flex">
       {!user?.outlet && <AdminSidebar />}
@@ -398,7 +557,7 @@ const StockMovementReport = () => {
                   </button>
                   <button
                     onClick={() => {
-                      // exportToPDF();
+                      exportToPDF();
                       setExportDropdown(false);
                     }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -502,7 +661,13 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Closing Stock (DP)</p>
               <p className="text-2xl font-semibold text-indigo-700">
-                {(totals.openingValue + totals.primaryValue + totals.marketReturnValue - totals.secondaryValue - totals.officeReturnValue)?.toFixed(2)}
+                {(
+                  totals.openingValue +
+                  totals.primaryValue +
+                  totals.marketReturnValue -
+                  totals.secondaryValue -
+                  totals.officeReturnValue
+                )?.toFixed(2)}
               </p>
             </div>
           </div>
@@ -624,22 +789,20 @@ const StockMovementReport = () => {
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
-                      {
-                        item.openingStock +
-                          item.primary +
-                          item.marketReturn -
-                          item.secondary -
-                          item.officeReturn}
+                      {item.openingStock +
+                        item.primary +
+                        item.marketReturn -
+                        item.secondary -
+                        item.officeReturn}
                     </td>
                     <td className="border p-2 text-right">
-                      {
-                        (
-                          item.openingValueDP +
-                          item.primaryValueDP +
-                          item.marketReturnValueDP -
-                          item.secondaryValueDP -
-                          item.officeReturnValueDP
-                        )?.toFixed(2)}
+                      {(
+                        item.openingValueDP +
+                        item.primaryValueDP +
+                        item.marketReturnValueDP -
+                        item.secondaryValueDP -
+                        item.officeReturnValueDP
+                      )?.toFixed(2)}
                     </td>
                   </tr>
                 ))}
