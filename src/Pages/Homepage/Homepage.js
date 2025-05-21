@@ -33,6 +33,7 @@ export default function Home() {
     <div>
       {/* Dropdown for Stock Operations */}
       <div className="p-4">
+        {/* <p className="p-1 text-sm mb-1 font-bold text-secondary">Select Your Voucher</p> */}
         <select
           value={selectedTab}
           onChange={(e) => setSelectedTab(e.target.value)}

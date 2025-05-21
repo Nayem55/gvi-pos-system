@@ -10,30 +10,24 @@ export default function OpeningStock({ user, stock, getStockValue }) {
   const [cart, setCart] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD")
-  );
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
 
-  // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
-    
     const today = dayjs();
     const startDate = dayjs(product.promoStartDate);
     const endDate = dayjs(product.promoEndDate);
-    
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  // Get the appropriate DP price based on promo validity
   const getCurrentDP = (product) => {
     return isPromoValid(product) ? product.promoDP : product.dp;
   };
+
   const getCurrentTP = (product) => {
     return isPromoValid(product) ? product.promoTP : product.tp;
   };
 
-  // Handle product search
   const handleSearch = async (query) => {
     setSearch(query);
     if (query.length > 2) {
@@ -55,7 +49,6 @@ export default function OpeningStock({ user, stock, getStockValue }) {
     }
   };
 
-  // Add product to cart with current stock
   const addToCart = async (product) => {
     const alreadyAdded = cart.find((item) => item.barcode === product.barcode);
     if (alreadyAdded) {
@@ -79,18 +72,19 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           newStock: currentStock,
           currentDP,
           currentTP,
+          editableDP: currentDP,
+          editableTP: currentTP,
           canEdit: currentStock === 0,
           total: currentStock * currentDP,
         },
       ]);
-      setSearch("")
+      setSearch("");
     } catch (err) {
       console.error("Stock fetch error:", err);
       toast.error("Failed to fetch stock.");
     }
   };
 
-  // Update stock value in cart
   const updateStockValue = (barcode, value) => {
     const newValue = parseInt(value) || 0;
     setCart((prev) =>
@@ -99,19 +93,31 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           ? {
               ...item,
               newStock: newValue,
-              total: newValue * item.currentDP,
+              total: newValue * item.editableDP,
             }
           : item
       )
     );
   };
 
-  // Remove item from cart
+  const handlePriceChange = (barcode, field, value) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.barcode === barcode
+          ? {
+              ...item,
+              [field]: parseFloat(value) || 0,
+              total: item.newStock * (field === "editableDP" ? parseFloat(value) || 0 : item.editableDP),
+            }
+          : item
+      )
+    );
+  };
+
   const removeFromCart = (barcode) => {
     setCart((prev) => prev.filter((item) => item.barcode !== barcode));
   };
 
-  // Update stock for all items in cart
   const handleSubmit = async () => {
     if (cart.length === 0) return;
 
@@ -119,7 +125,6 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
     try {
       const requests = cart.map(async (item) => {
-        // Only update if the item is editable (opening stock was 0)
         if (item.canEdit) {
           await axios.put(
             "https://gvi-pos-server.vercel.app/update-outlet-stock",
@@ -127,12 +132,11 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               barcode: item.barcode,
               outlet: user.outlet,
               newStock: item.newStock,
-              currentStockValueDP: item.newStock * item.currentDP,
-              currentStockValueTP: item.newStock * item.currentTP,
+              currentStockValueDP: item.newStock * item.editableDP,
+              currentStockValueTP: item.newStock * item.editableTP,
             }
           );
 
-          // Log transaction with selected date
           await axios.post(
             "https://gvi-pos-server.vercel.app/stock-transactions",
             {
@@ -142,8 +146,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               quantity: item.newStock,
               date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
               user: user.name,
-              dp: item.currentDP,
-              tp: item.currentTP,
+              dp: item.editableDP,
+              tp: item.editableTP,
             }
           );
         }
@@ -176,8 +180,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
         />
         {user?.outlet && (
           <span className="text-sm font-semibold">
-            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
-            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
+            <p>Stock (DP): {stock.dp?.toFixed(2)}</p>
+            <p>Stock (TP): {stock.tp?.toFixed(2)}</p>
           </span>
         )}
       </div>
@@ -222,43 +226,87 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       </div>
 
       {/* Opening Stock Table */}
-        <div className="bg-white p-4 shadow rounded-lg mb-4">
-          <table className="w-full text-sm table-fixed border-collapse">
+      <div className="bg-white p-4 shadow rounded-lg mb-4">
+        <div className="overflow-x-hidden w-full">
+          <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b bg-gray-200">
-                <th className="p-2 w-3/6 text-left">Product</th>
-                <th className="p-2 w-1/6">Current</th>
-                <th className="p-2 w-1/6">New</th>
-                <th className="p-2 w-1/6"></th>
+              <tr className="border-b bg-gray-200 text-xs">
+                <th className="p-2 w-[80px] text-left w-1/3">Product</th>
+                {/* <th className="p-2 w-[40px] text-center">Current</th> */}
+                <th className="p-2 w-[40px] text-center">Opening Stock</th>
+                <th className="p-2 w-[180px] text-center">Price</th>
+                <th className="p-2 w-[40px] text-center">Total</th>
+                <th className="p-2 w-[40px] text-center"></th>
               </tr>
             </thead>
             <tbody>
               {cart.map((item) => (
-                <tr key={item.barcode} className="border-b">
-                  <td className="p-2 w-3/6 text-left break-words whitespace-normal">
+                <tr key={item.barcode} className="border-b text-xs">
+                  {/* Product Name */}
+                  <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
                     {item.name}
                   </td>
-                  <td className="p-2 w-1/6 text-center">{item.openingStock}</td>
-                  <td className="p-2 w-1/6">
+
+                  {/* Current Stock */}
+                  {/* <td className="p-2 text-center">
+                    {item.openingStock}
+                  </td> */}
+
+                  {/* New Stock Input */}
+                  <td className="p-1 text-center">
                     <input
                       type="number"
                       value={item.newStock}
-                      onChange={(e) =>
-                        updateStockValue(item.barcode, e.target.value)
-                      }
-                      className={`w-full p-1 border rounded text-center ${
+                      onChange={(e) => updateStockValue(item.barcode, e.target.value)}
+                      className={`border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px] ${
                         !item.canEdit ? "bg-gray-100" : ""
                       }`}
                       disabled={!item.canEdit}
                     />
                   </td>
-                  <td className="p-2 w-1/6 text-center">
-                    <button
-                      onClick={() => removeFromCart(item.barcode)}
-                      className="mt-1 rounded"
-                    >
+
+                  {/* Editable TP and DP Inputs */}
+                  <td className="p-1 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <input
+                        type="number"
+                        value={item.editableTP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item.barcode,
+                            "editableTP",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
+                        disabled={!item.canEdit}
+                      />
+                      <input
+                        type="number"
+                        value={item.editableDP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item.barcode,
+                            "editableDP",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
+                        disabled={!item.canEdit}
+                      />
+                    </div>
+                  </td>
+
+                  {/* Total */}
+                  <td className="p-2 text-center text-xs">
+                    {(item.editableDP * item.newStock).toFixed(2)}
+                  </td>
+
+                  {/* Delete Button */}
+                  <td className="text-center">
+                    <button onClick={() => removeFromCart(item.barcode)}>
                       <svg
-                        className="w-4 h-4"
+                        className="w-4 h-4 mx-auto"
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 448 512"
                       >
@@ -274,43 +322,47 @@ export default function OpeningStock({ user, stock, getStockValue }) {
             </tbody>
           </table>
         </div>
+      </div>
 
       {/* Overall Total & Submit Button */}
-        <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
-          <span className="text-lg font-bold">
-            Total: {cart.reduce((sum, item) => sum + item.total, 0)} BDT
-          </span>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
-          >
-            {isSubmitting ? (
-              <svg
-                className="animate-spin h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                ></path>
-              </svg>
-            ) : (
-              "Submit"
-            )}
-          </button>
-        </div>
+      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
+        <span className="text-lg font-bold">
+          Total (DP) :{" "}
+          {cart
+            .reduce((sum, item) => sum + (item.editableDP * item.newStock), 0)
+            .toFixed(2)}{" "}
+        </span>
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
+        >
+          {isSubmitting ? (
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
+          ) : (
+            "Submit"
+          )}
+        </button>
+      </div>
     </div>
   );
 }

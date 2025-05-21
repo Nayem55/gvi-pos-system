@@ -413,7 +413,7 @@ const StockMovementReport = () => {
             </div>
             <button
               onClick={handleFilterClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              className="bg-blue-900 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
               Apply Filter
             </button>
@@ -612,39 +612,39 @@ const StockMovementReport = () => {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="sticky bottom-0 bg-gray-100">
+              <tfoot className="sticky bottom-[-1px] bg-gray-100">
                 <tr className="font-bold">
-                  <td className="border p-2" colSpan="2">
+                  <td className="p-2" colSpan="2">
                     Total
                   </td>
-                  <td className="border p-2 text-right">{totals.openingQty}</td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">{totals.openingQty}</td>
+                  <td className="p-2 text-right">
                     {totals.openingValue.toFixed(2)}
                   </td>
-                  <td className="border p-2 text-right">{totals.primaryQty}</td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">{totals.primaryQty}</td>
+                  <td className="p-2 text-right">
                     {totals.primaryValue.toFixed(2)}
                   </td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">
                     {totals.marketReturnQty}
                   </td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">
                     {totals.marketReturnValue.toFixed(2)}
                   </td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">
                     {totals.officeReturnQty}
                   </td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">
                     {totals.officeReturnValue.toFixed(2)}
                   </td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">
                     {totals.secondaryQty}
                   </td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">
                     {totals.secondaryValue.toFixed(2)}
                   </td>
-                  <td className="border p-2 text-right">{totals.closingQty}</td>
-                  <td className="border p-2 text-right">
+                  <td className="p-2 text-right">{totals.closingQty}</td>
+                  <td className="p-2 text-right">
                     {totals.closingValue.toFixed(2)}
                   </td>
                 </tr>
