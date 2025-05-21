@@ -3,10 +3,13 @@ import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
+import "jspdf-autotable";
+// import jsPDF from "jspdf";
 
 const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const [selectedOutlet, setSelectedOutlet] = useState(user.outlet || "");
+  const [exportDropdown, setExportDropdown] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
     end: dayjs().endOf("month").format("YYYY-MM-DD"),
@@ -15,7 +18,7 @@ const StockMovementReport = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
-  console.log(reportData)
+  console.log(reportData);
 
   const outlets = [
     "Madina Trade International: New Market",
@@ -312,32 +315,108 @@ const StockMovementReport = () => {
     );
   };
 
+  // const exportToPDF = () => {
+  //   const doc = new jsPDF();
+
+  //   // Add title
+  //   doc.setFontSize(16);
+  //   doc.text(`Stock Movement Report - ${selectedOutlet}`, 14, 15);
+  //   doc.setFontSize(12);
+  //   doc.text(
+  //     `Period: ${dayjs(dateRange.start).format("YYYY-MM-DD")} to ${dayjs(
+  //       dateRange.end
+  //     ).format("YYYY-MM-DD")}`,
+  //     14,
+  //     22
+  //   );
+
+  //   // Prepare table data
+  //   const headers = [
+  //     "SL",
+  //     "Product Name",
+  //     ["Opening", "Qty", "Value (DP)"],
+  //     ["Primary", "Qty", "Value (DP)"],
+  //     ["Market Return", "Qty", "Value (DP)"],
+  //     ["Office Return", "Qty", "Value (DP)"],
+  //     ["Secondary", "Qty", "Value (DP)"],
+  //     ["Closing", "Qty", "Value (DP)"],
+  //   ];
+
+  //   const data = reportData.map((item, index) => [
+  //     index + 1,
+  //     item.productName,
+  //     item.openingStock,
+  //     item.openingValueDP?.toFixed(2),
+  //     item.primary,
+  //     item.primaryValueDP?.toFixed(2),
+  //     item.marketReturn,
+  //     item.marketReturnValueDP?.toFixed(2),
+  //     item.officeReturn,
+  //     item.officeReturnValueDP?.toFixed(2),
+  //     item.secondary,
+  //     item.secondaryValueDP?.toFixed(2),
+  //     item.closingStock,
+  //     item.closingValueDP?.toFixed(2),
+  //   ]);
+
+  //   // Add table
+  //   doc.autoTable({
+  //     head: [headers.flat()],
+  //     body: data,
+  //     startY: 30,
+  //     styles: { fontSize: 8 },
+  //     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+  //     columnStyles: {
+  //       0: { cellWidth: 10 },
+  //       1: { cellWidth: 40 },
+  //       // ... other column styles as needed
+  //     },
+  //   });
+
+  //   // Add totals
+  //   doc.autoTable({
+  //     body: [
+  //       [
+  //         "Total",
+  //         "",
+  //         totals.openingQty,
+  //         totals.openingValue.toFixed(2),
+  //         totals.primaryQty,
+  //         totals.primaryValue.toFixed(2),
+  //         totals.marketReturnQty,
+  //         totals.marketReturnValue.toFixed(2),
+  //         totals.officeReturnQty,
+  //         totals.officeReturnValue.toFixed(2),
+  //         totals.secondaryQty,
+  //         totals.secondaryValue.toFixed(2),
+  //         totals.closingQty,
+  //         totals.closingValue.toFixed(2),
+  //       ],
+  //     ],
+  //     startY: doc.lastAutoTable.finalY + 10,
+  //     styles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+  //   });
+
+  //   doc.save(`Stock_Movement_${selectedOutlet}_${dateRange.start}.pdf`);
+  // };
+
   // Calculate totals
+
+  // Update the totals calculation to use the new value fields
   const totals = reportData.reduce(
     (acc, item) => {
       acc.openingQty += item.openingStock || 0;
       acc.openingValue += item.openingValueDP || 0;
       acc.primaryQty += item.primary || 0;
-      acc.primaryValue += item.primary * item.priceDP || 0;
+      acc.primaryValue += item.primaryValueDP || 0;
       acc.marketReturnQty += item.marketReturn || 0;
-      acc.marketReturnValue += item.marketReturn * item.priceDP || 0;
+      acc.marketReturnValue += item.marketReturnValueDP || 0;
       acc.officeReturnQty += item.officeReturn || 0;
-      acc.officeReturnValue += item.officeReturn * item.priceDP || 0;
+      acc.officeReturnValue += item.officeReturnValueDP || 0;
       acc.secondaryQty += item.secondary || 0;
-      acc.secondaryValue += item.secondary * item.priceDP || 0;
-      acc.closingQty +=
-        item.openingStock +
-          item.primary +
-          item.marketReturn -
-          item.secondary -
-          item.officeReturn || 0;
-      acc.closingValue +=
-        (item.openingStock +
-          item.primary +
-          item.marketReturn -
-          item.secondary -
-          item.officeReturn) *
-          item.priceDP || 0;
+      acc.secondaryValue += item.secondaryValueDP || 0;
+      acc.closingQty += item.closingStock || 0;
+      acc.closingValue += item.closingValueDP || 0;
       return acc;
     },
     {
@@ -355,7 +434,7 @@ const StockMovementReport = () => {
       closingValue: 0,
     }
   );
-
+  console.log(reportData);
   return (
     <div className="flex">
       {!user?.outlet && <AdminSidebar />}
@@ -365,13 +444,53 @@ const StockMovementReport = () => {
           <h2 className="text-3xl font-bold text-gray-800">
             Stock Movement Report
           </h2>
-          <button
-            onClick={exportToExcel}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            disabled={reportData.length === 0}
-          >
-            Export to Excel
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setExportDropdown(!exportDropdown)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
+              disabled={reportData.length === 0}
+            >
+              Export
+              <svg
+                className="w-4 h-4 ml-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {exportDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      exportToExcel();
+                      setExportDropdown(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={() => {
+                      // exportToPDF();
+                      setExportDropdown(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Export to PDF
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
@@ -465,7 +584,7 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Closing Stock (DP)</p>
               <p className="text-2xl font-semibold text-indigo-700">
-                {totals.closingValue?.toFixed(2)}
+                {(totals.openingValue + totals.primaryValue + totals.marketReturnValue - totals.secondaryValue - totals.officeReturnValue)?.toFixed(2)}
               </p>
             </div>
           </div>
@@ -497,16 +616,10 @@ const StockMovementReport = () => {
                   </th>
                 </tr>
                 <tr className="bg-gray-100">
-                  <th
-                    rowSpan="2"
-                    className=" p-2 sticky top-22 bg-gray-100"
-                  >
+                  <th rowSpan="2" className=" p-2 sticky top-22 bg-gray-100">
                     Sl
                   </th>
-                  <th
-                    rowSpan="2"
-                    className="p-2 sticky top-22 bg-gray-100"
-                  >
+                  <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
                     Products Name
                   </th>
                   <th
@@ -574,26 +687,26 @@ const StockMovementReport = () => {
                     </td>
                     <td className="border p-2 text-right">{item.primary}</td>
                     <td className="border p-2 text-right">
-                      {(item.primary * item.priceDP)?.toFixed(2)}
+                      {item.primaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
                       {item.marketReturn}
                     </td>
                     <td className="border p-2 text-right">
-                      {(item.marketReturn * item.priceDP)?.toFixed(2)}
+                      {item.marketReturnValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
                       {item.officeReturn}
                     </td>
                     <td className="border p-2 text-right">
-                      {(item.officeReturn * item.priceDP)?.toFixed(2)}
+                      {item.officeReturnValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">{item.secondary}</td>
                     <td className="border p-2 text-right">
-                      {(item.secondary * item.priceDP)?.toFixed(2)}
+                      {item.secondaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
-                      {item.closingStock ||
+                      {
                         item.openingStock +
                           item.primary +
                           item.marketReturn -
@@ -601,14 +714,13 @@ const StockMovementReport = () => {
                           item.officeReturn}
                     </td>
                     <td className="border p-2 text-right">
-                      {item.closingValueDP?.toFixed(2) ||
+                      {
                         (
-                          (item.openingStock +
-                            item.primary +
-                            item.marketReturn -
-                            item.secondary -
-                            item.officeReturn) *
-                          item.priceDP
+                          item.openingValueDP +
+                          item.primaryValueDP +
+                          item.marketReturnValueDP -
+                          item.secondaryValueDP -
+                          item.officeReturnValueDP
                         )?.toFixed(2)}
                     </td>
                   </tr>
@@ -627,21 +739,15 @@ const StockMovementReport = () => {
                   <td className="p-2 text-right">
                     {totals.primaryValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right">
-                    {totals.marketReturnQty}
-                  </td>
+                  <td className="p-2 text-right">{totals.marketReturnQty}</td>
                   <td className="p-2 text-right">
                     {totals.marketReturnValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right">
-                    {totals.officeReturnQty}
-                  </td>
+                  <td className="p-2 text-right">{totals.officeReturnQty}</td>
                   <td className="p-2 text-right">
                     {totals.officeReturnValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right">
-                    {totals.secondaryQty}
-                  </td>
+                  <td className="p-2 text-right">{totals.secondaryQty}</td>
                   <td className="p-2 text-right">
                     {totals.secondaryValue.toFixed(2)}
                   </td>
