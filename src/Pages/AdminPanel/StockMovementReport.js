@@ -189,7 +189,6 @@ const StockMovementReport = () => {
           `Server error: ${error.response.status}`;
       } else if (error.request) {
         // Request was made but no response
-        errorMessage = "No response from server. Please try again.";
       }
 
       setError(errorMessage);
@@ -268,21 +267,20 @@ const StockMovementReport = () => {
         (item.officeReturn * item.priceDP)?.toFixed(2),
         item.secondary,
         (item.secondary * item.priceDP)?.toFixed(2),
-        item.closingStock ||
+        (
           item.openingStock +
-            item.primary +
-            item.marketReturn -
-            item.secondary -
-            item.officeReturn,
-        item.closingValueDP?.toFixed(2) ||
-          (
-            (item.openingStock +
-              item.primary +
-              item.marketReturn -
-              item.secondary -
-              item.officeReturn) *
-            item.priceDP
-          )?.toFixed(2),
+          item.primary +
+          item.marketReturn -
+          item.secondary -
+          item.officeReturn
+        ).toFixed(2),
+        (
+          item.openingValueDP +
+          item.primary * item.priceDP +
+          item.marketReturn * item.priceDP -
+          item.secondary * item.priceDP -
+          item.officeReturn * item.priceDP
+        )?.toFixed(2),
       ]),
     ];
 
@@ -388,22 +386,21 @@ const StockMovementReport = () => {
         (item.officeReturn * item.priceDP)?.toFixed(2) || "0.00",
         item.secondary || 0,
         (item.secondary * item.priceDP)?.toFixed(2) || "0.00",
-        item.closingStock ||
-          (item.openingStock || 0) +
-            (item.primary || 0) +
-            (item.marketReturn || 0) -
-            (item.secondary || 0) -
-            (item.officeReturn || 0),
-        item.closingValueDP?.toFixed(2) ||
-          (
-            ((item.openingStock || 0) +
-              (item.primary || 0) +
-              (item.marketReturn || 0) -
-              (item.secondary || 0) -
-              (item.officeReturn || 0)) *
-            item.priceDP
-          )?.toFixed(2) ||
-          "0.00",
+        (item.secondary * item.priceDP)?.toFixed(2),
+        (
+          item.openingStock +
+          item.primary +
+          item.marketReturn -
+          item.secondary -
+          item.officeReturn
+        ) || 0,
+        (
+          item.openingValueDP +
+          item.primary * item.priceDP +
+          item.marketReturn * item.priceDP -
+          item.secondary * item.priceDP -
+          item.officeReturn * item.priceDP
+        )?.toFixed(2),
       ]);
 
       // Add totals row if needed
@@ -421,8 +418,18 @@ const StockMovementReport = () => {
           totals.officeReturnValue?.toFixed(2) || "0.00",
           totals.secondaryQty || 0,
           totals.secondaryValue?.toFixed(2) || "0.00",
-          totals.closingQty || 0,
-          totals.closingValue?.toFixed(2) || "0.00",
+          totals.openingQty +
+            totals.primaryQty +
+            totals.marketReturnQty -
+            totals.secondaryQty -
+            totals.officeReturnQty || 0,
+          (
+            totals.openingValue +
+            totals.primaryValue +
+            totals.marketReturnValue -
+            totals.secondaryValue -
+            totals.officeReturnValue
+          ).toFixed(2) || "0.00",
         ]);
       }
 
