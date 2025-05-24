@@ -260,26 +260,26 @@ const StockMovementReport = () => {
         item.openingStock,
         item.openingValueDP?.toFixed(2),
         item.primary,
-        (item.primary * item.priceDP)?.toFixed(2),
+        (item.primaryValueDP)?.toFixed(2),
         item.marketReturn,
-        (item.marketReturn * item.priceDP)?.toFixed(2),
+        (item.marketReturnValueDP)?.toFixed(2),
         item.officeReturn,
-        (item.officeReturn * item.priceDP)?.toFixed(2),
+        (item.officeReturnValueDP)?.toFixed(2),
         item.secondary,
-        (item.secondary * item.priceDP)?.toFixed(2),
+        (item.secondaryValueDP)?.toFixed(2),
         (
           item.openingStock +
           item.primary +
           item.marketReturn -
           item.secondary -
           item.officeReturn
-        ).toFixed(2),
+        ),
         (
           item.openingValueDP +
-          item.primary * item.priceDP +
-          item.marketReturn * item.priceDP -
-          item.secondary * item.priceDP -
-          item.officeReturn * item.priceDP
+          item.primaryValueDP +
+          item.marketReturnValueDP -
+          item.secondaryValueDP -
+          item.officeReturnValueDP
         )?.toFixed(2),
       ]),
     ];
@@ -379,14 +379,13 @@ const StockMovementReport = () => {
         item.openingStock || 0,
         item.openingValueDP?.toFixed(2) || "0.00",
         item.primary || 0,
-        (item.primary * item.priceDP)?.toFixed(2) || "0.00",
+        (item.primaryValueDP)?.toFixed(2) || "0.00",
         item.marketReturn || 0,
-        (item.marketReturn * item.priceDP)?.toFixed(2) || "0.00",
+        (item.marketReturnValueDP)?.toFixed(2) || "0.00",
         item.officeReturn || 0,
-        (item.officeReturn * item.priceDP)?.toFixed(2) || "0.00",
+        (item.officeReturnValueDP)?.toFixed(2) || "0.00",
         item.secondary || 0,
-        (item.secondary * item.priceDP)?.toFixed(2) || "0.00",
-        (item.secondary * item.priceDP)?.toFixed(2),
+        (item.secondaryValueDP)?.toFixed(2) || "0.00",
         (
           item.openingStock +
           item.primary +
@@ -396,11 +395,11 @@ const StockMovementReport = () => {
         ) || 0,
         (
           item.openingValueDP +
-          item.primary * item.priceDP +
-          item.marketReturn * item.priceDP -
-          item.secondary * item.priceDP -
-          item.officeReturn * item.priceDP
-        )?.toFixed(2),
+          item.primaryValueDP +
+          item.marketReturnValueDP -
+          item.secondaryValueDP -
+          item.officeReturnValueDP
+        )?.toFixed(2) || "0.00",
       ]);
 
       // Add totals row if needed
