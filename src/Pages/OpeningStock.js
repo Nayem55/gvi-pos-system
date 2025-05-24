@@ -134,6 +134,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               newStock: item.newStock,
               currentStockValueDP: item.newStock * item.editableDP,
               currentStockValueTP: item.newStock * item.editableTP,
+              openingStockValueDP: item.newStock * item.editableDP,
+              openingStockValueTP: item.newStock * item.editableTP,
             }
           );
 
