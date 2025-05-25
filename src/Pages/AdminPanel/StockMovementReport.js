@@ -216,9 +216,9 @@ const StockMovementReport = () => {
         "",
         "",
         `Period: ${
-          dayjs(dateRange.start).format("YYYY-MM-DD") +
+          dayjs(dateRange.start).format("DD-MM-YY") +
           " to " +
-          dayjs(dateRange.end).format("YYYY-MM-DD")
+          dayjs(dateRange.end).format("DD-MM-YY")
         }`,
       ],
       ["", "", "", "", "", "", "", "", ""],
@@ -332,9 +332,9 @@ const StockMovementReport = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       doc.text(
         `Period: ${
-          dayjs(dateRange.start).format("YYYY-MM-DD") +
+          dayjs(dateRange.start).format("DD-MM-YY") +
           " to " +
-          dayjs(dateRange.end).format("YYYY-MM-DD")
+          dayjs(dateRange.end).format("DD-MM-YY")
         }`,
         pageWidth - 75,
         15
@@ -701,8 +701,8 @@ const StockMovementReport = () => {
                 </tr>
                 <tr>
                   <th colSpan="14" className="bg-gray-200 px-4 py-3 text-left">
-                    Period: {dayjs(dateRange.start).format("YYYY-MM-DD")} to{" "}
-                    {dayjs(dateRange.end).format("YYYY-MM-DD")}
+                    Period: {dayjs(dateRange.start).format("DD-MM-YY")} to{" "}
+                    {dayjs(dateRange.end).format("DD-MM-YY")}
                   </th>
                 </tr>
                 <tr className="bg-gray-100">
@@ -770,28 +770,28 @@ const StockMovementReport = () => {
                     <td className="border p-2">{index + 1}</td>
                     <td className="border p-2">{item.productName}</td>
                     <td className="border p-2 text-right">
-                      {item.openingStock}
+                      {item.openingStock} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">{item.primary}</td>
+                    <td className="border p-2 text-right">{item.primary} pcs</td>
                     <td className="border p-2 text-right">
                       {item.primaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
-                      {item.marketReturn}
+                      {item.marketReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.marketReturnValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
-                      {item.officeReturn}
+                      {item.officeReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.officeReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">{item.secondary}</td>
+                    <td className="border p-2 text-right">{item.secondary} pcs</td>
                     <td className="border p-2 text-right">
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
@@ -800,7 +800,7 @@ const StockMovementReport = () => {
                         item.primary +
                         item.marketReturn -
                         item.secondary -
-                        item.officeReturn}
+                        item.officeReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {(

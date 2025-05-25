@@ -3,7 +3,11 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
-import { FaSave, FaTrash } from "react-icons/fa";
+import { FaSave, FaTrash, FaFileDownload, FaFileImport } from "react-icons/fa";
+import * as XLSX from "xlsx";
+
+// Configure dayjs to handle date formats consistently
+dayjs.locale('en');
 
 export default function PromotionalPage() {
   const [products, setProducts] = useState([]);
@@ -13,6 +17,8 @@ export default function PromotionalPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
     const delay = setTimeout(() => {
@@ -109,7 +115,6 @@ export default function PromotionalPage() {
           [field]: numValue,
         };
 
-        // Only update promo if type is quantity
         if (updated.type === "quantity") {
           const paid = field === "paid" ? numValue : updated.paid;
           const free = field === "free" ? numValue : updated.free;
@@ -147,6 +152,7 @@ export default function PromotionalPage() {
     
     return original;
   };
+
   const savePromotion = async (product) => {
     const promotion = selectedPromotions[product._id];
     const promo = promotion?.promo;
@@ -216,13 +222,215 @@ export default function PromotionalPage() {
     }
   };
 
+  const handleFileUpload = (e) => {
+    const uploadedFile = e.target.files[0];
+    if (!uploadedFile) return;
+    setImportFile(uploadedFile);
+  };
+
+  const readExcelFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const processExcelData = async (data) => {
+    let successCount = 0;
+    let errorCount = 0;
+    const dateFormatRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateErrors = [];
+
+    for (const [index, row] of data.entries()) {
+      try {
+        // Skip instruction rows or empty rows
+        if (!row["Product ID"] && !row["Product Name"]) continue;
+
+        const product = products.find(p => p._id === row["Product ID"] || p.name === row["Product Name"]);
+        if (!product) {
+          errorCount++;
+          continue;
+        }
+
+        // Validate and format dates
+        let startDate = "";
+        if (row["Start Date"]) {
+          if (typeof row["Start Date"] === 'string' && dateFormatRegex.test(row["Start Date"])) {
+            startDate = row["Start Date"];
+          } else if (row["Start Date"] instanceof Date) {
+            startDate = dayjs(row["Start Date"]).format('YYYY-MM-DD');
+          } else {
+            throw new Error(`Invalid date format for Start Date: ${row["Start Date"]}`);
+          }
+        }
+
+        let endDate = "";
+        if (row["End Date"]) {
+          if (typeof row["End Date"] === 'string' && dateFormatRegex.test(row["End Date"])) {
+            endDate = row["End Date"];
+          } else if (row["End Date"] instanceof Date) {
+            endDate = dayjs(row["End Date"]).format('YYYY-MM-DD');
+          } else {
+            throw new Error(`Invalid date format for End Date: ${row["End Date"]}`);
+          }
+        }
+
+        // Validate start date is before end date if both exist
+        if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
+          throw new Error("Start date must be before end date");
+        }
+
+        const promotion = {
+          type: row["Promo Type"] || "quantity",
+          paid: parseInt(row["Paid Quantity"] || 0),
+          free: parseInt(row["Free Quantity"] || 0),
+          percentage: parseFloat(row["Percentage"] || 0),
+          startDate,
+          endDate,
+        };
+
+        if (promotion.type === "quantity") {
+          promotion.promo = {
+            paid: promotion.paid,
+            free: promotion.free,
+            total: promotion.paid + promotion.free
+          };
+        }
+
+        const updatedProduct = {
+          ...product,
+          promoType: promotion.type,
+          promoPlan: promotion.type === "quantity" && promotion.promo
+            ? `${promotion.paid}+${promotion.free}`
+            : "None",
+          promoPercentage: promotion.type === "percentage" ? promotion.percentage : 0,
+          promoDP: calculatePromotionalPrice(product.dp, promotion),
+          promoTP: calculatePromotionalPrice(product.tp, promotion),
+          promoStartDate: promotion.startDate || null,
+          promoEndDate: promotion.endDate || null,
+        };
+
+        await axios.put(
+          `https://gvi-pos-server.vercel.app/products/${product._id}`,
+          updatedProduct
+        );
+
+        successCount++;
+      } catch (error) {
+        console.error(`Error processing row ${index + 2}:`, error);
+        dateErrors.push(`Row ${index + 2}: ${error.message}`);
+        errorCount++;
+      }
+    }
+
+    if (dateErrors.length > 0) {
+      toast.error(
+        `Date format errors detected in ${dateErrors.length} rows. Please use YYYY-MM-DD format.`,
+        { duration: 5000 }
+      );
+    }
+
+    return { successCount, errorCount };
+  };
+
+  const handleBulkImport = async () => {
+    if (!importFile) {
+      toast.error("Please select a file first");
+      return;
+    }
+
+    setImportLoading(true);
+
+    try {
+      const data = await readExcelFile(importFile);
+      const { successCount, errorCount } = await processExcelData(data);
+      
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} promotions`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} promotions`);
+      }
+
+      fetchProducts();
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast.error("Failed to process the file. Please check the format and try again.");
+    } finally {
+      setImportLoading(false);
+      setImportFile(null);
+      document.getElementById("import-file").value = "";
+    }
+  };
+
+  const downloadDemoFile = () => {
+    const demoData = products.map(product => ({
+      "Product ID": product._id,
+      "Product Name": product.name,
+      "Promo Type": "quantity",
+      "Paid Quantity": "",
+      "Free Quantity": "",
+      "Percentage": "",
+      "Start Date": "",
+      "End Date": ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(demoData);
+    
+    // Add date format instructions to the worksheet
+    if (!worksheet["!cols"]) worksheet["!cols"] = [];
+    worksheet["!cols"][6] = { // Start Date column (G)
+      wch: 12,
+      t: 'd',
+      z: 'yyyy-mm-dd' // Excel format code for dates
+    };
+    worksheet["!cols"][7] = { // End Date column (H)
+      wch: 12,
+      t: 'd',
+      z: 'yyyy-mm-dd'
+    };
+
+    // Add instructions as the first row
+    XLSX.utils.sheet_add_aoa(worksheet, [
+      ["IMPORTANT: Date columns must use YYYY-MM-DD format (e.g., 2023-12-31)"]
+    ], { origin: -1 });
+
+    // Add example data
+    if (products.length > 0) {
+      XLSX.utils.sheet_add_aoa(worksheet, [
+        ["", "", "", "", "", "", "2023-12-01", "2023-12-31"]
+      ], { origin: 1 });
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Promotions");
+    
+    // Create a custom date for the filename
+    const today = dayjs().format('YYYY-MM-DD');
+    XLSX.writeFile(workbook, `Promotions_Template_${today}.xlsx`);
+  };
+
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <AdminSidebar />
       <div className="flex-1 p-6">
         <h2 className="text-3xl font-semibold text-gray-800 mb-6">Promotional Management</h2>
 
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col md:flex-row gap-4">
           <input
             type="text"
             placeholder="Search by product name..."
@@ -230,6 +438,63 @@ export default function PromotionalPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="border border-gray-300 p-3 rounded-lg w-full max-w-md shadow-sm"
           />
+          
+          <div className="flex gap-2">
+            <button
+              onClick={downloadDemoFile}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2"
+            >
+              <FaFileDownload /> Download Template
+            </button>
+            
+            <div className="relative">
+              <input
+                id="import-file"
+                type="file"
+                accept=".xlsx, .xls, .csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <label
+                htmlFor="import-file"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 cursor-pointer"
+              >
+                <FaFileImport /> Import Promotions
+              </label>
+              {/* {importFile && (
+                <span className="ml-2 text-sm text-gray-600">{importFile.name}</span>
+              )} */}
+            </div>
+            
+            {importFile && (
+              <button
+                onClick={handleBulkImport}
+                disabled={importLoading}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center gap-2 disabled:bg-gray-400"
+              >
+                {importLoading ? "Processing..." : "Apply Import"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+          <h3 className="font-medium text-yellow-800">Import Instructions:</h3>
+          <ol className="list-decimal pl-5 text-sm text-yellow-700 space-y-1">
+            <li>Download the template file to get the correct format</li>
+            <li>Fill in the promotion details (either Paid+Free quantities or Percentage)</li>
+            <li>
+              <strong>Date format must be YYYY-MM-DD (e.g., 2023-12-31)</strong>
+              <ul className="list-disc pl-5 mt-1">
+                <li>In Excel, right-click the date cell → Format Cells → Custom → Type: yyyy-mm-dd</li>
+                <li>Or enter dates directly in this format (text format also works)</li>
+                <li>Example dates are provided in the template</li>
+              </ul>
+            </li>
+            <li>Start date must be before end date</li>
+            <li>Do not modify the "Product ID" or "Product Name" columns</li>
+            <li>Upload the completed file</li>
+          </ol>
         </div>
 
         <div className="overflow-x-auto shadow-md rounded-lg bg-white">
