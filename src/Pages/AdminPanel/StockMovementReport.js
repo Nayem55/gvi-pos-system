@@ -19,7 +19,6 @@ const StockMovementReport = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
-  console.log(reportData);
 
   const outlets = [
     "Madina Trade International: New Market",
@@ -167,30 +166,28 @@ const StockMovementReport = () => {
 
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/api/stock-movement",
-        {
-          params,
-        }
+        { params }
       );
 
       if (response.data?.success) {
-        setReportData(response.data.data);
+        // Sort the data alphabetically by productName
+        const sortedData = [...response.data.data].sort((a, b) =>
+          a.productName.localeCompare(b.productName)
+        );
+        setReportData(sortedData);
       } else {
         throw new Error(response.data?.message || "Invalid response format");
       }
     } catch (error) {
       console.error("Fetch error:", error);
-
-      // Handle different error types
       let errorMessage = "Failed to load report data";
       if (error.response) {
-        // Server responded with error status
         errorMessage =
           error.response.data?.message ||
           `Server error: ${error.response.status}`;
       } else if (error.request) {
         // Request was made but no response
       }
-
       setError(errorMessage);
       setReportData([]);
     } finally {
@@ -203,6 +200,10 @@ const StockMovementReport = () => {
   };
 
   const exportToExcel = () => {
+    // Sort data alphabetically for export
+    const sortedData = [...reportData].sort((a, b) =>
+      a.productName.localeCompare(b.productName)
+    );
     // Prepare Excel data
     const excelData = [
       [
@@ -254,26 +255,24 @@ const StockMovementReport = () => {
         "Qty",
         "Value",
       ],
-      ...reportData.map((item, index) => [
+      ...sortedData.map((item, index) => [
         index + 1,
         item.productName,
         item.openingStock,
         item.openingValueDP?.toFixed(2),
         item.primary,
-        (item.primaryValueDP)?.toFixed(2),
+        item.primaryValueDP?.toFixed(2),
         item.marketReturn,
-        (item.marketReturnValueDP)?.toFixed(2),
+        item.marketReturnValueDP?.toFixed(2),
         item.officeReturn,
-        (item.officeReturnValueDP)?.toFixed(2),
+        item.officeReturnValueDP?.toFixed(2),
         item.secondary,
-        (item.secondaryValueDP)?.toFixed(2),
-        (
-          item.openingStock +
+        item.secondaryValueDP?.toFixed(2),
+        item.openingStock +
           item.primary +
           item.marketReturn -
           item.secondary -
-          item.officeReturn
-        ),
+          item.officeReturn,
         (
           item.openingValueDP +
           item.primaryValueDP +
@@ -315,6 +314,10 @@ const StockMovementReport = () => {
   };
 
   const exportToPDF = () => {
+    // Sort data alphabetically for export
+    const sortedData = [...reportData].sort((a, b) =>
+      a.productName.localeCompare(b.productName)
+    );
     try {
       // Initialize PDF in landscape mode
       const doc = new jsPDF({
@@ -373,26 +376,24 @@ const StockMovementReport = () => {
         ],
       ];
 
-      const data = reportData.map((item, index) => [
+      const data = sortedData.map((item, index) => [
         index + 1,
         item.productName || "",
         item.openingStock || 0,
         item.openingValueDP?.toFixed(2) || "0.00",
         item.primary || 0,
-        (item.primaryValueDP)?.toFixed(2) || "0.00",
+        item.primaryValueDP?.toFixed(2) || "0.00",
         item.marketReturn || 0,
-        (item.marketReturnValueDP)?.toFixed(2) || "0.00",
+        item.marketReturnValueDP?.toFixed(2) || "0.00",
         item.officeReturn || 0,
-        (item.officeReturnValueDP)?.toFixed(2) || "0.00",
+        item.officeReturnValueDP?.toFixed(2) || "0.00",
         item.secondary || 0,
-        (item.secondaryValueDP)?.toFixed(2) || "0.00",
-        (
-          item.openingStock +
+        item.secondaryValueDP?.toFixed(2) || "0.00",
+        item.openingStock +
           item.primary +
           item.marketReturn -
           item.secondary -
-          item.officeReturn
-        ) || 0,
+          item.officeReturn || 0,
         (
           item.openingValueDP +
           item.primaryValueDP +
