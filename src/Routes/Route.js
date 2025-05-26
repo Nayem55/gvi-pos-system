@@ -20,6 +20,7 @@ import AdminHomePage from "../Pages/AdminPanel/AdminHomePage";
 import Home from "../Pages/Homepage/Homepage";
 import PromotionalPage from "../Pages/AdminPanel/Promotion";
 import StockMovementReport from "../Pages/AdminPanel/StockMovementReport";
+import GroupStockMovementReport from "../Pages/AdminPanel/StockMovementGroupwise";
 
 const router = createBrowserRouter([
   {
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
       {
         path: "/stock-movement",
         element: <StockMovementReport/>,
+      },
+      {
+        path: "/stock-movement/group",
+        element: <GroupStockMovementReport/>,
       },
       {
         path: "/manage-stock",
