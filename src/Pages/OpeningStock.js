@@ -10,7 +10,9 @@ export default function OpeningStock({ user, stock, getStockValue }) {
   const [cart, setCart] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
 
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
@@ -107,7 +109,11 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           ? {
               ...item,
               [field]: parseFloat(value) || 0,
-              total: item.newStock * (field === "editableDP" ? parseFloat(value) || 0 : item.editableDP),
+              total:
+                item.newStock *
+                (field === "editableDP"
+                  ? parseFloat(value) || 0
+                  : item.editableDP),
             }
           : item
       )
@@ -147,6 +153,9 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               type: "opening",
               quantity: item.newStock,
               date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+              asm: user.asm,
+              rsm: user.rsm,
+              zone: user.zone,
               user: user.name,
               dp: item.editableDP,
               tp: item.editableTP,
@@ -259,7 +268,9 @@ export default function OpeningStock({ user, stock, getStockValue }) {
                     <input
                       type="number"
                       value={item.newStock}
-                      onChange={(e) => updateStockValue(item.barcode, e.target.value)}
+                      onChange={(e) =>
+                        updateStockValue(item.barcode, e.target.value)
+                      }
                       className={`border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px] ${
                         !item.canEdit ? "bg-gray-100" : ""
                       }`}
@@ -331,7 +342,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
         <span className="text-lg font-bold">
           Total (DP) :{" "}
           {cart
-            .reduce((sum, item) => sum + (item.editableDP * item.newStock), 0)
+            .reduce((sum, item) => sum + item.editableDP * item.newStock, 0)
             .toFixed(2)}{" "}
         </span>
         <button

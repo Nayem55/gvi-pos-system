@@ -148,6 +148,9 @@ export default function Primary({ user, stock, getStockValue }) {
           {
             barcode: item.barcode,
             outlet: user.outlet,
+            asm:user.asm,
+            rsm:user.rsm,
+            zone:user.zone,
             type: "primary",
             quantity: item.primary,
             date: formattedDateTime,

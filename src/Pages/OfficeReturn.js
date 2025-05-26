@@ -12,7 +12,9 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
   const [cart, setCart] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
 
@@ -24,8 +26,10 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  const getCurrentDP = (product) => isPromoValid(product) ? product.promoDP : product.dp;
-  const getCurrentTP = (product) => isPromoValid(product) ? product.promoTP : product.tp;
+  const getCurrentDP = (product) =>
+    isPromoValid(product) ? product.promoDP : product.dp;
+  const getCurrentTP = (product) =>
+    isPromoValid(product) ? product.promoTP : product.tp;
 
   const handleSearch = async (query) => {
     setSearch(query);
@@ -106,7 +110,10 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
           return {
             ...item,
             [field]: newValue,
-            total: field === "editableDP" ? newValue * item.officeReturn : item.total,
+            total:
+              field === "editableDP"
+                ? newValue * item.officeReturn
+                : item.total,
           };
         }
         return item;
@@ -131,8 +138,10 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
             barcode: item.barcode,
             outlet: user.outlet,
             newStock: item.openingStock - item.officeReturn,
-            currentStockValueDP: (item.openingStock - item.officeReturn) * item.editableDP,
-            currentStockValueTP: (item.openingStock - item.officeReturn) * item.editableTP,
+            currentStockValueDP:
+              (item.openingStock - item.officeReturn) * item.editableDP,
+            currentStockValueTP:
+              (item.openingStock - item.officeReturn) * item.editableTP,
           }
         );
 
@@ -142,6 +151,9 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
             barcode: item.barcode,
             outlet: user.outlet,
             type: "office return",
+            asm: user.asm,
+            rsm: user.rsm,
+            zone: user.zone,
             quantity: item.officeReturn,
             date: formattedDateTime,
             user: user.name,
@@ -203,7 +215,12 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
 
           const productResponse = await axios.get(
             "https://gvi-pos-server.vercel.app/search-product",
-            { params: { search: row["Barcode"] || row["Product Name"], type: "barcode" } }
+            {
+              params: {
+                search: row["Barcode"] || row["Product Name"],
+                type: "barcode",
+              },
+            }
           );
 
           const product = productResponse.data[0];
@@ -279,30 +296,36 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
   const downloadDemoFile = () => {
     const demoData = [
       {
-        "Barcode": "123456789",
+        Barcode: "123456789",
         "Product Name": "Sample Product",
         "Return Quantity": "5",
-        "DP": "100.00",
-        "TP": "120.00"
+        DP: "100.00",
+        TP: "120.00",
       },
       {
-        "Barcode": "987654321",
+        Barcode: "987654321",
         "Product Name": "Another Product",
         "Return Quantity": "3",
-        "DP": "150.00",
-        "TP": "180.00"
-      }
+        DP: "150.00",
+        TP: "180.00",
+      },
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(demoData);
-    
+
     // Add instructions as the first row
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      ["IMPORTANT: Maintain this exact format. Only edit the values (not column names)"],
-      ["Barcode and Product Name must match existing products"],
-      ["Return Quantity cannot exceed current stock"],
-      ["DP/TP are optional - will use current prices if omitted"]
-    ], { origin: -1 });
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        [
+          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+        ],
+        ["Barcode and Product Name must match existing products"],
+        ["Return Quantity cannot exceed current stock"],
+        ["DP/TP are optional - will use current prices if omitted"],
+      ],
+      { origin: -1 }
+    );
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Office Returns");
@@ -416,16 +439,18 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
                   <td className="p-2 text-left break-words max-w-[100px] whitespace-normal">
                     {item.name}
                   </td>
-                  <td className="p-2 text-center">
-                    {item.openingStock}
-                  </td>
+                  <td className="p-2 text-center">{item.openingStock}</td>
                   <td className="p-1 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <input
                         type="number"
                         value={item.editableDP}
                         onChange={(e) =>
-                          handlePriceChange(item.barcode, "editableDP", e.target.value)
+                          handlePriceChange(
+                            item.barcode,
+                            "editableDP",
+                            e.target.value
+                          )
                         }
                         className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
                       />
@@ -433,7 +458,11 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
                         type="number"
                         value={item.editableTP}
                         onChange={(e) =>
-                          handlePriceChange(item.barcode, "editableTP", e.target.value)
+                          handlePriceChange(
+                            item.barcode,
+                            "editableTP",
+                            e.target.value
+                          )
                         }
                         className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
                       />
@@ -475,7 +504,8 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)} BDT
+          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)}{" "}
+          BDT
         </span>
         <button
           onClick={handleSubmit}

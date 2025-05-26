@@ -82,7 +82,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           total: 0,
         },
       ]);
-      setSearch("")
+      setSearch("");
     } catch (err) {
       console.error("Stock fetch error:", err);
       toast.error("Failed to fetch stock.");
@@ -154,6 +154,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             barcode: item.barcode,
             outlet: user.outlet,
             type: "market return",
+            asm: user.asm,
+            rsm: user.rsm,
+            zone: user.zone,
             quantity: item.marketReturn,
             date: formattedDateTime,
             user: user.name,
