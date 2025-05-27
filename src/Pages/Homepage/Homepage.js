@@ -17,18 +17,32 @@ export default function Home() {
     }
   }, []);
 
+  // const getStockValue = async (outletName) => {
+  //   try {
+  //     const response = await axios.get(
+  //       `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
+  //     );
+  //     const stockValue = response.data.totalCurrentDP;
+  //     setStock({dp:response.data.totalCurrentDP,tp:response.data.totalCurrentTP}); // Update the stock state with the received value
+  //   } catch (error) {
+  //     console.error("Error fetching stock value:", error);
+  //   }
+  // };
   const getStockValue = async (outletName) => {
     try {
+      const encodedOutletName = encodeURIComponent(outletName);
       const response = await axios.get(
-        `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
+        `https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`
       );
-      const stockValue = response.data.totalCurrentDP;
-      setStock({dp:response.data.totalCurrentDP,tp:response.data.totalCurrentTP}); // Update the stock state with the received value
+      setStock({
+        dp: response.data.totalCurrentDP,
+        tp: response.data.totalCurrentTP,
+      });
     } catch (error) {
       console.error("Error fetching stock value:", error);
     }
   };
-  
+
   return (
     <div>
       {/* Dropdown for Stock Operations */}
@@ -49,19 +63,44 @@ export default function Home() {
 
       {/* Render Selected Tab */}
       {selectedTab === "opening" && (
-        <OpeningStock user={user} stock={stock} setStock={setStock} getStockValue={getStockValue} />
+        <OpeningStock
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          getStockValue={getStockValue}
+        />
       )}
       {selectedTab === "primary" && (
-        <Primary user={user} stock={stock} setStock={setStock} getStockValue={getStockValue}  />
+        <Primary
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          getStockValue={getStockValue}
+        />
       )}
       {selectedTab === "secondary" && (
-        <Secondary user={user} stock={stock} setStock={setStock} getStockValue={getStockValue} />
+        <Secondary
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          getStockValue={getStockValue}
+        />
       )}
       {selectedTab === "officeReturn" && (
-        <OfficeReturn user={user} stock={stock} setStock={setStock} getStockValue={getStockValue}  />
+        <OfficeReturn
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          getStockValue={getStockValue}
+        />
       )}
       {selectedTab === "marketReturn" && (
-        <MarketReturn user={user} stock={stock} setStock={setStock} getStockValue={getStockValue}  />
+        <MarketReturn
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          getStockValue={getStockValue}
+        />
       )}
     </div>
   );
