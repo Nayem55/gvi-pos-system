@@ -39,7 +39,7 @@ const GroupStockMovementReport = () => {
         console.error("Error fetching area options:", error);
       }
     };
-    
+
     fetchAreaOptions();
   }, [selectedType]);
 
@@ -73,8 +73,17 @@ const GroupStockMovementReport = () => {
       );
 
       if (response.data?.success) {
+        const filteredData = response.data.data.filter((item) => {
+          return (
+            (item.openingStock && item.openingStock !== 0) ||
+            (item.primary && item.primary !== 0) ||
+            (item.secondary && item.secondary !== 0) ||
+            (item.officeReturn && item.officeReturn !== 0) ||
+            (item.marketReturn && item.marketReturn !== 0)
+          );
+        });
         // Sort the data alphabetically by productName
-        const sortedData = [...response.data.data].sort((a, b) =>
+        const sortedData = [...filteredData].sort((a, b) =>
           a.productName.localeCompare(b.productName)
         );
         setReportData(sortedData);
@@ -107,7 +116,7 @@ const GroupStockMovementReport = () => {
     const sortedData = [...reportData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
     );
-    
+
     const excelData = [
       [
         `${selectedType}: ${selectedArea}`,
@@ -212,7 +221,7 @@ const GroupStockMovementReport = () => {
     const sortedData = [...reportData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
     );
-    
+
     try {
       const doc = new jsPDF({
         orientation: "landscape",
@@ -221,7 +230,7 @@ const GroupStockMovementReport = () => {
 
       doc.setFontSize(12);
       doc.text(`${selectedType}: ${selectedArea || ""}`, 14, 15);
-      
+
       const pageWidth = doc.internal.pageSize.getWidth();
       doc.text(
         `Period: ${
@@ -383,7 +392,7 @@ const GroupStockMovementReport = () => {
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800">
-            Area Stock Movement Report
+            Group Stock Movement Report
           </h2>
           <div className="relative">
             <button
@@ -641,7 +650,9 @@ const GroupStockMovementReport = () => {
                     <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">{item.primary} pcs</td>
+                    <td className="border p-2 text-right">
+                      {item.primary} pcs
+                    </td>
                     <td className="border p-2 text-right">
                       {item.primaryValueDP?.toFixed(2)}
                     </td>
@@ -657,7 +668,9 @@ const GroupStockMovementReport = () => {
                     <td className="border p-2 text-right">
                       {item.officeReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">{item.secondary} pcs</td>
+                    <td className="border p-2 text-right">
+                      {item.secondary} pcs
+                    </td>
                     <td className="border p-2 text-right">
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
@@ -666,7 +679,8 @@ const GroupStockMovementReport = () => {
                         item.primary +
                         item.marketReturn -
                         item.secondary -
-                        item.officeReturn} pcs
+                        item.officeReturn}{" "}
+                      pcs
                     </td>
                     <td className="border p-2 text-right">
                       {(

@@ -53,7 +53,7 @@ const router = createBrowserRouter([
         element: <UserDashboard/>,
       },
       {
-        path: "/stock-movement",
+        path: "/stock-movement/dealer",
         element: <StockMovementReport/>,
       },
       {

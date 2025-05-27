@@ -19,7 +19,6 @@ const StockMovementReport = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
-
   const outlets = [
     "Madina Trade International: New Market",
     "Shamima Akter: New Market",
@@ -170,8 +169,17 @@ const StockMovementReport = () => {
       );
 
       if (response.data?.success) {
+        const filteredData = response.data.data.filter((item) => {
+          return (
+            (item.openingStock && item.openingStock !== 0) ||
+            (item.primary && item.primary !== 0) ||
+            (item.secondary && item.secondary !== 0) ||
+            (item.officeReturn && item.officeReturn !== 0) ||
+            (item.marketReturn && item.marketReturn !== 0)
+          );
+        });
         // Sort the data alphabetically by productName
-        const sortedData = [...response.data.data].sort((a, b) =>
+        const sortedData = [...filteredData].sort((a, b) =>
           a.productName.localeCompare(b.productName)
         );
         setReportData(sortedData);
@@ -775,7 +783,9 @@ const StockMovementReport = () => {
                     <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">{item.primary} pcs</td>
+                    <td className="border p-2 text-right">
+                      {item.primary} pcs
+                    </td>
                     <td className="border p-2 text-right">
                       {item.primaryValueDP?.toFixed(2)}
                     </td>
@@ -791,7 +801,9 @@ const StockMovementReport = () => {
                     <td className="border p-2 text-right">
                       {item.officeReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">{item.secondary} pcs</td>
+                    <td className="border p-2 text-right">
+                      {item.secondary} pcs
+                    </td>
                     <td className="border p-2 text-right">
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
@@ -800,7 +812,8 @@ const StockMovementReport = () => {
                         item.primary +
                         item.marketReturn -
                         item.secondary -
-                        item.officeReturn} pcs
+                        item.officeReturn}{" "}
+                      pcs
                     </td>
                     <td className="border p-2 text-right">
                       {(
