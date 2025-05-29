@@ -536,6 +536,7 @@ const FinancialMovementReport = () => {
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border p-2">Date</th>
+                    <th className="border p-2">Dealer</th>
                     <th className="border p-2">Type</th>
                     <th className="border p-2">Amount</th>
                     <th className="border p-2">Created By</th>
@@ -549,9 +550,12 @@ const FinancialMovementReport = () => {
                         {dayjs(txn.date).format("DD-MM-YY")}
                       </td>
                       <td className="border p-2 capitalize">
+                        {txn.outlet.replace("_", " ")}
+                      </td>
+                      <td className="border p-2 capitalize">
                         {txn.type.replace("_", " ")}
                       </td>
-                      <td className="border p-2 text-right">
+                      <td className="border p-2 ">
                         {txn.amount.toFixed(2)}
                       </td>
                       <td className="border p-2">{txn.createdBy}</td>
