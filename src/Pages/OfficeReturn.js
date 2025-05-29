@@ -5,7 +5,12 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
-export default function OfficeReturn({ user, stock, getStockValue }) {
+export default function OfficeReturn({
+  user,
+  stock,
+  getStockValue,
+  currentDue,
+}) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [searchResults, setSearchResults] = useState([]);
@@ -131,6 +136,25 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
     const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
 
     try {
+      // Calculate total amount that will be added to due
+      const totalAmount = cart.reduce(
+        (sum, item) => sum + item.primary * item.editableDP,
+        0
+      );
+
+      // First update the due amount
+      const dueResponse = await axios.put(
+        "https://gvi-pos-server.vercel.app/update-due",
+        {
+          outlet: user.outlet,
+          currentDue: currentDue - totalAmount,
+        }
+      );
+
+      if (!dueResponse.data.success) {
+        throw new Error("Failed to update due amount");
+      }
+
       const requests = cart.map(async (item) => {
         await axios.put(
           "https://gvi-pos-server.vercel.app/update-outlet-stock",
@@ -164,6 +188,19 @@ export default function OfficeReturn({ user, stock, getStockValue }) {
       });
 
       await Promise.all(requests);
+
+      // Record money transaction for the primary voucher
+      await axios.post("https://gvi-pos-server.vercel.app/money-transfer", {
+        outlet: user.outlet,
+        amount: totalAmount,
+        asm: user.asm,
+        rsm: user.rsm,
+        zone: user.zone,
+        type: "office return",
+        date: formattedDateTime,
+        createdBy: user.name,
+      });
+
       toast.success("All office returns processed successfully!");
       getStockValue(user.outlet);
       setCart([]);

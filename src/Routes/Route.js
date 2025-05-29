@@ -21,6 +21,8 @@ import Home from "../Pages/Homepage/Homepage";
 import PromotionalPage from "../Pages/AdminPanel/Promotion";
 import StockMovementReport from "../Pages/AdminPanel/StockMovementReport";
 import GroupStockMovementReport from "../Pages/AdminPanel/StockMovementGroupwise";
+import Accounts from "../Pages/Accounts";
+import FinancialMovementReport from "../Pages/FinancialMovementReport";
 
 const router = createBrowserRouter([
   {
@@ -53,12 +55,20 @@ const router = createBrowserRouter([
         element: <UserDashboard/>,
       },
       {
+        path: "/accounts",
+        element: <Accounts/>,
+      },
+      {
         path: "/stock-movement/dealer",
         element: <StockMovementReport/>,
       },
       {
         path: "/stock-movement/group",
         element: <GroupStockMovementReport/>,
+      },
+      {
+        path: "/admin/money-transaction",
+        element: <FinancialMovementReport/>,
       },
       {
         path: "/manage-stock",

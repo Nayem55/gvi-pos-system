@@ -5,11 +5,14 @@ import Secondary from "../Secondary";
 import OfficeReturn from "../OfficeReturn";
 import MarketReturn from "../MarketReturn";
 import axios from "axios";
+import PaymentVoucher from "../../Component/PaymentVoucher";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
   const [stock, setStock] = useState(0); // Total stock
+  const [currentDue, setCurrentDue] = useState(0); // Total due
   const user = JSON.parse(localStorage.getItem("pos-user"));
+  console.log()
 
   useEffect(() => {
     if (user && user.outlet) {
@@ -34,6 +37,11 @@ export default function Home() {
       const response = await axios.get(
         `https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`
       );
+      const due = await axios.get(
+        `https://gvi-pos-server.vercel.app/current-due/${encodedOutletName}`
+      );
+
+      setCurrentDue(due.data.current_due);
       setStock({
         dp: response.data.totalCurrentDP,
         tp: response.data.totalCurrentTP,
@@ -44,9 +52,9 @@ export default function Home() {
   };
 
   return (
-    <div>
+    <div className="py-4 w-full max-w-md mx-auto min-h-screen">
       {/* Dropdown for Stock Operations */}
-      <div className="p-4">
+      <div className="p-4 sm:py-4">
         {/* <p className="p-1 text-sm mb-1 font-bold text-secondary">Select Your Voucher</p> */}
         <select
           value={selectedTab}
@@ -57,7 +65,8 @@ export default function Home() {
           <option value="primary">Primary</option>
           <option value="secondary">Secondary</option>
           <option value="officeReturn">Office Return</option>
-          <option value="marketReturn">Market Return</option>
+          <option value="marketReturn">Market Return</option> 
+          <option value="payment">Payment</option> 
         </select>
       </div>
 
@@ -66,6 +75,7 @@ export default function Home() {
         <OpeningStock
           user={user}
           stock={stock}
+          currentDue={currentDue}
           setStock={setStock}
           getStockValue={getStockValue}
         />
@@ -75,6 +85,7 @@ export default function Home() {
           user={user}
           stock={stock}
           setStock={setStock}
+          currentDue={currentDue}
           getStockValue={getStockValue}
         />
       )}
@@ -83,6 +94,7 @@ export default function Home() {
           user={user}
           stock={stock}
           setStock={setStock}
+          currentDue={currentDue}
           getStockValue={getStockValue}
         />
       )}
@@ -91,6 +103,7 @@ export default function Home() {
           user={user}
           stock={stock}
           setStock={setStock}
+          currentDue={currentDue}
           getStockValue={getStockValue}
         />
       )}
@@ -99,6 +112,16 @@ export default function Home() {
           user={user}
           stock={stock}
           setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+        />
+      )}
+      {selectedTab === "payment" && (
+        <PaymentVoucher
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
           getStockValue={getStockValue}
         />
       )}

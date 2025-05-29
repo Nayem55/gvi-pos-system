@@ -15,6 +15,9 @@ const UserManagementPage = () => {
     group: "",
     zone: "",
     outlet: "",
+    asm: "",
+    rsm: "",
+    som: "",
   });
   const [isAddUserVisible, setIsAddUserVisible] = useState(false);
   const [updateUser, setUpdateUser] = useState(null);
@@ -98,7 +101,7 @@ const UserManagementPage = () => {
   return (
     <div className="flex w-[95vw] sm:w-[100vw] overflow-x-scroll">
       {/* Side Drawer */}
-      <AdminSidebar/>
+      <AdminSidebar />
 
       {/* Main Content */}
       <div className="flex-1 p-4 md:p-6 bg-gray-100 py-10">
@@ -265,6 +268,48 @@ const UserManagementPage = () => {
                 className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
+            <div className="mb-4">
+              <label htmlFor="asm" className="block text-sm font-semibold mb-2">
+                ASM
+              </label>
+              <input
+                type="text"
+                id="asm"
+                value={newUser.outlet}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, asm: e.target.value })
+                }
+                className="w-full p-2 border border-gray-300 rounded"
+              />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="asm" className="block text-sm font-semibold mb-2">
+                RSM
+              </label>
+              <input
+                type="text"
+                id="rsm"
+                value={newUser.outlet}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, rsm: e.target.value })
+                }
+                className="w-full p-2 border border-gray-300 rounded"
+              />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="asm" className="block text-sm font-semibold mb-2">
+                SOM
+              </label>
+              <input
+                type="text"
+                id="som"
+                value={newUser.outlet}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, som: e.target.value })
+                }
+                className="w-full p-2 border border-gray-300 rounded"
+              />
+            </div>
             <button
               type="submit"
               disabled={loading}
@@ -292,6 +337,9 @@ const UserManagementPage = () => {
                   <th className="border p-2">Group</th>
                   <th className="border p-2">Zone</th>
                   <th className="border p-2">Outlet</th>
+                  <th className="border p-2">ASM</th>
+                  <th className="border p-2">RSM</th>
+                  <th className="border p-2">SOM</th>
                   <th className="border p-2">Actions</th>
                 </tr>
               </thead>
@@ -305,6 +353,9 @@ const UserManagementPage = () => {
                     <td className="border p-2">{user.group || ""}</td>
                     <td className="border p-2">{user.zone || ""}</td>
                     <td className="border p-2">{user.outlet || ""}</td>
+                    <td className="border p-2">{user.asm || ""}</td>
+                    <td className="border p-2">{user.rsm || ""}</td>
+                    <td className="border p-2">{user.som || ""}</td>
                     <td className="border p-2">
                       <button
                         onClick={() => setUpdateUser(user)}
@@ -463,6 +514,57 @@ const UserManagementPage = () => {
                     value={updateUser.outlet}
                     onChange={(e) =>
                       setUpdateUser({ ...updateUser, outlet: e.target.value })
+                    }
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label
+                    htmlFor="asm"
+                    className="block text-sm font-semibold mb-2"
+                  >
+                    ASM
+                  </label>
+                  <input
+                    type="text"
+                    id="asm"
+                    value={updateUser.asm}
+                    onChange={(e) =>
+                      setUpdateUser({ ...updateUser, asm: e.target.value })
+                    }
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label
+                    htmlFor="rsm"
+                    className="block text-sm font-semibold mb-2"
+                  >
+                    RSM
+                  </label>
+                  <input
+                    type="text"
+                    id="rsm"
+                    value={updateUser.rsm}
+                    onChange={(e) =>
+                      setUpdateUser({ ...updateUser, rsm: e.target.value })
+                    }
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label
+                    htmlFor="asm"
+                    className="block text-sm font-semibold mb-2"
+                  >
+                    SOM
+                  </label>
+                  <input
+                    type="text"
+                    id="som"
+                    value={updateUser.som}
+                    onChange={(e) =>
+                      setUpdateUser({ ...updateUser, som: e.target.value })
                     }
                     className="w-full p-2 border border-gray-300 rounded"
                   />
