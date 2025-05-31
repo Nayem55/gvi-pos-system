@@ -41,6 +41,11 @@ const AdminSidebar = () => {
       path: "/admin/promotion",
       icon: <Gift size={20} />,
     },
+    {
+      name: "Accounts",
+      path: "/admin/money-transaction",
+      icon: <Gift size={20} />,
+    },
   ];
 
   return (
