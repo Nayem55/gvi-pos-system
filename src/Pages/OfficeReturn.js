@@ -138,9 +138,10 @@ export default function OfficeReturn({
     try {
       // Calculate total amount that will be added to due
       const totalAmount = cart.reduce(
-        (sum, item) => sum + item.primary * item.editableDP,
+        (sum, item) => sum + item.officeReturn * item.editableDP,
         0
       );
+      console.log(totalAmount)
 
       // First update the due amount
       const dueResponse = await axios.put(
@@ -189,7 +190,7 @@ export default function OfficeReturn({
 
       await Promise.all(requests);
 
-      // Record money transaction for the primary voucher
+      // Record money transaction for the office return voucher
       await axios.post("https://gvi-pos-server.vercel.app/money-transfer", {
         outlet: user.outlet,
         amount: totalAmount,
@@ -200,6 +201,7 @@ export default function OfficeReturn({
         date: formattedDateTime,
         createdBy: user.name,
       });
+
 
       toast.success("All office returns processed successfully!");
       getStockValue(user.outlet);
