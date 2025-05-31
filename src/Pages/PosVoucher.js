@@ -285,7 +285,9 @@ export default function PosVoucher({ stock, setStock }) {
 
       {/* Customer Information */}
       <div className="bg-white p-4 rounded-lg shadow mb-4 border border-green-100">
-        <h2 className="text-md font-semibold text-green-700 mb-2">Customer Information</h2>
+        <h2 className="text-md font-semibold text-green-700 mb-2">
+          Customer Information
+        </h2>
         <div className="space-y-2">
           <input
             type="text"
@@ -368,13 +370,20 @@ export default function PosVoucher({ stock, setStock }) {
                   className="p-3 cursor-pointer hover:bg-green-50 border-b border-gray-100 last:border-0 flex justify-between items-center"
                 >
                   <span>
-                    {p.name} {isPromoValid(p) && <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">PROMO</span>}
+                    {p.name}{" "}
+                    {isPromoValid(p) && (
+                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">
+                        PROMO
+                      </span>
+                    )}
                   </span>
                   <span className="text-sm text-gray-600">{p.barcode}</span>
                 </li>
               ))
             ) : (
-              <li className="p-3 text-center text-gray-500">No products found</li>
+              <li className="p-3 text-center text-gray-500">
+                No products found
+              </li>
             )}
           </ul>
         )}
@@ -395,11 +404,16 @@ export default function PosVoucher({ stock, setStock }) {
             </thead>
             <tbody>
               {cart.map((item) => (
-                <tr key={item._id} className="border-b border-gray-200 hover:bg-green-50">
+                <tr
+                  key={item._id}
+                  className="border-b border-gray-200 hover:bg-green-50"
+                >
                   {/* Product Name */}
                   <td className="p-3 text-left max-w-[120px]">
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-gray-500">Stock: {item.stock}</div>
+                    <div className="text-xs text-gray-500">
+                      Stock: {item.stock}
+                    </div>
                   </td>
 
                   {/* Quantity Controls */}
@@ -412,7 +426,9 @@ export default function PosVoucher({ stock, setStock }) {
                         >
                           -
                         </button>
-                        <span className="text-sm w-6 text-center">{item.pcs}</span>
+                        <span className="text-sm w-6 text-center">
+                          {item.pcs}
+                        </span>
                         <button
                           onClick={() => updateQuantity(item._id, 1)}
                           className="bg-green-100 hover:bg-green-200 text-green-800 rounded h-6 w-6 flex items-center justify-center"
@@ -428,11 +444,11 @@ export default function PosVoucher({ stock, setStock }) {
                     <div className="flex flex-col items-center gap-1">
                       <input
                         type="number"
-                        value={item.editableTP}
+                        value={item.editableDP}
                         onChange={(e) =>
                           handlePriceChange(
                             item._id,
-                            "editableTP",
+                            "editableDP",
                             e.target.value
                           )
                         }
@@ -440,11 +456,11 @@ export default function PosVoucher({ stock, setStock }) {
                       />
                       <input
                         type="number"
-                        value={item.editableDP}
+                        value={item.editableTP}
                         onChange={(e) =>
                           handlePriceChange(
                             item._id,
-                            "editableDP",
+                            "editableTP",
                             e.target.value
                           )
                         }
@@ -460,7 +476,7 @@ export default function PosVoucher({ stock, setStock }) {
 
                   {/* Delete Button */}
                   <td className="text-center">
-                    <button 
+                    <button
                       onClick={() => removeFromCart(item._id)}
                       className="text-red-500 hover:text-red-700"
                     >
@@ -487,10 +503,14 @@ export default function PosVoucher({ stock, setStock }) {
       <div className="bg-white p-4 rounded-lg shadow border border-green-100">
         <div className="flex justify-between items-center mb-4">
           <span className="text-lg font-bold text-gray-800">Total Items:</span>
-          <span className="text-lg font-bold">{cart.reduce((sum, item) => sum + item.pcs, 0)}</span>
+          <span className="text-lg font-bold">
+            {cart.reduce((sum, item) => sum + item.pcs, 0)}
+          </span>
         </div>
         <div className="flex justify-between items-center mb-4">
-          <span className="text-lg font-bold text-gray-800">Total Amount (TP):</span>
+          <span className="text-lg font-bold text-gray-800">
+            Total Amount (TP):
+          </span>
           <span className="text-xl font-bold text-green-600">
             {cart
               .reduce((sum, item) => sum + item.editableTP * item.pcs, 0)

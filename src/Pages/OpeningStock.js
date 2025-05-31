@@ -283,11 +283,11 @@ export default function OpeningStock({ user, stock, getStockValue }) {
                     <div className="flex flex-col items-center gap-1">
                       <input
                         type="number"
-                        value={item.editableTP}
+                        value={item.editableDP}
                         onChange={(e) =>
                           handlePriceChange(
                             item.barcode,
-                            "editableTP",
+                            "editableDP",
                             e.target.value
                           )
                         }
@@ -296,11 +296,11 @@ export default function OpeningStock({ user, stock, getStockValue }) {
                       />
                       <input
                         type="number"
-                        value={item.editableDP}
+                        value={item.editableTP}
                         onChange={(e) =>
                           handlePriceChange(
                             item.barcode,
-                            "editableDP",
+                            "editableTP",
                             e.target.value
                           )
                         }

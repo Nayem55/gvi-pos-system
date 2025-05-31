@@ -378,11 +378,11 @@ export default function Secondary({ stock, setStock }) {
                     <div className="flex flex-col items-center gap-1">
                       <input
                         type="number"
-                        value={item.editableTP}
+                        value={item.editableDP}
                         onChange={(e) =>
                           handlePriceChange(
                             item._id,
-                            "editableTP",
+                            "editableDP",
                             e.target.value
                           )
                         }
@@ -390,11 +390,11 @@ export default function Secondary({ stock, setStock }) {
                       />
                       <input
                         type="number"
-                        value={item.editableDP}
+                        value={item.editableTP}
                         onChange={(e) =>
                           handlePriceChange(
                             item._id,
-                            "editableDP",
+                            "editableTP",
                             e.target.value
                           )
                         }
