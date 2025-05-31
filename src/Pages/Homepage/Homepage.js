@@ -6,6 +6,7 @@ import OfficeReturn from "../OfficeReturn";
 import MarketReturn from "../MarketReturn";
 import axios from "axios";
 import PaymentVoucher from "../../Component/PaymentVoucher";
+import PosVoucher from "../PosVoucher";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -64,6 +65,7 @@ export default function Home() {
           <option value="opening">Opening Stock</option>
           <option value="primary">Primary</option>
           <option value="secondary">Secondary</option>
+          <option value="pos">POS</option>
           <option value="officeReturn">Office Return</option>
           <option value="marketReturn">Market Return</option> 
           <option value="payment">Payment</option> 
@@ -118,6 +120,15 @@ export default function Home() {
       )}
       {selectedTab === "payment" && (
         <PaymentVoucher
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+        />
+      )}
+      {selectedTab === "pos" && (
+        <PosVoucher
           user={user}
           stock={stock}
           setStock={setStock}
