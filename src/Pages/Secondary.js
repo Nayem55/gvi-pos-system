@@ -190,7 +190,7 @@ export default function Secondary({ stock, setStock }) {
         user: user._id,
         outlet: user.outlet,
         route: route,
-        menu: menu,
+        memo: menu,
         sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
         total_tp: cart.reduce(
           (sum, item) => sum + item.editableTP * item.pcs,
