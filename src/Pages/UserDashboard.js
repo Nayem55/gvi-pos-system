@@ -111,18 +111,25 @@ const UserDashboard = () => {
           // Calculate quantity difference
           const quantityDiff = product.quantity - product.originalQuantity;
 
-          // Get current stock info
+          // Get current stock info including current values
           const stockRes = await axios.get(
             "https://gvi-pos-server.vercel.app/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
-          const currentStock = stockRes.data.stock || 0;
+
+          const currentStock = stockRes.data.stock.currentStock || 0;
+          const currentDPValue = stockRes.data.stock.currentStockValueDP || 0;
+          const currentTPValue = stockRes.data.stock.currentStockValueTP || 0;
+
+          // Calculate new values by adjusting existing values
+          const dpValueChange = quantityDiff * product.dp;
+          const tpValueChange = quantityDiff * product.tp;
 
           return {
             barcode: product.barcode,
             newStock: currentStock - quantityDiff, // Subtract because sales reduce stock
-            currentStockValueDP: (currentStock - quantityDiff) * product.dp,
-            currentStockValueTP: (currentStock - quantityDiff) * product.tp,
+            currentStockValueDP: currentDPValue - dpValueChange, // Adjust existing value
+            currentStockValueTP: currentTPValue - tpValueChange, // Adjust existing value
             quantityDiff,
           };
         })
@@ -131,7 +138,12 @@ const UserDashboard = () => {
       // Update all stock records
       await Promise.all(
         stockUpdates.map(
-          ({ barcode, newStock, currentStockValueDP, currentStockValueTP }) => {
+          ({
+            barcode,
+            newStock,
+            currentStockValueDP,
+            currentStockValueTP,
+          }) => {
             return axios.put(
               "https://gvi-pos-server.vercel.app/update-outlet-stock",
               {
