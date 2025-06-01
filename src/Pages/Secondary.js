@@ -83,7 +83,7 @@ export default function Secondary({ stock, setStock }) {
           params: { barcode: product.barcode, outlet: user.outlet },
         }
       );
-      const outletStock = stockResponse.data.stock;
+      const outletStock = stockResponse.data.stock.currentStock;
 
       if (outletStock === 0) {
         toast.error(`${product.name} is out of stock!`);
