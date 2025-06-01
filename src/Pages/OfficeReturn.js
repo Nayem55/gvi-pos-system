@@ -68,7 +68,9 @@ export default function OfficeReturn({
       const stockRes = await axios.get(
         `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
-      const currentStock = stockRes.data.stock || 0;
+      const currentStock = stockRes.data.stock.currentStock || 0;
+      const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
+      const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
@@ -80,6 +82,8 @@ export default function OfficeReturn({
           officeReturn: 0,
           currentDP,
           currentTP,
+          currentStockDP,
+          currentStockTP,
           editableDP: currentDP,
           editableTP: currentTP,
           total: 0,
@@ -106,6 +110,8 @@ export default function OfficeReturn({
       )
     );
   };
+  console.log(cart)
+
 
   const handlePriceChange = (barcode, field, value) => {
     setCart((prev) =>
@@ -141,7 +147,6 @@ export default function OfficeReturn({
         (sum, item) => sum + item.officeReturn * item.editableDP,
         0
       );
-      console.log(totalAmount)
 
       // First update the due amount
       const dueResponse = await axios.put(
@@ -164,9 +169,9 @@ export default function OfficeReturn({
             outlet: user.outlet,
             newStock: item.openingStock - item.officeReturn,
             currentStockValueDP:
-              (item.openingStock - item.officeReturn) * item.editableDP,
+              (item.currentStockDP - (item.officeReturn * item.editableDP)),
             currentStockValueTP:
-              (item.openingStock - item.officeReturn) * item.editableTP,
+              (item.currentStockTP - (item.officeReturn * item.editableTP)),
           }
         );
 

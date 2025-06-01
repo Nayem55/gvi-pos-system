@@ -67,7 +67,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
       const stockRes = await axios.get(
         `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
-      const currentStock = stockRes.data.stock || 0;
+      const currentStock = stockRes.data.stock.currentStock || 0;
+      const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
+      const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
@@ -79,6 +81,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           marketReturn: 0,
           currentDP,
           currentTP,
+          currentStockDP,
+          currentStockTP,
           total: 0,
         },
       ]);
@@ -141,9 +145,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             outlet: user.outlet,
             newStock: item.openingStock + item.marketReturn,
             currentStockValueDP:
-              (item.openingStock + item.marketReturn) * item.currentDP,
+              item.currentStockDP + (item.marketReturn * item.editableDP),
             currentStockValueTP:
-              (item.openingStock + item.marketReturn) * item.currentTP,
+              item.currentStockTP + (item.marketReturn * item.editableTP),
           }
         );
 

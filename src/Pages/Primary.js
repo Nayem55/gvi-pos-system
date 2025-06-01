@@ -64,7 +64,9 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
         { params: { barcode: product.barcode, outlet: user.outlet } }
       );
 
-      const currentStock = stockRes.data.stock || 0;
+      const currentStock = stockRes.data.stock.currentStock || 0;
+      const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
+      const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
@@ -76,6 +78,8 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
           primary: 0,
           currentDP,
           currentTP,
+          currentStockDP,
+          currentStockTP,
           editableDP: currentDP,
           editableTP: currentTP,
           total: 0,
@@ -157,9 +161,9 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
             outlet: user.outlet,
             newStock: item.openingStock + item.primary,
             currentStockValueDP:
-              (item.openingStock + item.primary) * item.editableDP,
+              (item.currentStockDP + (item.primary * item.editableDP)),
             currentStockValueTP:
-              (item.openingStock + item.primary) * item.editableTP,
+              (item.currentStockTP + (item.primary * item.editableTP)),
           }
         );
 
@@ -194,7 +198,6 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
         date: formattedDateTime,
         createdBy: user.name,
       });
-
 
       toast.success("All primary processed successfully!");
       getStockValue(user.outlet);

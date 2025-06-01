@@ -62,7 +62,9 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       const stockRes = await axios.get(
         `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
-      const currentStock = stockRes.data.stock || 0;
+      const currentStock = stockRes.data.stock.currentStock || 0;
+      const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
+      const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
@@ -74,6 +76,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           newStock: currentStock,
           currentDP,
           currentTP,
+          currentStockDP,
+          currentStockTP,
           editableDP: currentDP,
           editableTP: currentTP,
           canEdit: currentStock === 0,

@@ -13,7 +13,6 @@ export default function Home() {
   const [stock, setStock] = useState(0); // Total stock
   const [currentDue, setCurrentDue] = useState(0); // Total due
   const user = JSON.parse(localStorage.getItem("pos-user"));
-  console.log()
 
   useEffect(() => {
     if (user && user.outlet) {
