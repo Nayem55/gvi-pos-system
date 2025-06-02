@@ -23,6 +23,10 @@ import StockMovementReport from "../Pages/AdminPanel/StockMovementReport";
 import GroupStockMovementReport from "../Pages/AdminPanel/StockMovementGroupwise";
 import Accounts from "../Pages/Accounts";
 import FinancialMovementReport from "../Pages/FinancialMovementReport";
+import CreateProductPage from "../Pages/CreateProductPage";
+import AlterProductsPage from "../Pages/AlterProductsPage";
+import CreateUserPage from "../Pages/CreateUserPage";
+import AlterUsersPage from "../Pages/AlterUsersPage";
 
 const router = createBrowserRouter([
   {
@@ -81,6 +85,22 @@ const router = createBrowserRouter([
       {
         path: "/admin/products",
         element: <AdminProducts/>,
+      },
+      {
+        path: "/admin/create-product",
+        element: <CreateProductPage/>,
+      },
+      {
+        path: "/admin/alter-products",
+        element: <AlterProductsPage />,
+      },
+      {
+        path: "/admin/create-user",
+        element: <CreateUserPage />,
+      },
+      {
+        path: "/admin/alter-users",
+        element: <AlterUsersPage />,
       },
       {
         path: "/admin/promotion",
