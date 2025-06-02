@@ -74,30 +74,32 @@ const UserDashboard = () => {
   };
 
   // Modified handleEditReport function to include stock data
-  const handleEditReport = async (report) => {
-    try {
-      // Fetch current stock for all products in the report
-      const productsWithStock = await Promise.all(
-        report.products.map(async (product) => {
-          const currentStock = await fetchProductStock(product.barcode);
-          return {
-            ...product,
-            originalQuantity: product.quantity, // Store original quantity
-            currentStock, // Store current stock level
-          };
-        })
-      );
+ const handleEditReport = async (report) => {
+  try {
+    // Fetch current stock for all products in the report
+    const productsWithOriginalValues = await Promise.all(
+      report.products.map(async (product) => {
+        const currentStock = await fetchProductStock(product.barcode);
+        return {
+          ...product,
+          originalQuantity: product.quantity, // Store original quantity
+          originalDP: product.dp/product.quantity, // Store original DP
+          originalTP: product.tp/product.quantity, // Store original TP
+          currentStock, // Store current stock level
+        };
+      })
+    );
 
-      setEditingReport({
-        ...report,
-        products: productsWithStock,
-      });
-      setIsEditing(true);
-    } catch (error) {
-      console.error("Error preparing edit:", error);
-      toast.error("Failed to prepare report for editing");
-    }
-  };
+    setEditingReport({
+      ...report,
+      products: productsWithOriginalValues,
+    });
+    setIsEditing(true);
+  } catch (error) {
+    console.error("Error preparing edit:", error);
+    toast.error("Failed to prepare report for editing");
+  }
+};
 
   // Modified handleUpdateReport function to work with existing API
   const handleUpdateReport = async (e) => {
@@ -108,10 +110,7 @@ const UserDashboard = () => {
       // Prepare stock updates for all products
       const stockUpdates = await Promise.all(
         editingReport.products.map(async (product) => {
-          // Calculate quantity difference
-          const quantityDiff = product.quantity - product.originalQuantity;
-
-          // Get current stock info including current values
+          // Get current stock info
           const stockRes = await axios.get(
             "https://gvi-pos-server.vercel.app/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
@@ -121,29 +120,29 @@ const UserDashboard = () => {
           const currentDPValue = stockRes.data.stock.currentStockValueDP || 0;
           const currentTPValue = stockRes.data.stock.currentStockValueTP || 0;
 
-          // Calculate new values by adjusting existing values
-          const dpValueChange = quantityDiff * product.dp;
-          const tpValueChange = quantityDiff * product.tp;
+          // Calculate net changes
+          const quantityChange = product.quantity - product.originalQuantity;
+          const dpValueChange =
+            (product.quantity * product.dp) -
+            (product.originalQuantity * product.originalDP);
+          const tpValueChange =
+            (product.quantity * product.tp) -
+            (product.originalQuantity * product.originalTP);
 
           return {
             barcode: product.barcode,
-            newStock: currentStock - quantityDiff, // Subtract because sales reduce stock
-            currentStockValueDP: currentDPValue - dpValueChange, // Adjust existing value
-            currentStockValueTP: currentTPValue - tpValueChange, // Adjust existing value
-            quantityDiff,
+            newStock: currentStock - quantityChange,
+            currentStockValueDP: currentDPValue - dpValueChange,
+            currentStockValueTP: currentTPValue - tpValueChange,
+            openingStockValueDP: currentDPValue - dpValueChange,
+            openingStockValueTP: currentTPValue - tpValueChange,
           };
         })
       );
-
       // Update all stock records
       await Promise.all(
         stockUpdates.map(
-          ({
-            barcode,
-            newStock,
-            currentStockValueDP,
-            currentStockValueTP,
-          }) => {
+          ({ barcode, newStock, currentStockValueDP, currentStockValueTP }) => {
             return axios.put(
               "https://gvi-pos-server.vercel.app/update-outlet-stock",
               {
