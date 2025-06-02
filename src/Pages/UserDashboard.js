@@ -176,60 +176,60 @@ const UserDashboard = () => {
   };
 
   // Modified handleDeleteReport to restore stock using existing API
-  const handleDeleteReport = async (reportId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this report? This will restore the stock quantities."
-      )
-    )
-      return;
+  // const handleDeleteReport = async (reportId) => {
+  //   if (
+  //     !window.confirm(
+  //       "Are you sure you want to delete this report? This will restore the stock quantities."
+  //     )
+  //   )
+  //     return;
 
-    try {
-      // First get the report to know what quantities to restore
-      const reportResponse = await axios.get(
-        `https://gvi-pos-server.vercel.app/sales-reports/${reportId}`
-      );
-      const report = reportResponse.data;
+  //   try {
+  //     // First get the report to know what quantities to restore
+  //     const reportResponse = await axios.get(
+  //       `https://gvi-pos-server.vercel.app/sales-reports/${reportId}`
+  //     );
+  //     const report = reportResponse.data;
 
-      // Restore stock for all products
-      await Promise.all(
-        report.products.map(async (product) => {
-          // Get current stock info
-          const stockRes = await axios.get(
-            "https://gvi-pos-server.vercel.app/outlet-stock",
-            { params: { barcode: product.barcode, outlet: user.outlet } }
-          );
-          const currentStock = stockRes.data.stock || 0;
+  //     // Restore stock for all products
+  //     await Promise.all(
+  //       report.products.map(async (product) => {
+  //         // Get current stock info
+  //         const stockRes = await axios.get(
+  //           "https://gvi-pos-server.vercel.app/outlet-stock",
+  //           { params: { barcode: product.barcode, outlet: user.outlet } }
+  //         );
+  //         const currentStock = stockRes.data.stock || 0;
 
-          return axios.put(
-            "https://gvi-pos-server.vercel.app/update-outlet-stock",
-            {
-              barcode: product.barcode,
-              outlet: user.outlet,
-              newStock: currentStock + product.quantity, // Add back the sold quantity
-              currentStockValueDP:
-                (currentStock + product.quantity) * product.dp,
-              currentStockValueTP:
-                (currentStock + product.quantity) * product.tp,
-            }
-          );
-        })
-      );
+  //         return axios.put(
+  //           "https://gvi-pos-server.vercel.app/update-outlet-stock",
+  //           {
+  //             barcode: product.barcode,
+  //             outlet: user.outlet,
+  //             newStock: currentStock + product.quantity, // Add back the sold quantity
+  //             currentStockValueDP:
+  //               (currentStock + product.quantity) * product.dp,
+  //             currentStockValueTP:
+  //               (currentStock + product.quantity) * product.tp,
+  //           }
+  //         );
+  //       })
+  //     );
 
-      // Then delete the report
-      await axios.delete(
-        `https://gvi-pos-server.vercel.app/delete-sales-report/${reportId}`
-      );
+  //     // Then delete the report
+  //     await axios.delete(
+  //       `https://gvi-pos-server.vercel.app/delete-sales-report/${reportId}`
+  //     );
 
-      toast.success(
-        "Report deleted and stock quantities restored successfully"
-      );
-      fetchDailyReports();
-    } catch (error) {
-      console.error("Error deleting report:", error);
-      toast.error(error.response?.data?.message || "Failed to delete report");
-    }
-  };
+  //     toast.success(
+  //       "Report deleted and stock quantities restored successfully"
+  //     );
+  //     fetchDailyReports();
+  //   } catch (error) {
+  //     console.error("Error deleting report:", error);
+  //     toast.error(error.response?.data?.message || "Failed to delete report");
+  //   }
+  // };
 
   const handleProductChange = (index, field, value) => {
     const updatedProducts = [...editingReport.products];
@@ -433,12 +433,12 @@ const UserDashboard = () => {
                               >
                                 Edit
                               </button>
-                              <button
+                              {/* <button
                                 onClick={() => handleDeleteReport(report._id)}
                                 className="text-red-600 hover:text-red-900"
                               >
                                 Delete
-                              </button>
+                              </button> */}
                             </div>
                           ) : (
                             <span className="text-gray-400">View Only</span>
