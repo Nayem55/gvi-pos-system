@@ -110,6 +110,8 @@ const UserDashboard = () => {
       // Prepare stock updates for all products
       const stockUpdates = await Promise.all(
         editingReport.products.map(async (product) => {
+            console.log(product.originalQuantity,product.originalDP)
+
           // Get current stock info
           const stockRes = await axios.get(
             "https://gvi-pos-server.vercel.app/outlet-stock",
