@@ -110,8 +110,6 @@ const UserDashboard = () => {
       // Prepare stock updates for all products
       const stockUpdates = await Promise.all(
         editingReport.products.map(async (product) => {
-            console.log(product.originalQuantity,product.originalDP)
-
           // Get current stock info
           const stockRes = await axios.get(
             "https://gvi-pos-server.vercel.app/outlet-stock",
@@ -125,10 +123,10 @@ const UserDashboard = () => {
           // Calculate net changes
           const quantityChange = product.quantity - product.originalQuantity;
           const dpValueChange =
-            (product.quantity * product.dp) -
+            (product.dp) -
             (product.originalQuantity * product.originalDP);
           const tpValueChange =
-            (product.quantity * product.tp) -
+            (product.tp) -
             (product.originalQuantity * product.originalTP);
 
           return {
@@ -136,8 +134,6 @@ const UserDashboard = () => {
             newStock: currentStock - quantityChange,
             currentStockValueDP: currentDPValue - dpValueChange,
             currentStockValueTP: currentTPValue - tpValueChange,
-            openingStockValueDP: currentDPValue - dpValueChange,
-            openingStockValueTP: currentTPValue - tpValueChange,
           };
         })
       );
