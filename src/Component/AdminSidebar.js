@@ -16,6 +16,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { BiCategoryAlt } from "react-icons/bi";
+import { BsShop } from "react-icons/bs";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -123,6 +124,12 @@ const AdminSidebar = () => {
                 >
                   <Users size={16} /> User
                 </Link>
+                <Link
+                  to="/admin/create-outlet"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <BsShop size={16} /> Outlet
+                </Link>
               </div>
             )}
           </div>
@@ -161,6 +168,12 @@ const AdminSidebar = () => {
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Users size={16} /> Users
+                </Link>
+                <Link
+                  to="/admin/alter-outlets"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <BsShop size={16} /> Outlets
                 </Link>
               </div>
             )}

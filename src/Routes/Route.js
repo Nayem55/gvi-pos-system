@@ -29,6 +29,8 @@ import CreateUserPage from "../Pages/CreateUserPage";
 import AlterUsersPage from "../Pages/AlterUsersPage";
 import CreateCategoryPage from "../Pages/CreateCategoryPage";
 import AlterCategoriesPage from "../Pages/AlterCategoriesPage";
+import CreateOutletPage from "../Pages/CreateOutletPage";
+import AlterOutletsPage from "../Pages/AlterOutletsPage";
 
 const router = createBrowserRouter([
   {
@@ -111,6 +113,14 @@ const router = createBrowserRouter([
       {
         path: "/admin/alter-categories",
         element: <AlterCategoriesPage />,
+      },
+      {
+        path: "/admin/create-outlet",
+        element: <CreateOutletPage />,
+      },
+      {
+        path: "/admin/alter-outlets",
+        element: <AlterOutletsPage />,
       },
       {
         path: "/admin/promotion",
