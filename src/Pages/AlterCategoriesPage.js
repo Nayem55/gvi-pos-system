@@ -9,6 +9,7 @@ const AlterCategoriesPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [editedName, setEditedName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [updatingProducts, setUpdatingProducts] = useState(false);
 
   const fetchCategories = async () => {
     try {
@@ -23,19 +24,37 @@ const AlterCategoriesPage = () => {
     }
   };
 
-  const handleUpdate = async (id) => {
+  const handleUpdate = async (id, oldName) => {
     if (!editedName.trim()) {
       toast.error("Category name cannot be empty");
       return;
     }
 
+    if (editedName === oldName) {
+      setEditingId(null);
+      return;
+    }
+
     try {
       setLoading(true);
+      setUpdatingProducts(true);
+      
+      // 1. First update the category name
       await axios.put(
         `https://gvi-pos-server.vercel.app/categories/${id}`,
         { name: editedName }
       );
-      toast.success("Category updated successfully!");
+
+      // 2. Then update all products with this category
+      await axios.put(
+        "https://gvi-pos-server.vercel.app/update-products-category",
+        {
+          oldCategory: oldName,
+          newCategory: editedName
+        }
+      );
+
+      toast.success("Category and related products updated successfully!");
       setEditingId(null);
       fetchCategories();
     } catch (error) {
@@ -43,6 +62,7 @@ const AlterCategoriesPage = () => {
       toast.error(error.response?.data?.error || "Failed to update category");
     } finally {
       setLoading(false);
+      setUpdatingProducts(false);
     }
   };
 
@@ -57,7 +77,7 @@ const AlterCategoriesPage = () => {
         <h2 className="text-2xl font-bold mb-6">Manage Categories</h2>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
-          {loading ? (
+          {loading && !updatingProducts ? (
             <p>Loading categories...</p>
           ) : categories.length === 0 ? (
             <p>No categories found</p>
@@ -79,6 +99,7 @@ const AlterCategoriesPage = () => {
                           value={editedName}
                           onChange={(e) => setEditedName(e.target.value)}
                           className="w-full p-2 border rounded"
+                          disabled={updatingProducts}
                         />
                       ) : (
                         category.name
@@ -88,17 +109,23 @@ const AlterCategoriesPage = () => {
                       {editingId === category._id ? (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleUpdate(category._id)}
-                            className="bg-green-600 text-white px-3 py-1 rounded"
+                            onClick={() => handleUpdate(category._id, category.name)}
+                            disabled={updatingProducts}
+                            className={`px-3 py-1 rounded ${
+                              updatingProducts
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-green-600 text-white"
+                            }`}
                           >
-                            Save
+                            {updatingProducts ? "Updating..." : "Save"}
                           </button>
                           <button
                             onClick={() => {
                               setEditingId(null);
                               setEditedName("");
                             }}
-                            className="bg-gray-300 px-3 py-1 rounded"
+                            disabled={updatingProducts}
+                            className="bg-gray-300 px-3 py-1 rounded disabled:opacity-50"
                           >
                             Cancel
                           </button>
@@ -110,6 +137,7 @@ const AlterCategoriesPage = () => {
                             setEditedName(category.name);
                           }}
                           className="text-blue-500 hover:text-blue-700"
+                          disabled={updatingProducts}
                         >
                           <Edit3 size={18} />
                         </button>
@@ -119,6 +147,11 @@ const AlterCategoriesPage = () => {
                 ))}
               </tbody>
             </table>
+          )}
+          {updatingProducts && (
+            <div className="mt-4 text-sm text-gray-600">
+              Updating products with new category name...
+            </div>
           )}
         </div>
       </div>
