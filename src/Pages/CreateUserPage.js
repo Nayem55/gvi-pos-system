@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -18,6 +18,75 @@ const CreateUserPage = () => {
     som: "",
   });
   const [loading, setLoading] = useState(false);
+  const [dropdownData, setDropdownData] = useState({
+    roles: ["SO", "ASM", "RSM", "SOM"], // Hardcoded roles
+    groups: [],
+    zones: [],
+    outlets: [],
+    asms: [],
+    rsms: [],
+    soms: []
+  });
+  const [fetchingData, setFetchingData] = useState({
+    groups: false,
+    zones: false,
+    outlets: false,
+    asms: false,
+    rsms: false,
+    soms: false
+  });
+
+  // Fetch dropdown data when component mounts
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        // Fetch groups
+        setFetchingData(prev => ({...prev, groups: true}));
+        const groups = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=group");
+        setDropdownData(prev => ({...prev, groups: groups.data}));
+
+        // Fetch zones
+        setFetchingData(prev => ({...prev, zones: true}));
+        const zones = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=zone");
+        setDropdownData(prev => ({...prev, zones: zones.data}));
+
+        // Fetch outlets
+        setFetchingData(prev => ({...prev, outlets: true}));
+        const outlets = await axios.get("https://gvi-pos-server.vercel.app/get-outlets");
+        setDropdownData(prev => ({...prev, outlets: outlets.data}));
+
+        // Fetch ASMs
+        setFetchingData(prev => ({...prev, asms: true}));
+        const asms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=asm");
+        setDropdownData(prev => ({...prev, asms: asms.data}));
+
+        // Fetch RSMs
+        setFetchingData(prev => ({...prev, rsms: true}));
+        const rsms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=rsm");
+        setDropdownData(prev => ({...prev, rsms: rsms.data}));
+
+        // Fetch SOMs
+        setFetchingData(prev => ({...prev, soms: true}));
+        const soms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=som");
+        setDropdownData(prev => ({...prev, soms: soms.data}));
+
+      } catch (error) {
+        console.error("Error fetching dropdown data:", error);
+        toast.error("Failed to load dropdown options");
+      } finally {
+        setFetchingData({
+          groups: false,
+          zones: false,
+          outlets: false,
+          asms: false,
+          rsms: false,
+          soms: false
+        });
+      }
+    };
+
+    fetchDropdownData();
+  }, []);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -45,6 +114,32 @@ const CreateUserPage = () => {
     }
   };
 
+  // Helper component for dropdown fields
+  const DropdownField = ({ label, field, options, isLoading }) => (
+    <div className="mb-4">
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      {isLoading ? (
+        <select className="w-full p-2 border rounded bg-gray-100" disabled>
+          <option>Loading {label}...</option>
+        </select>
+      ) : (
+        <select
+          value={newUser[field]}
+          onChange={(e) => setNewUser({...newUser, [field]: e.target.value})}
+          className="w-full p-2 border rounded"
+          required={field === 'role'} // Make role required
+        >
+          <option value="">Select {label}</option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex">
       <AdminSidebar />
@@ -53,6 +148,7 @@ const CreateUserPage = () => {
 
         <form onSubmit={handleCreateUser} className="bg-white p-6 rounded-lg shadow-md">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Text input fields */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Name</label>
               <input
@@ -63,6 +159,7 @@ const CreateUserPage = () => {
                 className="w-full p-2 border rounded"
               />
             </div>
+
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Phone Number</label>
               <input
@@ -73,6 +170,7 @@ const CreateUserPage = () => {
                 className="w-full p-2 border rounded"
               />
             </div>
+
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Password</label>
               <input
@@ -83,70 +181,56 @@ const CreateUserPage = () => {
                 className="w-full p-2 border rounded"
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Role</label>
-              <input
-                type="text"
-                value={newUser.role}
-                onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                required
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Group</label>
-              <input
-                type="text"
-                value={newUser.group}
-                onChange={(e) => setNewUser({...newUser, group: e.target.value})}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Zone</label>
-              <input
-                type="text"
-                value={newUser.zone}
-                onChange={(e) => setNewUser({...newUser, zone: e.target.value})}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Outlet</label>
-              <input
-                type="text"
-                value={newUser.outlet}
-                onChange={(e) => setNewUser({...newUser, outlet: e.target.value})}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">ASM</label>
-              <input
-                type="text"
-                value={newUser.asm}
-                onChange={(e) => setNewUser({...newUser, asm: e.target.value})}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">RSM</label>
-              <input
-                type="text"
-                value={newUser.rsm}
-                onChange={(e) => setNewUser({...newUser, rsm: e.target.value})}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">SOM</label>
-              <input
-                type="text"
-                value={newUser.som}
-                onChange={(e) => setNewUser({...newUser, som: e.target.value})}
-                className="w-full p-2 border rounded"
-              />
-            </div>
+
+            {/* Dropdown fields */}
+            <DropdownField
+              label="Role"
+              field="role"
+              options={dropdownData.roles}
+              isLoading={false} // Hardcoded, no loading
+            />
+
+            <DropdownField
+              label="Group"
+              field="group"
+              options={dropdownData.groups}
+              isLoading={fetchingData.groups}
+            />
+
+            <DropdownField
+              label="Zone"
+              field="zone"
+              options={dropdownData.zones}
+              isLoading={fetchingData.zones}
+            />
+
+            <DropdownField
+              label="Outlet"
+              field="outlet"
+              options={dropdownData.outlets}
+              isLoading={fetchingData.outlets}
+            />
+
+            <DropdownField
+              label="ASM"
+              field="asm"
+              options={dropdownData.asms}
+              isLoading={fetchingData.asms}
+            />
+
+            <DropdownField
+              label="RSM"
+              field="rsm"
+              options={dropdownData.rsms}
+              isLoading={fetchingData.rsms}
+            />
+
+            <DropdownField
+              label="SOM"
+              field="som"
+              options={dropdownData.soms}
+              isLoading={fetchingData.soms}
+            />
           </div>
           
           <button

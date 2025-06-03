@@ -17,7 +17,7 @@ const AlterProductsPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("https://gvi-pos-server.vercel.app/product-categories");
+      const response = await axios.get("https://gvi-pos-server.vercel.app/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);

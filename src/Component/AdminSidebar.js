@@ -15,6 +15,7 @@ import {
   PlusCircle,
   Edit3,
 } from "lucide-react";
+import { BiCategoryAlt } from "react-icons/bi";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,6 +112,12 @@ const AdminSidebar = () => {
                   <Package size={16} /> Product
                 </Link>
                 <Link
+                  to="/admin/create-category"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <BiCategoryAlt size={16} /> Category
+                </Link>
+                <Link
                   to="/admin/create-user"
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
                 >
@@ -142,6 +149,12 @@ const AdminSidebar = () => {
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Package size={16} /> Products
+                </Link>
+                <Link
+                  to="/admin/alter-categories"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <BiCategoryAlt size={16} /> Category
                 </Link>
                 <Link
                   to="/admin/alter-users"
