@@ -12,23 +12,49 @@ const CreateProductPage = () => {
     tp: "",
     mrp: "",
     category: "",
+    brand: "" // Added brand field
   });
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]); // State for brands
+  const [fetchingData, setFetchingData] = useState({
+    categories: false,
+    brands: false
+  });
 
   const fetchCategories = async () => {
     try {
+      setFetchingData(prev => ({...prev, categories: true}));
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/categories"
       );
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories");
+    } finally {
+      setFetchingData(prev => ({...prev, categories: false}));
+    }
+  };
+
+  const fetchBrands = async () => {
+    try {
+      setFetchingData(prev => ({...prev, brands: true}));
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/brands" // You'll need to create this endpoint
+      );
+      setBrands(response.data);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      toast.error("Failed to load brands");
+    } finally {
+      setFetchingData(prev => ({...prev, brands: false}));
     }
   };
 
   useEffect(() => {
     fetchCategories();
+    fetchBrands();
   }, []);
 
   const createProductWithStocks = async () => {
@@ -47,9 +73,9 @@ const CreateProductPage = () => {
         tp: "",
         mrp: "",
         category: "",
+        brand: ""
       });
 
-      // Optional: Redirect to products list or show success message
     } catch (error) {
       console.error("Error creating product:", error);
       toast.error(error.response?.data?.message || "Failed to create product");
@@ -68,6 +94,7 @@ const CreateProductPage = () => {
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Existing fields (name, barcode) */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">
                 Product Name
@@ -80,6 +107,7 @@ const CreateProductPage = () => {
                 }
                 className="w-full p-2 border rounded"
                 placeholder="Enter product name"
+                required
               />
             </div>
 
@@ -93,27 +121,63 @@ const CreateProductPage = () => {
                 }
                 className="w-full p-2 border rounded"
                 placeholder="Enter barcode"
+                required
               />
             </div>
 
+            {/* Category Dropdown */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Category</label>
-              <select
-                value={newProduct.category}
-                onChange={(e) =>
-                  setNewProduct({ ...newProduct, category: e.target.value })
-                }
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Select Category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+              {fetchingData.categories ? (
+                <select className="w-full p-2 border rounded bg-gray-100" disabled>
+                  <option>Loading categories...</option>
+                </select>
+              ) : (
+                <select
+                  value={newProduct.category}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, category: e.target.value })
+                  }
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
+            {/* New Brand Dropdown */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Brand</label>
+              {fetchingData.brands ? (
+                <select className="w-full p-2 border rounded bg-gray-100" disabled>
+                  <option>Loading brands...</option>
+                </select>
+              ) : (
+                <select
+                  value={newProduct.brand}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, brand: e.target.value })
+                  }
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="">Select Brand</option>
+                  {brands.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Price fields (dp, tp, mrp) */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">DP Price</label>
               <input
@@ -124,6 +188,9 @@ const CreateProductPage = () => {
                 }
                 className="w-full p-2 border rounded"
                 placeholder="Enter DP price"
+                required
+                min="0"
+                step="0.01"
               />
             </div>
 
@@ -137,6 +204,9 @@ const CreateProductPage = () => {
                 }
                 className="w-full p-2 border rounded"
                 placeholder="Enter TP price"
+                required
+                min="0"
+                step="0.01"
               />
             </div>
 
@@ -152,6 +222,9 @@ const CreateProductPage = () => {
                 }
                 className="w-full p-2 border rounded"
                 placeholder="Enter MRP price"
+                required
+                min="0"
+                step="0.01"
               />
             </div>
           </div>

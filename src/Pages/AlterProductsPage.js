@@ -12,15 +12,37 @@ const AlterProductsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [fetchingData, setFetchingData] = useState({
+    categories: false,
+    brands: false
+  });
 
   const API_URL = "https://gvi-pos-server.vercel.app/products";
 
   const fetchCategories = async () => {
     try {
+      setFetchingData(prev => ({...prev, categories: true}));
       const response = await axios.get("https://gvi-pos-server.vercel.app/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories");
+    } finally {
+      setFetchingData(prev => ({...prev, categories: false}));
+    }
+  };
+
+  const fetchBrands = async () => {
+    try {
+      setFetchingData(prev => ({...prev, brands: true}));
+      const response = await axios.get("https://gvi-pos-server.vercel.app/brands");
+      setBrands(response.data);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      toast.error("Failed to load brands");
+    } finally {
+      setFetchingData(prev => ({...prev, brands: false}));
     }
   };
 
@@ -40,6 +62,7 @@ const AlterProductsPage = () => {
   useEffect(() => {
     fetchProducts(currentPage);
     fetchCategories();
+    fetchBrands();
   }, [currentPage]);
 
   const handleInputChange = (e, id, field) => {
@@ -87,6 +110,7 @@ const AlterProductsPage = () => {
               <tr>
                 <th className="border p-2">Name</th>
                 <th className="border p-2">Barcode</th>
+                <th className="border p-2">Brand</th>
                 <th className="border p-2">Category</th>
                 <th className="border p-2">DP</th>
                 <th className="border p-2">TP</th>
@@ -124,13 +148,33 @@ const AlterProductsPage = () => {
                   <td className="border p-2">
                     {editingProduct?._id === product._id ? (
                       <select
+                        value={product.brand || ""}
+                        onChange={(e) => handleInputChange(e, product._id, "brand")}
+                        className="border p-1 w-full"
+                      >
+                        <option value="">Select Brand</option>
+                        {brands.map((brand) => (
+                          <option key={brand} value={brand}>
+                            {brand}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      product.brand || "-"
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    {editingProduct?._id === product._id ? (
+                      <select
                         value={product.category}
                         onChange={(e) => handleInputChange(e, product._id, "category")}
                         className="border p-1 w-full"
                       >
                         <option value="">Select Category</option>
                         {categories.map((category) => (
-                          <option key={category} value={category}>{category}</option>
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
                         ))}
                       </select>
                     ) : (
