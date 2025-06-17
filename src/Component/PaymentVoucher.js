@@ -136,7 +136,7 @@ export default function PaymentVoucher({
               placeholder="Enter amount"
               step="0.01"
               min="0"
-              max={currentDue}
+              // max={currentDue}
               required
             />
           </div>

@@ -83,6 +83,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           currentTP,
           currentStockDP,
           currentStockTP,
+          editableDP: currentDP, // Added editableDP
+          editableTP: currentTP, // Added editableTP
           total: 0,
         },
       ]);
@@ -102,10 +104,27 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           ? {
               ...item,
               marketReturn: returnValue,
-              total: returnValue * item.currentDP,
+              total: returnValue * item.editableDP, // Changed from currentDP to editableDP
             }
           : item
       )
+    );
+  };
+
+  // Handle price change for DP/TP
+  const handlePriceChange = (barcode, field, value) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.barcode === barcode) {
+          const newValue = parseFloat(value) || 0;
+          return {
+            ...item,
+            [field]: newValue,
+            total: field === "editableDP" ? newValue * item.marketReturn : item.total,
+          };
+        }
+        return item;
+      })
     );
   };
 
@@ -145,9 +164,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             outlet: user.outlet,
             newStock: item.openingStock + item.marketReturn,
             currentStockValueDP:
-              item.currentStockDP + (item.marketReturn * item.editableDP),
+              item.currentStockDP + (item.marketReturn * item.editableDP), // Changed from currentDP to editableDP
             currentStockValueTP:
-              item.currentStockTP + (item.marketReturn * item.editableTP),
+              item.currentStockTP + (item.marketReturn * item.editableTP), // Changed from currentTP to editableTP
           }
         );
 
@@ -164,8 +183,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             quantity: item.marketReturn,
             date: formattedDateTime,
             user: user.name,
-            dp: item.currentDP,
-            tp: item.currentTP,
+            dp: item.editableDP, // Changed from currentDP to editableDP
+            tp: item.editableTP, // Changed from currentTP to editableTP
           }
         );
       });
@@ -244,65 +263,96 @@ export default function MarketReturn({ user, stock, getStockValue }) {
 
       {/* Market Return Table */}
       <div className="bg-white p-4 shadow rounded-lg mb-4">
-        <table className="w-full text-sm table-fixed border-collapse">
-          <thead>
-            <tr className="border-b bg-gray-200">
-              <th className="p-2 w-2/6 text-left">Product</th>
-              <th className="p-2 w-1/6">Stock</th>
-              <th className="p-2 w-1/6">Return</th>
-              <th className="p-2 w-1/6">New Stock</th>
-              <th className="p-2 w-1/6"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {cart.map((item) => (
-              <tr key={item.barcode} className="border-b">
-                <td className="p-2 w-2/6 text-left break-words whitespace-normal">
-                  {item.name}
-                </td>
-                <td className="p-2 w-1/6 text-center">{item.openingStock}</td>
-                <td className="p-2 w-1/6">
-                  <input
-                    type="number"
-                    value={item.marketReturn}
-                    onChange={(e) =>
-                      updateMarketReturnValue(item.barcode, e.target.value)
-                    }
-                    className="w-full p-1 border rounded text-center"
-                    min="0"
-                    max={item.openingStock}
-                  />
-                </td>
-                <td className="p-2 w-1/6 text-center">
-                  {item.openingStock + item.marketReturn}
-                </td>
-                <td className="p-2 w-1/6 text-center">
-                  <button
-                    onClick={() => removeFromCart(item.barcode)}
-                    className="mt-1 rounded"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 448 512"
-                    >
-                      <path
-                        fill="#FD0032"
-                        d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
-                      />
-                    </svg>
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b bg-gray-200">
+                <th className="p-2 text-left">Product</th>
+                <th className="p-2 text-center">Stock</th>
+                <th className="p-2 text-center">Prices</th>
+                <th className="p-2 text-center">Return</th>
+                <th className="p-2 text-center">New Stock</th>
+                <th className="p-2 text-center"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {cart.map((item) => (
+                <tr key={item.barcode} className="border-b">
+                  <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
+                    {item.name}
+                  </td>
+                  <td className="p-2 text-center">{item.openingStock}</td>
+                  <td className="p-2 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <input
+                        type="number"
+                        value={item.editableDP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item.barcode,
+                            "editableDP",
+                            e.target.value
+                          )
+                        }
+                        className="w-full p-1 border rounded text-center text-xs"
+                      />
+                      <input
+                        type="number"
+                        value={item.editableTP}
+                        onChange={(e) =>
+                          handlePriceChange(
+                            item.barcode,
+                            "editableTP",
+                            e.target.value
+                          )
+                        }
+                        className="w-full p-1 border rounded text-center text-xs"
+                      />
+                    </div>
+                  </td>
+                  <td className="p-2 text-center">
+                    <input
+                      type="number"
+                      value={item.marketReturn}
+                      onChange={(e) =>
+                        updateMarketReturnValue(item.barcode, e.target.value)
+                      }
+                      className="w-full p-1 border rounded text-center"
+                      min="0"
+                      max={item.openingStock}
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    {item.openingStock + item.marketReturn}
+                  </td>
+                  <td className="p-2 text-center">
+                    <button
+                      onClick={() => removeFromCart(item.barcode)}
+                      className="text-red-500"
+                    >
+                      <svg
+                        className="w-4 h-4 mx-auto"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 448 512"
+                      >
+                        <path
+                          fill="currentColor"
+                          d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"
+                        />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0)} BDT
+          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)} BDT
         </span>
         <button
           onClick={handleSubmit}

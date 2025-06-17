@@ -145,7 +145,7 @@ const Accounts = () => {
       `Financial_Report_${selectedArea}_${dateRange.start}.xlsx`
     );
   };
-
+  // Updated exportToPDF function with proper debit/credit categorization
   const exportToPDF = () => {
     if (!reportData) return;
 
@@ -154,71 +154,226 @@ const Accounts = () => {
       unit: "mm",
     });
 
+    const leftMargin = 20;
+    const rightMargin = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const lineHeight = 7;
+    let currentY = 20;
+
+    // === Header Section ===
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.text(`${selectedArea || "Outlet"}`, leftMargin, currentY);
+    currentY += lineHeight;
+
+    doc.text(
+      `Date : ${dayjs().format("DD-MMM-YY")}`,
+      pageWidth - rightMargin,
+      currentY,
+      { align: "right" }
+    );
+    currentY += lineHeight * 2;
+
     doc.setFontSize(14);
+    doc.setFont(undefined, "bold");
+    currentY += lineHeight;
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, "normal");
     doc.text(
-      `${selectedType === "outlet" ? "Outlet" : selectedType}: ${
-        selectedArea || ""
-      }`,
-      14,
-      15
-    );
-    doc.text(
-      `Period: ${dayjs(dateRange.start).format("DD-MM-YY")} to ${dayjs(
+      `${dayjs(dateRange.start).format("DD-MMM-YY")} to ${dayjs(
         dateRange.end
-      ).format("DD-MM-YY")}`,
-      14,
-      22
+      ).format("DD-MMM-YY")}`,
+      leftMargin,
+      currentY
     );
 
-    // Summary table
-    autoTable(doc, {
-      startY: 30,
-      head: [["Item", "Amount"]],
-      body: [
-        ["Opening Due", reportData.openingDue.toFixed(2)],
-        ["Primary Added", reportData.primary.toFixed(2)],
-        ["Payments", reportData.payment.toFixed(2)],
-        ["Office Returns", reportData.officeReturn.toFixed(2)],
-        ["Closing Due", reportData.closingDue.toFixed(2)],
-      ],
-      theme: "grid",
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-      },
-    });
+    currentY += lineHeight;
 
-    // Transactions table
-    if (reportData.transactions && reportData.transactions.length > 0) {
-      doc.text("Transaction Details", 14, doc.lastAutoTable.finalY + 10);
+    // === Prepare Table Data ===
+    const debitTransactions = reportData.transactions.filter((t) =>
+      ["primary"].includes(t.type.toLowerCase())
+    );
+    const creditTransactions = reportData.transactions.filter((t) =>
+      ["payment", "office return", "return"].includes(t.type.toLowerCase())
+    );
 
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 15,
-        head: [["Date", "Type", "Amount", "Created By", "Remarks"]],
-        body: reportData.transactions.map((txn) => [
-          dayjs(txn.date).format("DD-MM-YY"),
-          txn.type,
-          txn.amount.toFixed(2),
-          txn.createdBy,
-          txn.remarks || "",
-        ]),
-        styles: { fontSize: 8 },
-        columnStyles: {
-          0: { cellWidth: 20 },
-          1: { cellWidth: 20 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 30 },
-          4: { cellWidth: "auto" },
-        },
+    if (reportData.openingDue > 0) {
+      debitTransactions.unshift({
+        date: dateRange.start,
+        type: "OPENING",
+        amount: reportData.openingDue,
       });
     }
 
+    const maxRows = Math.max(
+      debitTransactions.length,
+      creditTransactions.length
+    );
+    const tableBody = [];
+
+    for (let i = 0; i < maxRows; i++) {
+      const debit = debitTransactions[i] || {};
+      const credit = creditTransactions[i] || {};
+
+      tableBody.push([
+        debit.date ? dayjs(debit.date).format("DD-MMM-YY") : "",
+        debit.type ? debit.type.toUpperCase().replace(/_/g, " ") : "",
+        debit.amount ? debit.amount.toFixed(2) : "",
+        credit.date ? dayjs(credit.date).format("DD-MMM-YY") : "",
+        credit.type
+          ? `${credit.type.toUpperCase().replace(/_/g, " ")}${
+              credit.paymentMode ? ` (${credit.paymentMode.toUpperCase()})` : ""
+            }`
+          : "",
+        credit.amount ? credit.amount.toFixed(2) : "",
+      ]);
+    }
+
+    // === Draw Table (Header + Body) ===
+    const colWidths = [20, 40, 25, 20, 40, 25];
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      head: [
+        [
+          "Date",
+          "Particulars",
+          "Debit",
+          "Date",
+          "Particulars",
+          "Credit",
+        ],
+      ],
+      body: tableBody,
+      margin: { left: leftMargin, right: rightMargin },
+      columnStyles: {
+        0: { cellWidth: colWidths[0] },
+        1: { cellWidth: colWidths[1] },
+        2: { cellWidth: colWidths[2], halign: "right" },
+        3: { cellWidth: colWidths[3] },
+        4: { cellWidth: colWidths[4] },
+        5: { cellWidth: colWidths[5], halign: "right" },
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 2,
+        overflow: "linebreak",
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [220, 220, 220],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+        halign: "center",
+      },
+      bodyStyles: {
+        lineWidth: 0.1,
+      },
+    });
+
+    const tableEndY = doc.lastAutoTable.finalY + 10;
+
+    // === Summary Section ===
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.line(leftMargin, tableEndY, pageWidth - rightMargin, tableEndY);
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.text("Closing Balance", leftMargin, tableEndY + 10);
+    doc.text(
+      reportData.closingDue.toFixed(2),
+      pageWidth - rightMargin,
+      tableEndY + 10,
+      { align: "right" }
+    );
+
+    // === Footer Section ===
+    const footerY = tableEndY + 25;
+    doc.setFont(undefined, "normal");
+    doc.text("Yours faithfully,", leftMargin, footerY + 10);
+    doc.text("Authorized Signatory", leftMargin, footerY + 26);
+
+    // === Save File ===
     doc.save(
-      `Financial_Report_${selectedArea || "all"}_${dayjs().format(
-        "YYYYMMDD"
-      )}.pdf`
+      `Account_Statement_${selectedArea}_${dayjs().format("YYYYMMDD")}.pdf`
     );
   };
+
+  // const exportToPDF = () => {
+  //   if (!reportData) return;
+
+  //   const doc = new jsPDF({
+  //     orientation: "portrait",
+  //     unit: "mm",
+  //   });
+
+  //   doc.setFontSize(14);
+  //   doc.text(
+  //     `${selectedType === "outlet" ? "Outlet" : selectedType}: ${
+  //       selectedArea || ""
+  //     }`,
+  //     14,
+  //     15
+  //   );
+  //   doc.text(
+  //     `Period: ${dayjs(dateRange.start).format("DD-MM-YY")} to ${dayjs(
+  //       dateRange.end
+  //     ).format("DD-MM-YY")}`,
+  //     14,
+  //     22
+  //   );
+
+  //   // Summary table
+  //   autoTable(doc, {
+  //     startY: 30,
+  //     head: [["Item", "Amount"]],
+  //     body: [
+  //       ["Opening Due", reportData.openingDue.toFixed(2)],
+  //       ["Primary Added", reportData.primary.toFixed(2)],
+  //       ["Payments", reportData.payment.toFixed(2)],
+  //       ["Office Returns", reportData.officeReturn.toFixed(2)],
+  //       ["Closing Due", reportData.closingDue.toFixed(2)],
+  //     ],
+  //     theme: "grid",
+  //     headStyles: {
+  //       fillColor: [41, 128, 185],
+  //       textColor: 255,
+  //     },
+  //   });
+
+  //   // Transactions table
+  //   if (reportData.transactions && reportData.transactions.length > 0) {
+  //     doc.text("Transaction Details", 14, doc.lastAutoTable.finalY + 10);
+
+  //     autoTable(doc, {
+  //       startY: doc.lastAutoTable.finalY + 15,
+  //       head: [["Date", "Type", "Amount", "Created By", "Remarks"]],
+  //       body: reportData.transactions.map((txn) => [
+  //         dayjs(txn.date).format("DD-MM-YY"),
+  //         txn.type,
+  //         txn.amount.toFixed(2),
+  //         txn.createdBy,
+  //         txn.remarks || "",
+  //       ]),
+  //       styles: { fontSize: 8 },
+  //       columnStyles: {
+  //         0: { cellWidth: 20 },
+  //         1: { cellWidth: 20 },
+  //         2: { cellWidth: 20 },
+  //         3: { cellWidth: 30 },
+  //         4: { cellWidth: "auto" },
+  //       },
+  //     });
+  //   }
+
+  //   doc.save(
+  //     `Financial_Report_${selectedArea || "all"}_${dayjs().format(
+  //       "YYYYMMDD"
+  //     )}.pdf`
+  //   );
+  // };
 
   return (
     <div className="flex">
