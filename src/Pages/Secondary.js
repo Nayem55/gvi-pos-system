@@ -4,7 +4,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-export default function Secondary({ stock, setStock }) {
+export default function Secondary({ stock, setStock, getStockValue }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [cart, setCart] = useState(
@@ -246,6 +246,7 @@ export default function Secondary({ stock, setStock }) {
       setCart([]);
       localStorage.removeItem("cart");
       toast.success("Sales report submitted");
+      getStockValue(user.outlet);
     } catch (error) {
       console.error("Error updating outlet stock:", error);
       toast.error("Failed to submit sales report");
