@@ -206,6 +206,9 @@ const Accounts = () => {
       });
     }
 
+    let totalDebit = 0;
+    let totalCredit = 0;
+
     const maxRows = Math.max(
       debitTransactions.length,
       creditTransactions.length
@@ -216,35 +219,42 @@ const Accounts = () => {
       const debit = debitTransactions[i] || {};
       const credit = creditTransactions[i] || {};
 
+      const debitAmount = debit.amount || 0;
+      const creditAmount = credit.amount || 0;
+
+      totalDebit += debitAmount;
+      totalCredit += creditAmount;
+
       tableBody.push([
         debit.date ? dayjs(debit.date).format("DD-MMM-YY") : "",
         debit.type ? debit.type.toUpperCase().replace(/_/g, " ") : "",
-        debit.amount ? debit.amount.toFixed(2) : "",
+        debitAmount ? debitAmount.toFixed(2) : "",
         credit.date ? dayjs(credit.date).format("DD-MMM-YY") : "",
         credit.type
           ? `${credit.type.toUpperCase().replace(/_/g, " ")}${
               credit.paymentMode ? ` (${credit.paymentMode.toUpperCase()})` : ""
             }`
           : "",
-        credit.amount ? credit.amount.toFixed(2) : "",
+        creditAmount ? creditAmount.toFixed(2) : "",
       ]);
     }
+
+    // Add total row at the end
+    tableBody.push([
+      "", // empty cell
+      "TOTAL", // label for debit
+      totalDebit.toFixed(2), // total debit
+      "", // empty cell
+      "TOTAL", // label for credit
+      totalCredit.toFixed(2), // total credit
+    ]);
 
     // === Draw Table (Header + Body) ===
     const colWidths = [20, 40, 25, 20, 40, 25];
 
     autoTable(doc, {
       startY: currentY + 5,
-      head: [
-        [
-          "Date",
-          "Particulars",
-          "Debit",
-          "Date",
-          "Particulars",
-          "Credit",
-        ],
-      ],
+      head: [["Date", "Particulars", "Debit", "Date", "Particulars", "Credit"]],
       body: tableBody,
       margin: { left: leftMargin, right: rightMargin },
       columnStyles: {
@@ -269,6 +279,14 @@ const Accounts = () => {
       },
       bodyStyles: {
         lineWidth: 0.1,
+      },
+      didDrawCell: (data) => {
+        if (
+          data.row.index === tableBody.length - 1 &&
+          data.column.index === 1
+        ) {
+          doc.setFont("bold");
+        }
       },
     });
 
