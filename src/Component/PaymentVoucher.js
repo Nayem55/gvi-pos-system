@@ -18,7 +18,36 @@ export default function PaymentVoucher({
     date: new Date().toISOString().split("T")[0],
   });
 
-  const [loading, setLoading] = useState(false); // ✅ Loading state
+  const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false); // New state for image upload loading
+  const [image, setImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const CLOUDINARY_URL =
+    "https://api.cloudinary.com/v1_1/dodxop7lz/image/upload";
+  const UPLOAD_PRESET = "ebay-memo";
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    setImage(file);
+
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", UPLOAD_PRESET);
+
+      setImageUploading(true); // Start image upload loading
+      try {
+        const res = await axios.post(CLOUDINARY_URL, formData);
+        setImageUrl(res.data.secure_url);
+        toast.success("Image uploaded successfully");
+      } catch (error) {
+        toast.error("Image upload failed");
+        console.error("Cloudinary Upload Error:", error);
+      } finally {
+        setImageUploading(false); // End image upload loading
+      }
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,12 +56,14 @@ export default function PaymentVoucher({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // ✅ Start loading
-    const formattedDateTime = dayjs(formData.date).format("YYYY-MM-DD HH:mm:ss");
+    setLoading(true);
+    const formattedDateTime = dayjs(formData.date).format(
+      "YYYY-MM-DD HH:mm:ss"
+    );
 
     try {
       const dueResponse = await axios.put(
-        "https://gvi-pos-server.vercel.app/update-due",
+        "http://localhost:5000/update-due",
         {
           outlet: user.outlet,
           currentDue: currentDue - parseFloat(formData.amount),
@@ -43,7 +74,7 @@ export default function PaymentVoucher({
         throw new Error("Failed to update due amount");
       }
 
-      await axios.post("https://gvi-pos-server.vercel.app/money-transfer", {
+      await axios.post("http://localhost:5000/money-transfer", {
         outlet: user.outlet,
         amount: parseFloat(formData.amount),
         asm: user.asm,
@@ -54,6 +85,7 @@ export default function PaymentVoucher({
         bank: formData.bank || "",
         date: formattedDateTime,
         createdBy: user.name,
+        imageUrl,
       });
 
       toast.success("Payment voucher submitted successfully!");
@@ -69,7 +101,7 @@ export default function PaymentVoucher({
       toast.error("Failed to submit payment");
       console.error("Error:", error);
     } finally {
-      setLoading(false); // ✅ Stop loading
+      setLoading(false);
     }
   };
 
@@ -126,7 +158,9 @@ export default function PaymentVoucher({
 
         {formData.paymentMode === "bank" && (
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Select Bank</label>
+            <label className="block text-sm font-medium mb-1">
+              Select Bank
+            </label>
             <select
               name="bank"
               value={formData.bank}
@@ -140,6 +174,50 @@ export default function PaymentVoucher({
             </select>
           </div>
         )}
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            Upload Proof Image
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="w-full p-2 border border-gray-300 rounded"
+            disabled={imageUploading}
+          />
+          {imageUploading ? (
+            <div className="mt-2 flex items-center">
+              <svg
+                className="animate-spin h-5 w-5 text-green-600 mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                ></path>
+              </svg>
+              <span>Uploading image...</span>
+            </div>
+          ) : imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Preview"
+              className="mt-2 h-24 rounded border object-cover"
+            />
+          ) : null}
+        </div>
 
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Remarks</label>
@@ -157,7 +235,9 @@ export default function PaymentVoucher({
           type="submit"
           className="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md transition duration-200 flex justify-center items-center"
           disabled={
-            loading || (formData.paymentMode === "bank" && !formData.bank)
+            loading || 
+            imageUploading || // Disable when image is uploading
+            (formData.paymentMode === "bank" && !formData.bank)
           }
         >
           {loading ? (

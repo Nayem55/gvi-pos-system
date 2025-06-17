@@ -371,7 +371,9 @@ const Accounts = () => {
                     <th className="border p-2">Date</th>
                     <th className="border p-2">Dealer</th>
                     <th className="border p-2">Type</th>
+                    <th className="border p-2">Payment Mode</th>
                     <th className="border p-2">Amount</th>
+                    <th className="border p-2">Image</th>
                     <th className="border p-2">Created By</th>
                     <th className="border p-2">Remarks</th>
                   </tr>
@@ -388,8 +390,14 @@ const Accounts = () => {
                       <td className="border p-2 capitalize">
                         {txn.type.replace("_", " ")}
                       </td>
+                      <td className="border p-2 capitalize">
+                        {txn.paymentMode === "bank"
+                          ? `Bank (${txn.bank.replace("_", " ") || "N/A"})`
+                          : txn.paymentMode}
+                      </td>
+                      <td className="border p-2 ">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2 ">
-                        {txn.amount?.toFixed(2)}
+                        <img alt="" src={txn.imageUrl} />
                       </td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>

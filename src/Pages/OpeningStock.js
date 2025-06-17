@@ -130,10 +130,30 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
   const handleSubmit = async () => {
     if (cart.length === 0) return;
-
     setIsSubmitting(true);
 
     try {
+      // Calculate total DP value of opening stock
+      const totalDPValue = cart.reduce(
+        (sum, item) => sum + item.editableDP * item.newStock,
+        0
+      );
+
+      // First update the opening due and current due
+      const dueResponse = await axios.put(
+        "https://gvi-pos-server.vercel.app/update-due",
+        {
+          outlet: user.outlet,
+          isOpeningVoucher: true,
+          newOpeningDue: totalDPValue,
+        }
+      );
+
+      if (!dueResponse.data.success) {
+        throw new Error("Failed to update due amount");
+      }
+
+      // Then process all stock updates
       const requests = cart.map(async (item) => {
         if (item.canEdit) {
           await axios.put(
@@ -169,19 +189,18 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       });
 
       await Promise.all(requests);
-      toast.success("Opening stocks updated!");
+      toast.success("Opening stocks and due updated!");
       getStockValue(user.outlet);
       setCart([]);
       setSearch("");
       setSearchResults([]);
     } catch (err) {
       console.error("Bulk update error:", err);
-      toast.error("Failed to update stocks.");
+      toast.error("Failed to update stocks and due.");
     } finally {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
       {/* Date & Outlet Stock */}
