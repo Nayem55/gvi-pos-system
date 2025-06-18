@@ -61,6 +61,7 @@ const AlterUsersPage = () => {
               <tr>
                 <th className="border p-2">Name</th>
                 <th className="border p-2">Phone</th>
+                <th className="border p-2">Password</th>
                 <th className="border p-2">Role</th>
                 <th className="border p-2">Group</th>
                 <th className="border p-2">Zone</th>
@@ -96,6 +97,18 @@ const AlterUsersPage = () => {
                       />
                     ) : (
                       user.number
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    {editingUser?._id === user._id ? (
+                      <input
+                        type="tel"
+                        value={editingUser.password}
+                        onChange={(e) => handleInputChange(e, "password")}
+                        className="border p-1 w-full"
+                      />
+                    ) : (
+                      user.password
                     )}
                   </td>
                   <td className="border p-2">
