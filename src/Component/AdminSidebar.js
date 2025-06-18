@@ -24,6 +24,7 @@ const AdminSidebar = () => {
   const [salesDropdown1Open, setSalesDropdown1Open] = useState(false);
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
   const [alterDropdownOpen, setAlterDropdownOpen] = useState(false);
+  const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
   const location = useLocation();
 
   // Sidebar navigation items
@@ -33,11 +34,6 @@ const AdminSidebar = () => {
       name: "Manage Stock",
       path: "/admin/manage-stock",
       icon: <Layers size={20} />,
-    },
-    {
-      name: "Monthly Target",
-      path: "/admin/monthly-target",
-      icon: <Target size={20} />,
     },
     {
       name: "Promotion Plan",
@@ -88,6 +84,39 @@ const AdminSidebar = () => {
               <span>{item.name}</span>
             </Link>
           ))}
+
+          {/* Target Dropdown */}
+          <div>
+            <button
+              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
+              onClick={() => setTargetDropdownOpen(!targetDropdownOpen)}
+            >
+              <span className="flex items-center gap-3">
+                <Target size={20} />
+                Target
+              </span>
+              <ChevronDown
+                size={16}
+                className={targetDropdownOpen ? "rotate-180" : ""}
+              />
+            </button>
+            {targetDropdownOpen && (
+              <div className="ml-6 mt-2 space-y-2">
+                <Link
+                  to="/admin/monthly-target"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  Monthly Target
+                </Link>
+                <Link
+                  to="/admin/category-target"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  Category Target
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Create Dropdown */}
           <div>
