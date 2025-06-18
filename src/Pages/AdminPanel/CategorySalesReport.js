@@ -166,15 +166,17 @@ const CategoryWiseSalesReport = () => {
   const handleExportModalToExcel = () => {
     try {
       const exportData = modalData.map((outlet) => ({
+        Category: selectedCategory, // Add category column
         Outlet: outlet._id,
         "PCS Sold": outlet.total_quantity,
         "Total TP": outlet.total_tp,
         "Total MRP": outlet.total_mrp,
       }));
 
-      // Add summary row
+      // Add summary row with category info
       exportData.push({
-        Outlet: "TOTAL",
+        Category: `${selectedCategory} - TOTAL`,
+        Outlet: "",
         "PCS Sold": modalSummary.totalQuantity,
         "Total TP": modalSummary.totalTP,
         "Total MRP": modalSummary.totalMRP,
@@ -183,31 +185,39 @@ const CategoryWiseSalesReport = () => {
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       const workbook = XLSX.utils.book_new();
 
-      // Create safe sheet name (max 31 chars, no special chars)
+      // Create safe sheet name
       const sheetName = `Sales-${selectedCategory}`
-        .substring(0, 28) // Leave room for possible truncation
-        .replace(/[\\/*?:[\]]/g, "") // Remove invalid Excel chars
+        .substring(0, 28)
+        .replace(/[\\/*?:[\]]/g, "")
         .trim();
 
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+      // Auto-size columns
+      const wscols = [
+        { wch: Math.max(20, selectedCategory.length + 5) }, // Category column
+        { wch: 20 }, // Outlet column
+        { wch: 10 }, // PCS Sold
+        { wch: 15 }, // Total TP
+        { wch: 15 }, // Total MRP
+      ];
+      worksheet["!cols"] = wscols;
 
       const excelBuffer = XLSX.write(workbook, {
         bookType: "xlsx",
         type: "array",
       });
 
-      // Create safe filename
-      const fileName =
-        `OutletSales-${selectedCategory}`
-          .substring(0, 50) // Reasonable filename length
-          .replace(/[\\/*?:[\]]/g, "") // Remove invalid filename chars
-          .trim() + `.xlsx`;
+      const fileName = `OutletSales-${selectedCategory}-${dayjs().format(
+        "YYYY-MM-DD"
+      )}.xlsx`;
 
       const fileData = new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
       saveAs(fileData, fileName);
+      toast.success("Excel file downloaded successfully");
     } catch (error) {
       console.error("Error exporting to Excel:", error);
       toast.error("Failed to export data. Please try again.");
