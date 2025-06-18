@@ -106,13 +106,13 @@ const AdminSidebar = () => {
                   to="/admin/monthly-target"
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
                 >
-                  Monthly Target
+                  Total Target
                 </Link>
                 <Link
                   to="/admin/category-target"
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
                 >
-                  Category Target
+                  Category Wise Target
                 </Link>
               </div>
             )}
@@ -230,6 +230,12 @@ const AdminSidebar = () => {
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
                 >
                   Dealer Wise
+                </Link>
+                <Link
+                  to="/admin/sales-movement/brand-wise"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  Brand Wise
                 </Link>
                 <Link
                   to="/admin/sales-movement/product-wise"

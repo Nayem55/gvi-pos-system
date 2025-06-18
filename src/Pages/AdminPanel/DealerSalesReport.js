@@ -19,7 +19,6 @@ const DealerSalesReport = () => {
   // State for all raw data
   const [allUsers, setAllUsers] = useState([]);
   const [allSalesReports, setAllSalesReports] = useState({});
-  const [allStockMovementData, setAllStockMovementData] = useState({});
   const [allTargets, setAllTargets] = useState({});
 
   // Filter and display state
@@ -34,7 +33,6 @@ const DealerSalesReport = () => {
   const [loading, setLoading] = useState({
     initialLoad: true,
     sales: false,
-    stock: false,
     targets: false,
   });
   const [error, setError] = useState(null);
@@ -85,12 +83,12 @@ const DealerSalesReport = () => {
     }
   }, [selectedMonth]);
 
-  // Fetch sales and stock data when month/date range changes
+  // Fetch sales data when month/date range changes
   const fetchReportData = useCallback(async () => {
     if (allUsers.length === 0) return;
 
     try {
-      setLoading((prev) => ({ ...prev, sales: true, stock: true }));
+      setLoading((prev) => ({ ...prev, sales: true }));
       setError(null);
 
       // Prepare date parameters
@@ -116,31 +114,11 @@ const DealerSalesReport = () => {
         return acc;
       }, {});
       setAllSalesReports(salesData);
-
-      // Fetch stock movement data for all outlets
-      const allOutlets = [
-        ...new Set(allUsers.map((u) => u.outlet).filter(Boolean)),
-      ];
-      const stockPromises = allOutlets.map((outlet) =>
-        api
-          .get("/stock-movement-report", {
-            params: { outlet, month: selectedMonth },
-          })
-          .then((response) => ({ outlet, data: response.data?.data || [] }))
-          .catch(() => ({ outlet, data: [] }))
-      );
-
-      const stockResults = await Promise.all(stockPromises);
-      const stockData = stockResults.reduce((acc, { outlet, data }) => {
-        acc[outlet] = data;
-        return acc;
-      }, {});
-      setAllStockMovementData(stockData);
     } catch (error) {
       console.error("Error fetching report data:", error);
       setError("Failed to load report data. Please try again.");
     } finally {
-      setLoading((prev) => ({ ...prev, sales: false, stock: false }));
+      setLoading((prev) => ({ ...prev, sales: false }));
     }
   }, [allUsers, selectedMonth, startDate, endDate]);
 
@@ -177,9 +155,6 @@ const DealerSalesReport = () => {
     return filteredUsers.map((user) => {
       let totalReports = 0;
       let totalTP = 0;
-      let totalPrimary = 0;
-      let totalOfficeReturn = 0;
-      let totalMarketReturn = 0;
 
       if (["ASM", "RSM", "SOM"].includes(user.role)) {
         // For managers, calculate based on their team
@@ -199,41 +174,6 @@ const DealerSalesReport = () => {
             ) || 0),
           0
         );
-
-        // Stock movement data - get all unique outlets from team members
-        const teamOutlets = [
-          ...new Set(teamMembers.map((m) => m.outlet).filter(Boolean)),
-        ];
-
-        totalPrimary = teamOutlets.reduce((sum, outlet) => {
-          const outletData = allStockMovementData[outlet] || [];
-          return (
-            sum +
-            outletData.reduce((subSum, item) => subSum + (item.primary || 0), 0)
-          );
-        }, 0);
-
-        totalOfficeReturn = teamOutlets.reduce((sum, outlet) => {
-          const outletData = allStockMovementData[outlet] || [];
-          return (
-            sum +
-            outletData.reduce(
-              (subSum, item) => subSum + (item.officeReturn || 0),
-              0
-            )
-          );
-        }, 0);
-
-        totalMarketReturn = teamOutlets.reduce((sum, outlet) => {
-          const outletData = allStockMovementData[outlet] || [];
-          return (
-            sum +
-            outletData.reduce(
-              (subSum, item) => subSum + (item.marketReturn || 0),
-              0
-            )
-          );
-        }, 0);
       } else {
         // For regular users
         totalReports = allSalesReports[user._id]?.length || 0;
@@ -242,21 +182,6 @@ const DealerSalesReport = () => {
             (sum, report) => sum + (report.total_tp || 0),
             0
           ) || 0;
-
-        // Stock movement data from their outlet
-        const outletData = allStockMovementData[user.outlet] || [];
-        totalPrimary = outletData.reduce(
-          (sum, item) => sum + (item.primary || 0),
-          0
-        );
-        totalOfficeReturn = outletData.reduce(
-          (sum, item) => sum + (item.officeReturn || 0),
-          0
-        );
-        totalMarketReturn = outletData.reduce(
-          (sum, item) => sum + (item.marketReturn || 0),
-          0
-        );
       }
 
       const target = getUserTarget(user._id);
@@ -270,45 +195,14 @@ const DealerSalesReport = () => {
         role: user.role,
         totalReports,
         totalTP,
-        totalPrimary,
-        totalOfficeReturn,
-        totalMarketReturn,
         target,
         achievement,
       };
     });
-  }, [
-    filteredUsers,
-    allUsers,
-    allSalesReports,
-    allStockMovementData,
-    getUserTarget,
-  ]);
+  }, [filteredUsers, allUsers, allSalesReports, getUserTarget]);
 
   // Calculate totals
-  const {
-    totalDealers,
-    totalReports,
-    totalTP,
-    totalPrimary,
-    totalOfficeReturn,
-    totalMarketReturn,
-  } = useMemo(() => {
-    const uniqueOutlets = new Set(
-      filteredUsers
-        .map((user) => {
-          if (["ASM", "RSM", "SOM"].includes(user.role)) {
-            const teamMembers = allUsers.filter((u) =>
-              u.zone.includes(user.zone)
-            );
-            return teamMembers.map((member) => member.outlet).filter(Boolean);
-          }
-          return user.outlet;
-        })
-        .flat()
-        .filter(Boolean)
-    );
-
+  const { totalDealers, totalReports, totalTP } = useMemo(() => {
     return {
       totalDealers: filteredUsers.length,
       totalReports: aggregatedReports.reduce(
@@ -316,35 +210,8 @@ const DealerSalesReport = () => {
         0
       ),
       totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
-      totalPrimary: Array.from(uniqueOutlets).reduce(
-        (sum, outlet) =>
-          sum +
-          (allStockMovementData[outlet] || []).reduce(
-            (subSum, item) => subSum + (item.primary || 0),
-            0
-          ),
-        0
-      ),
-      totalOfficeReturn: Array.from(uniqueOutlets).reduce(
-        (sum, outlet) =>
-          sum +
-          (allStockMovementData[outlet] || []).reduce(
-            (subSum, item) => subSum + (item.officeReturn || 0),
-            0
-          ),
-        0
-      ),
-      totalMarketReturn: Array.from(uniqueOutlets).reduce(
-        (sum, outlet) =>
-          sum +
-          (allStockMovementData[outlet] || []).reduce(
-            (subSum, item) => subSum + (item.marketReturn || 0),
-            0
-          ),
-        0
-      ),
     };
-  }, [filteredUsers, allUsers, aggregatedReports, allStockMovementData]);
+  }, [filteredUsers, aggregatedReports]);
 
   // Initial data load
   useEffect(() => {
@@ -363,8 +230,7 @@ const DealerSalesReport = () => {
     fetchReportData();
   }, [fetchReportData]);
 
-  const isLoading =
-    loading.initialLoad || loading.sales || loading.stock || loading.targets;
+  const isLoading = loading.initialLoad || loading.sales || loading.targets;
 
   const exportToExcel = () => {
     const exportData = aggregatedReports.map((report) => ({
@@ -372,9 +238,6 @@ const DealerSalesReport = () => {
       Outlet: report.outlet,
       Zone: report.zone,
       Role: report.role,
-      "Total Primary": `৳${report.totalPrimary.toFixed(2)}`,
-      "Office Return": `৳${report.totalOfficeReturn.toFixed(2)}`,
-      "Market Return": `৳${report.totalMarketReturn.toFixed(2)}`,
       Target: `৳${report.target}`,
       "Total TP": `৳${report.totalTP.toFixed(2)}`,
       "Achievement (%)": `${report.achievement.toFixed(1)}%`,
@@ -434,20 +297,6 @@ const DealerSalesReport = () => {
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Total TP Sales</h3>
             <p className="text-xl font-bold">৳{totalTP.toFixed(2)}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-purple-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Primary</h3>
-            <p className="text-xl font-bold">৳{totalPrimary.toFixed(2)}</p>
-          </div>
-          <div className="bg-red-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Office Return</h3>
-            <p className="text-xl font-bold">৳{totalOfficeReturn.toFixed(2)}</p>
-          </div>
-          <div className="bg-pink-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Market Return</h3>
-            <p className="text-xl font-bold">৳{totalMarketReturn.toFixed(2)}</p>
           </div>
         </div>
 
@@ -547,38 +396,17 @@ const DealerSalesReport = () => {
           </div>
         ) : (
           <div className="relative overflow-auto max-h-[90vh]">
-            {" "}
-            {/* Adjust height as needed */}
-            <table className="w-full border-collapse ">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-100 sticky top-0 z-10">
-                  <th className=" p-2 sticky top-0 bg-gray-100">User</th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Outlet
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">Zone</th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">Role</th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Primary
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Office Return
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Market Return
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Target
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Total TP
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Achievement (%)
-                  </th>
-                  <th className=" p-2 sticky top-0 bg-gray-100">
-                    Action
-                  </th>
+                  <th className="p-2 sticky top-0 bg-gray-100">User</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Outlet</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Zone</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Role</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Target</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Total TP</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Achievement (%)</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -588,19 +416,6 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.outlet || "-"}</td>
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
-                    <td className="border p-2">
-                      {user.totalPrimary > 0 ? user.totalPrimary.toFixed(2) : 0}
-                    </td>
-                    <td className="border p-2">
-                      {user.totalOfficeReturn > 0
-                        ? user.totalOfficeReturn.toFixed(2)
-                        : 0}
-                    </td>
-                    <td className="border p-2">
-                      {user.totalMarketReturn > 0
-                        ? user.totalMarketReturn.toFixed(2)
-                        : 0}
-                    </td>
                     <td className="border p-2">৳{user.target}</td>
                     <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
                     <td className="border p-2">
