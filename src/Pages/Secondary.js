@@ -188,6 +188,10 @@ export default function Secondary({ stock, setStock, getStockValue }) {
 
       const saleEntry = {
         user: user._id,
+        asm: user.asm,
+        rsm: user.rsm,
+        som: user.som,
+        zone: user.zone,
         outlet: user.outlet,
         route: route,
         memo: menu,
@@ -228,6 +232,7 @@ export default function Secondary({ stock, setStock, getStockValue }) {
             type: "secondary",
             asm: user.asm,
             rsm: user.rsm,
+            som: user.som,
             zone: user.zone,
             quantity: item.pcs,
             date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),

@@ -174,6 +174,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
             outlet: user.outlet,
             asm: user.asm,
             rsm: user.rsm,
+            som: user.som,
             zone: user.zone,
             type: "primary",
             quantity: item.primary,
