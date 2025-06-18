@@ -208,6 +208,7 @@ export default function Secondary({ stock, setStock, getStockValue }) {
         products: cart.map((item) => ({
           product_name: item.name,
           category: item.category,
+          brand: item.brand,
           barcode: item.barcode,
           quantity: item.pcs,
           tp: item.editableTP * item.pcs,

@@ -32,6 +32,7 @@ import AlterCategoriesPage from "../Pages/AlterCategoriesPage";
 import CreateOutletPage from "../Pages/CreateOutletPage";
 import AlterOutletsPage from "../Pages/AlterOutletsPage";
 import CategoryTargetPage from "../Pages/CategoryTargetPage";
+import BrandWiseSalesReport from "../Pages/BrandsSaleReport";
 
 const router = createBrowserRouter([
   {
@@ -138,6 +139,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/sales-movement/category-wise",
         element: <CategoryWiseSalesReport/>,
+      },
+      {
+        path: "/admin/sales-movement/brand-wise",
+        element: <BrandWiseSalesReport/>,
       },
       {
         path: "/admin/sales-movement/category-wise/detail/:category",
