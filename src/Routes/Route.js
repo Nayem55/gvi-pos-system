@@ -31,6 +31,7 @@ import CreateCategoryPage from "../Pages/CreateCategoryPage";
 import AlterCategoriesPage from "../Pages/AlterCategoriesPage";
 import CreateOutletPage from "../Pages/CreateOutletPage";
 import AlterOutletsPage from "../Pages/AlterOutletsPage";
+import CategoryTargetPage from "../Pages/CategoryTargetPage";
 
 const router = createBrowserRouter([
   {
@@ -161,6 +162,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/monthly-target",
         element: <MonthlyTargetPage/>,
+      },
+      {
+        path: "/admin/category-target",
+        element: <CategoryTargetPage/>,
       },
       {
         path: "/admin/daily/dealer-sales-report",
