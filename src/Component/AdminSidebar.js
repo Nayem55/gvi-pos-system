@@ -106,7 +106,7 @@ const AdminSidebar = () => {
                   to="/admin/monthly-target"
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
                 >
-                  Total Target
+                  Sale Target
                 </Link>
                 <Link
                   to="/admin/category-target"
@@ -229,7 +229,7 @@ const AdminSidebar = () => {
                   to="/admin/sales-movement/dealer-wise"
                   className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
                 >
-                  Dealer Wise
+                  User Wise
                 </Link>
                 <Link
                   to="/admin/sales-movement/brand-wise"

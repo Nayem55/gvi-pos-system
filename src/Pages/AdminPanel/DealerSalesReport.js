@@ -150,68 +150,72 @@ const DealerSalesReport = () => {
     });
   }, [allUsers, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
 
-  // Aggregate reports data with proper calculations
+  // Aggregate reports data with proper calculations and filter out empty/zero sales
   const aggregatedReports = useMemo(() => {
-    return filteredUsers.map((user) => {
-      let totalReports = 0;
-      let totalTP = 0;
+    return filteredUsers
+      .map((user) => {
+        let totalReports = 0;
+        let totalTP = 0;
 
-      if (["ASM", "RSM", "SOM"].includes(user.role)) {
-        // For managers, calculate based on their team
-        const teamMembers = allUsers.filter((u) => u.zone.includes(user.zone));
+        if (["ASM", "RSM", "SOM"].includes(user.role)) {
+          // For managers, calculate based on their team
+          const teamMembers = allUsers.filter((u) => u.zone.includes(user.zone));
 
-        // Sales data
-        totalReports = teamMembers.reduce(
-          (sum, member) => sum + (allSalesReports[member._id]?.length || 0),
-          0
-        );
-        totalTP = teamMembers.reduce(
-          (sum, member) =>
-            sum +
-            (allSalesReports[member._id]?.reduce(
-              (subSum, report) => subSum + (report.total_tp || 0),
-              0
-            ) || 0),
-          0
-        );
-      } else {
-        // For regular users
-        totalReports = allSalesReports[user._id]?.length || 0;
-        totalTP =
-          allSalesReports[user._id]?.reduce(
-            (sum, report) => sum + (report.total_tp || 0),
+          // Sales data
+          totalReports = teamMembers.reduce(
+            (sum, member) => sum + (allSalesReports[member._id]?.length || 0),
             0
-          ) || 0;
-      }
+          );
+          totalTP = teamMembers.reduce(
+            (sum, member) =>
+              sum +
+              (allSalesReports[member._id]?.reduce(
+                (subSum, report) => subSum + (report.total_tp || 0),
+                0
+              ) || 0),
+            0
+          );
+        } else {
+          // For regular users
+          totalReports = allSalesReports[user._id]?.length || 0;
+          totalTP =
+            allSalesReports[user._id]?.reduce(
+              (sum, report) => sum + (report.total_tp || 0),
+              0
+            ) || 0;
+        }
 
-      const target = getUserTarget(user._id);
-      const achievement = target > 0 ? (totalTP / target) * 100 : 0;
+        // Skip users with no sales reports or zero TP
+        if (totalReports === 0 || totalTP === 0) return null;
 
-      return {
-        userId: user._id,
-        name: user.name,
-        outlet: user.outlet,
-        zone: user.zone,
-        role: user.role,
-        totalReports,
-        totalTP,
-        target,
-        achievement,
-      };
-    });
+        const target = getUserTarget(user._id);
+        const achievement = target > 0 ? (totalTP / target) * 100 : 0;
+
+        return {
+          userId: user._id,
+          name: user.name,
+          outlet: user.outlet,
+          zone: user.zone,
+          role: user.role,
+          totalReports,
+          totalTP,
+          target,
+          achievement,
+        };
+      })
+      .filter(Boolean); // Remove null entries
   }, [filteredUsers, allUsers, allSalesReports, getUserTarget]);
 
-  // Calculate totals
-  const { totalDealers, totalReports, totalTP } = useMemo(() => {
+  // Calculate totals for active dealers only
+  const { totalDealers, achievedTargetCount, totalTP } = useMemo(() => {
     return {
-      totalDealers: filteredUsers.length,
-      totalReports: aggregatedReports.reduce(
-        (sum, user) => sum + user.totalReports,
-        0
-      ),
+      totalDealers: aggregatedReports.length,
+      achievedTargetCount: aggregatedReports.filter(
+        (user) => user.achievement >= 100
+      ).length,
       totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
     };
-  }, [filteredUsers, aggregatedReports]);
+  }, [aggregatedReports]);
 
   // Initial data load
   useEffect(() => {
@@ -235,12 +239,12 @@ const DealerSalesReport = () => {
   const exportToExcel = () => {
     const exportData = aggregatedReports.map((report) => ({
       "User Name": report.name,
-      Outlet: report.outlet,
+      Outlet: report.outlet || "-",
       Zone: report.zone,
       Role: report.role,
-      Target: `৳${report.target}`,
-      "Total TP": `৳${report.totalTP.toFixed(2)}`,
-      "Achievement (%)": `${report.achievement.toFixed(1)}%`,
+      Target: report.target,
+      "Total TP": report.totalTP.toFixed(2),
+      "Achievement (%)": report.achievement.toFixed(1),
     }));
 
     const wb = XLSX.utils.book_new();
@@ -273,7 +277,7 @@ const DealerSalesReport = () => {
           <button
             onClick={exportToExcel}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
-            disabled={isLoading}
+            disabled={isLoading || aggregatedReports.length === 0}
           >
             Export to Excel
           </button>
@@ -287,16 +291,18 @@ const DealerSalesReport = () => {
 
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Dealers</h3>
+            <h3 className="text-lg font-semibold">Active Dealers</h3>
             <p className="text-xl font-bold">{totalDealers}</p>
           </div>
           <div className="bg-green-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Sales Reports</h3>
-            <p className="text-xl font-bold">{totalReports}</p>
+            <h3 className="text-lg font-semibold">Achieved Target</h3>
+            <p className="text-xl font-bold">
+              {achievedTargetCount} / {totalDealers}
+            </p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total TP Sales</h3>
-            <p className="text-xl font-bold">৳{totalTP.toFixed(2)}</p>
+            <h3 className="text-lg font-semibold">Total TP</h3>
+            <p className="text-xl font-bold">{totalTP.toFixed(2)}</p>
           </div>
         </div>
 
@@ -394,6 +400,12 @@ const DealerSalesReport = () => {
           <div className="flex justify-center items-center my-10">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
           </div>
+        ) : aggregatedReports.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-lg text-gray-600">
+              No sales data found for the selected filters
+            </p>
+          </div>
         ) : (
           <div className="relative overflow-auto max-h-[90vh]">
             <table className="w-full border-collapse">
@@ -403,9 +415,9 @@ const DealerSalesReport = () => {
                   <th className="p-2 sticky top-0 bg-gray-100">Outlet</th>
                   <th className="p-2 sticky top-0 bg-gray-100">Zone</th>
                   <th className="p-2 sticky top-0 bg-gray-100">Role</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Target</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Total TP</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Achievement (%)</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Target (TP)</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Sales (TP)</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Achievement</th>
                   <th className="p-2 sticky top-0 bg-gray-100">Action</th>
                 </tr>
               </thead>
@@ -416,8 +428,8 @@ const DealerSalesReport = () => {
                     <td className="border p-2">{user.outlet || "-"}</td>
                     <td className="border p-2">{user.zone}</td>
                     <td className="border p-2">{user.role}</td>
-                    <td className="border p-2">৳{user.target}</td>
-                    <td className="border p-2">৳{user.totalTP.toFixed(2)}</td>
+                    <td className="border p-2">{user.target}</td>
+                    <td className="border p-2">{user.totalTP.toFixed(2)}</td>
                     <td className="border p-2">
                       <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
                         <div
@@ -455,7 +467,7 @@ const DealerSalesReport = () => {
                           )
                         }
                       >
-                        View Daily Report
+                        Details
                       </button>
                     </td>
                   </tr>
