@@ -188,6 +188,7 @@ export default function Secondary({ stock, setStock, getStockValue }) {
 
       const saleEntry = {
         user: user._id,
+        so: user.name,
         asm: user.asm,
         rsm: user.rsm,
         som: user.som,

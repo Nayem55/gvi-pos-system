@@ -461,6 +461,7 @@ const CategoryWiseSalesReport = () => {
                 <table className="w-full border-collapse border border-gray-300">
                   <thead>
                     <tr className="bg-gray-200">
+                      <th className="border p-2 text-left">SO</th>
                       <th className="border p-2 text-left">Outlet</th>
                       <th className="border p-2 text-center">PCS Sold</th>
                       <th className="border p-2 text-center">Total TP</th>
@@ -470,7 +471,8 @@ const CategoryWiseSalesReport = () => {
                   <tbody>
                     {modalData.map((outlet) => (
                       <tr key={outlet._id} className="hover:bg-gray-50">
-                        <td className="border p-2">{outlet._id}</td>
+                        <td className="border p-2">{outlet._id.so}</td>
+                        <td className="border p-2">{outlet._id.outlet}</td>
                         <td className="border p-2 text-center">
                           {outlet.total_quantity}
                         </td>
