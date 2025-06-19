@@ -114,6 +114,12 @@ const AdminSidebar = () => {
                 >
                   Category Wise Target
                 </Link>
+                <Link
+                  to="/admin/brand-target"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  Brand Wise Target
+                </Link>
               </div>
             )}
           </div>

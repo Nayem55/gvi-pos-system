@@ -295,7 +295,7 @@ const DealerSalesReport = () => {
             <p className="text-xl font-bold">{totalDealers}</p>
           </div>
           <div className="bg-green-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Achieved Target</h3>
+            <h3 className="text-lg font-semibold">Target Achieved</h3>
             <p className="text-xl font-bold">
               {achievedTargetCount} / {totalDealers}
             </p>

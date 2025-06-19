@@ -33,6 +33,7 @@ import CreateOutletPage from "../Pages/CreateOutletPage";
 import AlterOutletsPage from "../Pages/AlterOutletsPage";
 import CategoryTargetPage from "../Pages/CategoryTargetPage";
 import BrandWiseSalesReport from "../Pages/BrandsSaleReport";
+import BrandTargetPage from "../Pages/BrandTargetPage";
 
 const router = createBrowserRouter([
   {
@@ -171,6 +172,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/category-target",
         element: <CategoryTargetPage/>,
+      },
+      {
+        path: "/admin/brand-target",
+        element: <BrandTargetPage/>,
       },
       {
         path: "/admin/daily/dealer-sales-report",
