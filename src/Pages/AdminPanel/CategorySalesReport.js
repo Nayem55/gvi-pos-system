@@ -503,7 +503,7 @@ const fetchOutletDetails = async (category) => {
             ) : (
               <>
                 {/* Modal Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 p-4 border-b">
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 p-4 border-b">
                   <div className="bg-blue-100 p-3 rounded-lg flex items-center gap-3">
                     <ClipboardCheck size={20} className="text-blue-500" />
                     <div>
@@ -531,7 +531,7 @@ const fetchOutletDetails = async (category) => {
                       </h3>
                     </div>
                   </div>
-                  <div className="bg-red-100 p-3 rounded-lg flex items-center gap-3">
+                  {/* <div className="bg-red-100 p-3 rounded-lg flex items-center gap-3">
                     <DollarSign size={20} className="text-red-500" />
                     <div>
                       <p className="text-gray-600 text-xs">Total MRP</p>
@@ -539,7 +539,7 @@ const fetchOutletDetails = async (category) => {
                         {modalSummary.totalMRP.toFixed(2)}
                       </h3>
                     </div>
-                  </div>
+                  </div> */}
                   <div className="bg-purple-100 p-3 rounded-lg flex items-center gap-3">
                     <Target size={20} className="text-purple-500" />
                     <div>
@@ -588,9 +588,9 @@ const fetchOutletDetails = async (category) => {
                             <th className="border p-2 text-left">Outlet</th>
                             <th className="border p-2 text-center">PCS Sold</th>
                             <th className="border p-2 text-center">Total TP</th>
-                            <th className="border p-2 text-center">
+                            {/* <th className="border p-2 text-center">
                               Total MRP
-                            </th>
+                            </th> */}
                             <th className="border p-2 text-center">Target</th>
                             <th className="border p-2 text-center">
                               Achievement
@@ -613,9 +613,9 @@ const fetchOutletDetails = async (category) => {
                               <td className="border p-2 text-center">
                                 {outlet.total_tp.toFixed(2)}
                               </td>
-                              <td className="border p-2 text-center">
+                              {/* <td className="border p-2 text-center">
                                 {outlet.total_mrp.toFixed(2)}
-                              </td>
+                              </td> */}
                               <td className="border p-2 text-center">
                                 {outlet.target.toFixed(2)}
                               </td>
