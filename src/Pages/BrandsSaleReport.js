@@ -170,7 +170,8 @@ const BrandWiseSalesReport = () => {
     try {
       const exportData = modalData.map((outlet) => ({
         Brand: selectedBrand,
-        Outlet: outlet._id,
+        SO: outlet._id.so,
+        Outlet: outlet._id.outlet,
         "PCS Sold": outlet.total_quantity,
         "Total TP": outlet.total_tp,
         "Total MRP": outlet.total_mrp,
