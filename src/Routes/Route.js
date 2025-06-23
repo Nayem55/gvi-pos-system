@@ -88,7 +88,7 @@ const router = createBrowserRouter([
         element: <ManageUserStock/>,
       },
       {
-        path: "/tdda",
+        path: "admin/tada",
         element: <TDDAdminPanel/>,
       },
       {

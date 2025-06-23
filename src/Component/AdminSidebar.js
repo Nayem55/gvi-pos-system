@@ -15,8 +15,8 @@ import {
   PlusCircle,
   Edit3,
 } from "lucide-react";
-import { BiCategoryAlt } from "react-icons/bi";
-import { BsShop } from "react-icons/bs";
+import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
+import { BsCash, BsCashCoin, BsShop } from "react-icons/bs";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -43,7 +43,12 @@ const AdminSidebar = () => {
     {
       name: "Accounts",
       path: "/admin/money-transaction",
-      icon: <Gift size={20} />,
+      icon: <BsCashCoin size={20} />,
+    },
+    {
+      name: "TA/DA Report",
+      path: "/admin/tada",
+      icon: <BiSolidReport size={20} />,
     },
   ];
 
