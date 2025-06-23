@@ -14,8 +14,8 @@ const TDDA = () => {
         target: '',
         secondary: '',
         collection: '',
-        date: currentDate.format('YYYY-MM-DD'), // Format for date input
-        month: currentDate.format('YYYY-MM'),    // Format for month input
+        date: currentDate.format('YYYY-MM-DD'),
+        month: currentDate.format('YYYY-MM'),
         region: '',
         dailyExpenses: Array(31).fill({
             from: '',
@@ -49,6 +49,8 @@ const TDDA = () => {
     };
 
     const [formData, setFormData] = useState(initialFormData);
+    const [isEditing, setIsEditing] = useState(false);
+    const [existingId, setExistingId] = useState(null);
 
     // Set user data on component mount
     useEffect(() => {
@@ -77,7 +79,6 @@ const TDDA = () => {
         const updatedExpenses = [...formData.dailyExpenses];
         
         if (field.includes('.')) {
-            // Handle nested fields like transport.bus
             const [parent, child] = field.split('.');
             updatedExpenses[dayIndex] = {
                 ...updatedExpenses[dayIndex],
@@ -134,9 +135,8 @@ const TDDA = () => {
         }));
     };
 
-    // Calculate totals (you can expand this with actual calculations)
+    // Calculate totals
     const calculateTotals = () => {
-        // Example calculation - you should implement your actual business logic here
         const totalExpense = formData.dailyExpenses.reduce((sum, day) => {
             return sum + (parseFloat(day.totalExpense) || 0);
         }, 0);
@@ -150,53 +150,78 @@ const TDDA = () => {
         }));
     };
 
-    // Submit form to backend
+    // Submit or update form
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         try {
-            // Calculate any final totals before submission
             calculateTotals();
 
-            const response = await fetch('https://gvi-pos-server.vercel.app/tdda', {
-                method: 'POST',
+            const url = isEditing 
+                ? `https://gvi-pos-server.vercel.app/tdda/${existingId}`
+                : 'https://gvi-pos-server.vercel.app/tdda';
+            
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('pos-token')}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(isEditing ? formData : { ...formData, _id: undefined })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to submit TDDA form');
+                throw new Error(`Failed to ${isEditing ? 'update' : 'submit'} TDDA form`);
             }
 
             const result = await response.json();
-            alert('TDDA form submitted successfully!');
-            console.log('Submission result:', result);
+            alert(`TDDA form ${isEditing ? 'updated' : 'submitted'} successfully!`);
             
-            // Optionally reset form or redirect
-            // setFormData(initialFormData);
+            if (!isEditing && result.id) {
+                setExistingId(result.id);
+                setIsEditing(true);
+            }
             
         } catch (error) {
-            console.error('Error submitting TDDA form:', error);
-            alert('Error submitting form. Please try again.');
+            console.error(`Error ${isEditing ? 'updating' : 'submitting'} TDDA form:`, error);
+            alert(`Error ${isEditing ? 'updating' : 'submitting'} form. Please try again.`);
         }
     };
 
-    // Fetch existing TDDA data (if editing)
+    // Fetch existing TDDA data for the selected month
     const fetchTDDA = async () => {
         try {
-            const response = await fetch(`/api/tdda?userId=${user._id}&month=${formData.month}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('pos-token')}`
+            if (!user?._id || !formData.month) return;
+
+            const response = await fetch(
+                `https://gvi-pos-server.vercel.app/tdda?userId=${user._id}&month=${formData.month}`, 
+                {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('pos-token')}`
+                    }
                 }
-            });
+            );
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.length > 0) {
-                    setFormData(data[0]); // Load the first matching TDDA record
+                    setFormData(data[0]);
+                    setExistingId(data[0]._id);
+                    setIsEditing(true);
+                } else {
+                    // Reset to initial form if no data found for this month
+                    setFormData({
+                        ...initialFormData,
+                        userId: user._id,
+                        name: user.name,
+                        designation: user.role,
+                        area: user.zone,
+                        month: formData.month
+                    });
+                    setIsEditing(false);
+                    setExistingId(null);
                 }
             }
         } catch (error) {
@@ -204,12 +229,10 @@ const TDDA = () => {
         }
     };
 
-    // Load existing data for the current month on mount
+    // Load existing data when month changes
     useEffect(() => {
-        if (user?._id) {
-            fetchTDDA();
-        }
-    }, [user?._id, formData.month]);
+        fetchTDDA();
+    }, [formData.month]);
 
     return (
         <div className="bg-gray-50 p-4 md:p-8">
@@ -218,6 +241,9 @@ const TDDA = () => {
                     {/* Header */}
                     <div className="text-center mb-6">
                         <h2 className="text-xl font-bold">TA/DA BILL (RL)</h2>
+                        {isEditing && (
+                            <p className="text-green-600 mt-2">Editing existing record for {dayjs(formData.month).format('MMMM YYYY')}</p>
+                        )}
                     </div>
 
                     {/* Employee Info */}
@@ -587,9 +613,9 @@ const TDDA = () => {
                     <div className="mt-8 flex justify-end">
                         <button 
                             type="submit" 
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded"
+                            className={`${isEditing ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-2 px-6 rounded`}
                         >
-                            Submit TA/DA Bill
+                            {isEditing ? 'Update TA/DA Bill' : 'Submit TA/DA Bill'}
                         </button>
                     </div>
                 </form>
