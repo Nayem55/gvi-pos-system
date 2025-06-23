@@ -64,7 +64,7 @@ const TDDAdminPanel = () => {
     }
   };
 
-  // Export to Excel
+  // Export to Excel with professional styling
   const exportToExcel = () => {
     if (!reportData) return;
     
@@ -74,30 +74,36 @@ const TDDAdminPanel = () => {
       
       // Prepare data for the worksheet
       const data = [
-        ["Employee TD/DA Report", "", "", "", "", "", "", "", "", "", ""],
-        ["Name:", reportData.userInfo.name, "", "", "Designation:", reportData.userInfo.designation, "", "", "Month:", reportData.userInfo.month, ""],
-        ["Area:", reportData.userInfo.area, "", "", "", "", "", "", "", "", ""],
-        [],
-        ["Date", "Visited Place", "", "HQ", "Ex. HQ", "TRANSPORT BILL", "", "", "Hotel Bill", "Total Expense", "IMS On Day"],
-        ["", "From", "To", "", "", "Bus", "CNG", "Train", "", "", ""],
+        // Title row
+        ["Employee TD/DA Report", "", "", "", "", "", "", "", "", ""],
+        // Employee info
+        ["Name:", reportData.userInfo.name, "", "Designation:", reportData.userInfo.designation, "", "Month:", reportData.userInfo.month, "", ""],
+        ["Area:", reportData.userInfo.area, "", "", "", "", "", "", "", ""],
+        // Empty row
+        [""],
+        // Table headers
+        ["Date", "Visited Place", "HQ", "Ex. HQ", "Transport Bill", "Hotel Bill", "Total Expense", "IMS On Day", "", ""],
+        ["", "From", "To", "", "", "Bus", "CNG", "Train", "", ""],
+        // Daily expenses data
         ...reportData.dailyExpenses.map(day => [
           day.date,
           day.from,
           day.to,
-          day.hq,
-          day.exHq,
-          day.transport?.bus || "",
-          day.transport?.cng || "",
-          day.transport?.train || "",
-          day.hotelBill,
-          day.totalExpense,
-          day.imsOnDay
+          day.hq || "-",
+          day.exHq || "-",
+          day.transport?.bus || "-",
+          day.transport?.cng || "-",
+          day.transport?.train || "-",
+          day.hotelBill || "-",
+          day.totalExpense || "-"
         ]),
-        [],
-        ["Total Working Days:", reportData.summary.totalWorkingDays],
+        // Empty row
+        [""],
+        // Summary
+        ["Total Working Days:", reportData.summary.totalWorkingDays, "", "", "", "", "", "", "", ""],
         ["Total Expense:", typeof reportData.summary.totalExpense === 'number' 
           ? reportData.summary.totalExpense.toFixed(2) 
-          : parseFloat(reportData.summary.totalExpense || 0).toFixed(2)]
+          : parseFloat(reportData.summary.totalExpense || 0).toFixed(2), "", "", "", "", "", "", "", ""]
       ];
 
       // Create worksheet
@@ -105,15 +111,99 @@ const TDDAdminPanel = () => {
       
       // Set column widths
       ws['!cols'] = [
-        {wch: 10}, {wch: 12}, {wch: 12}, {wch: 8}, {wch: 8}, 
-        {wch: 8}, {wch: 8}, {wch: 8}, {wch: 10}, {wch: 12}, {wch: 10}
+        {wch: 12},  // Date
+        {wch: 15},  // From (Visited Place)
+        {wch: 15},  // To (Visited Place)
+        {wch: 10},  // HQ
+        {wch: 10},  // Ex HQ
+        {wch: 8},   // Bus
+        {wch: 8},   // CNG
+        {wch: 8},   // Train
+        {wch: 12},  // Hotel Bill
+        {wch: 12}   // Total Expense
       ];
+
+      // Define cell styles
+      const styles = {
+        title: { 
+          font: { bold: true, sz: 16, color: { rgb: "000000" } }, 
+          alignment: { horizontal: "center" },
+          fill: { fgColor: { rgb: "D9E1F2" } }
+        },
+        header: { 
+          font: { bold: true, color: { rgb: "FFFFFF" } }, 
+          fill: { fgColor: { rgb: "4472C4" } },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
+        },
+        subHeader: {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "B4C6E7" } },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
+        },
+        data: {
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
+        },
+        summary: {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "FCE4D6" } },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
+        }
+      };
+
+      // Apply styles to cells
+      for (let i = 0; i < data.length; i++) {
+        for (let j = 0; j < data[i].length; j++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: i, c: j });
+          
+          if (i === 0) { // Title row
+            ws[cellAddress].s = styles.title;
+          } else if (i === 4) { // Main header row
+            ws[cellAddress].s = styles.header;
+          } else if (i === 5) { // Sub-header row
+            ws[cellAddress].s = styles.subHeader;
+          } else if (i >= 6 && i < data.length - 3 && data[i][0]) { // Data rows
+            ws[cellAddress].s = styles.data;
+            if (j === 9) { // Total Expense column
+              ws[cellAddress].t = 'n'; // Set as number type
+              ws[cellAddress].z = '#,##0.00'; // Format with 2 decimal places
+            }
+          } else if (i >= data.length - 2) { // Summary rows
+            ws[cellAddress].s = styles.summary;
+          }
+        }
+      }
 
       // Merge cells
       ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+        // Title merge
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+        // Visited Place header merge
         { s: { r: 4, c: 1 }, e: { r: 4, c: 2 } },
-        { s: { r: 4, c: 5 }, e: { r: 4, c: 7 } }
+        // Transport Bill header merge
+        { s: { r: 4, c: 4 }, e: { r: 4, c: 7 } },
+        // Summary merges
+        { s: { r: data.length - 2, c: 0 }, e: { r: data.length - 2, c: 1 } },
+        { s: { r: data.length - 1, c: 0 }, e: { r: data.length - 1, c: 1 } }
       ];
 
       // Add worksheet to workbook
@@ -138,86 +228,91 @@ const TDDAdminPanel = () => {
       
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4 md:p-8">
-        <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg overflow-hidden p-6">
-          <h1 className="text-2xl font-bold text-center mb-6">TD/DA Admin Panel</h1>
+        <div className="max-w-6xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+          {/* Panel Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
+            <h1 className="text-2xl font-bold text-white">TD/DA Admin Panel</h1>
+          </div>
           
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
-              <select
-                value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              >
-                <option value="">Select a user</option>
-                {users?.map(user => (
-                  <option key={user._id} value={user._id}>
-                    {user.name} ({user.designation || user.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <div className="flex items-end">
-              <button
-                onClick={generateReport}
-                disabled={isGenerating || !selectedUser}
-                className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded flex items-center justify-center ${
-                  (isGenerating || !selectedUser) ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {isGenerating ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  "Generate Report"
-                )}
-              </button>
+          {/* Filters Section */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isLoading}
+                >
+                  <option value="">Select a user</option>
+                  {users?.map(user => (
+                    <option key={user._id} value={user._id}>
+                      {user.name} ({user.designation || user.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div className="flex items-end">
+                <button
+                  onClick={generateReport}
+                  disabled={isGenerating || !selectedUser}
+                  className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
+                    (isGenerating || !selectedUser) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isGenerating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Report"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
           
           {/* Report Summary */}
           {reportData && (
-            <div className="mb-6">
+            <div className="p-6 border-b border-gray-200">
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
-                <h2 className="text-lg font-semibold text-blue-800 mb-2">Report Summary</h2>
+                <h2 className="text-lg font-semibold text-blue-800 mb-3">Report Summary</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Employee Name</p>
-                    <p className="font-medium">{reportData.userInfo.name}</p>
+                    <p className="font-medium text-gray-900">{reportData.userInfo.name}</p>
                   </div>
-                  <div>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Designation</p>
-                    <p className="font-medium">{reportData.userInfo.designation}</p>
+                    <p className="font-medium text-gray-900">{reportData.userInfo.designation}</p>
                   </div>
-                  <div>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Month</p>
-                    <p className="font-medium">{dayjs(reportData.userInfo.month).format('MMMM YYYY')}</p>
+                    <p className="font-medium text-gray-900">{dayjs(reportData.userInfo.month).format('MMMM YYYY')}</p>
                   </div>
-                  <div>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Total Working Days</p>
-                    <p className="font-medium">{reportData.summary.totalWorkingDays}</p>
+                    <p className="font-medium text-gray-900">{reportData.summary.totalWorkingDays}</p>
                   </div>
-                  <div>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Total Expense</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-900">
                       {typeof reportData.summary.totalExpense === 'number' 
                         ? reportData.summary.totalExpense.toFixed(2) 
                         : parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}
@@ -226,55 +321,68 @@ const TDDAdminPanel = () => {
                 </div>
               </div>
               
-              <button
-                onClick={exportToExcel}
-                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded flex items-center justify-center mb-4"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export to Excel
-              </button>
+              <div className="flex justify-end">
+                <button
+                  onClick={exportToExcel}
+                  className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export to Excel
+                </button>
+              </div>
             </div>
           )}
           
           {/* Daily Expenses Table */}
           {reportData && (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 p-2">Date</th>
-                    <th className="border border-gray-300 p-2">From</th>
-                    <th className="border border-gray-300 p-2">To</th>
-                    <th className="border border-gray-300 p-2">HQ</th>
-                    <th className="border border-gray-300 p-2">Ex. HQ</th>
-                    <th className="border border-gray-300 p-2">Bus</th>
-                    <th className="border border-gray-300 p-2">CNG</th>
-                    <th className="border border-gray-300 p-2">Train</th>
-                    <th className="border border-gray-300 p-2">Hotel Bill</th>
-                    <th className="border border-gray-300 p-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.dailyExpenses.map((day, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border border-gray-300 p-2 text-center">{day.date}</td>
-                      <td className="border border-gray-300 p-2">{day.from}</td>
-                      <td className="border border-gray-300 p-2">{day.to}</td>
-                      <td className="border border-gray-300 p-2">{day.hq ? day.hqExHqAmount : '-'}</td>
-                      <td className="border border-gray-300 p-2">{day.exHq ? day.hqExHqAmount : '-'}</td>
-                      <td className="border border-gray-300 p-2 text-right">{day.transport?.bus || '-'}</td>
-                      <td className="border border-gray-300 p-2 text-right">{day.transport?.cng || '-'}</td>
-                      <td className="border border-gray-300 p-2 text-right">{day.transport?.train || '-'}</td>
-                      <td className="border border-gray-300 p-2 text-right">{day.hotelBill || '-'}</td>
-                      <td className="border border-gray-300 p-2 text-right font-medium">
-                        {day.totalExpense || '-'}
-                      </td>
+            <div className="p-6">
+              <div className="overflow-x-auto shadow-md rounded-lg">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-blue-600 text-white">
+                      <th className="p-3 text-left">Date</th>
+                      <th className="p-3 text-left" colSpan="2">Visited Place</th>
+                      <th className="p-3 text-left">HQ</th>
+                      <th className="p-3 text-left">Ex. HQ</th>
+                      <th className="p-3 text-left" colSpan="3">Transport Bill</th>
+                      <th className="p-3 text-left">Hotel Bill</th>
+                      <th className="p-3 text-left">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                    <tr className="bg-blue-500 text-white">
+                      <th></th>
+                      <th className="p-2 text-left">From</th>
+                      <th className="p-2 text-left">To</th>
+                      <th></th>
+                      <th></th>
+                      <th className="p-2 text-left">Bus</th>
+                      <th className="p-2 text-left">CNG</th>
+                      <th className="p-2 text-left">Train</th>
+                      <th></th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.dailyExpenses.map((day, index) => (
+                      <tr key={index} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}>
+                        <td className="p-3 border-b border-gray-200">{day.date}</td>
+                        <td className="p-3 border-b border-gray-200">{day.from}</td>
+                        <td className="p-3 border-b border-gray-200">{day.to}</td>
+                        <td className="p-3 border-b border-gray-200">{day.hq? day.hqExHqAmount : '-'}</td>
+                        <td className="p-3 border-b border-gray-200">{day.exHq? day.hqExHqAmount : '-'}</td>
+                        <td className="p-3 border-b border-gray-200">{day.transport?.bus || '-'}</td>
+                        <td className="p-3 border-b border-gray-200">{day.transport?.cng || '-'}</td>
+                        <td className="p-3 border-b border-gray-200">{day.transport?.train || '-'}</td>
+                        <td className="p-3 border-b border-gray-200">{day.hotelBill || '-'}</td>
+                        <td className="p-3 border-b border-gray-200 font-semibold">
+                          {day.totalExpense || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
