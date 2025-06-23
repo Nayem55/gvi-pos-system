@@ -235,13 +235,13 @@ const ProductWiseSalesReport = () => {
             <div className="bg-green-100 p-4 rounded-lg text-center shadow-md">
               <h3 className="text-lg font-semibold text-green-800">Total TP</h3>
               <p className="text-2xl font-bold">
-                ৳{summary.totalTP.toFixed(2)}
+                {summary.totalTP.toFixed(2)}
               </p>
             </div>
             <div className="bg-red-100 p-4 rounded-lg text-center shadow-md">
               <h3 className="text-lg font-semibold text-red-800">Total MRP</h3>
               <p className="text-2xl font-bold">
-                ৳{summary.totalMRP.toFixed(2)}
+                {summary.totalMRP.toFixed(2)}
               </p>
             </div>
           </div>
@@ -328,10 +328,10 @@ const ProductWiseSalesReport = () => {
                         {product.total_quantity}
                       </td>
                       <td className="border p-2 text-center">
-                        ৳{product.total_tp.toFixed(2)}
+                        {product.total_tp.toFixed(2)}
                       </td>
                       <td className="border p-2 text-center">
-                        ৳{product.total_mrp.toFixed(2)}
+                        {product.total_mrp.toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -451,10 +451,10 @@ const ProductWiseSalesReport = () => {
                           {outlet.total_quantity}
                         </td>
                         <td className="border p-2 text-center">
-                          ৳{outlet.total_tp.toFixed(2)}
+                          {outlet.total_tp.toFixed(2)}
                         </td>
                         <td className="border p-2 text-center">
-                          ৳{outlet.total_mrp.toFixed(2)}
+                          {outlet.total_mrp.toFixed(2)}
                         </td>
                       </tr>
                     ))}

@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 
 const API_CONFIG = {
   baseURL: "https://gvi-pos-server.vercel.app",
-  timeout: 30000,
+  timeout: 50000,
 };
 
 const api = axios.create({

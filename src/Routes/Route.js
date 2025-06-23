@@ -34,6 +34,7 @@ import AlterOutletsPage from "../Pages/AlterOutletsPage";
 import CategoryTargetPage from "../Pages/CategoryTargetPage";
 import BrandWiseSalesReport from "../Pages/BrandsSaleReport";
 import BrandTargetPage from "../Pages/BrandTargetPage";
+import TDDA from "../Pages/TDDA";
 
 const router = createBrowserRouter([
   {
@@ -84,6 +85,10 @@ const router = createBrowserRouter([
       {
         path: "/manage-stock",
         element: <ManageUserStock/>,
+      },
+      {
+        path: "/td-da",
+        element: <TDDA/>,
       },
       {
         path: "/admin",
