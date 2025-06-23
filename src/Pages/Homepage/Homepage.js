@@ -7,6 +7,7 @@ import MarketReturn from "../MarketReturn";
 import axios from "axios";
 import PaymentVoucher from "../../Component/PaymentVoucher";
 import PosVoucher from "../PosVoucher";
+import TadaVoucher from "../TadaVoucher";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -68,6 +69,7 @@ export default function Home() {
           <option value="officeReturn">Office Return</option>
           <option value="marketReturn">Market Return</option> 
           <option value="payment">Payment</option> 
+          <option value="tada">TA/DA</option> 
         </select>
       </div>
 
@@ -128,6 +130,15 @@ export default function Home() {
       )}
       {selectedTab === "pos" && (
         <PosVoucher
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+        />
+      )}
+      {selectedTab === "tada" && (
+        <TadaVoucher
           user={user}
           stock={stock}
           setStock={setStock}

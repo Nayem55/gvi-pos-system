@@ -1,627 +1,281 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
+import { toast } from 'react-hot-toast';
+import axios from 'axios';
 
-const TDDA = () => {
-    const user = JSON.parse(localStorage.getItem("pos-user"));
-    const currentDate = dayjs();
+const TDDAdminPanel = () => {
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(dayjs().format('YYYY-MM'));
+  const [reportData, setReportData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Fetch all users with TDDA records
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get('https://gvi-pos-server.vercel.app/tdda/users');
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Failed to load users');
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Initial form state
-    const initialFormData = {
-        userId: user?._id || '',
-        name: user?.name || '',
-        designation: user?.role || '',
-        area: user?.zone || '',
-        target: '',
-        secondary: '',
-        collection: '',
-        date: currentDate.format('YYYY-MM-DD'),
-        month: currentDate.format('YYYY-MM'),
-        region: '',
-        dailyExpenses: Array(31).fill({
-            from: '',
-            to: '',
-            hq: '',
-            exHq: '',
-            transport: { bus: '', cng: '', train: '' },
-            hotelBill: '',
-            totalExpense: '',
-            imsOnDay: ''
-        }),
-        summary: {
-            totalWorkingDay: '',
-            dailyAllowance: '',
-            hotelBill: '',
-            others: '',
-            totalExpense: '',
-            salary: '',
-            grandTotalExpense: ''
-        },
-        sales: {
-            primarySales: '',
-            expensePercentSecondary: '',
-            expensePercentPrimary: ''
-        },
-        signature: {
-            employee: '',
-            recommendedBy: '',
-            approvedBy: ''
+    fetchUsers();
+  }, []);
+
+  // Generate report
+  const generateReport = async () => {
+    if (!selectedUser) {
+      toast.error('Please select a user');
+      return;
+    }
+    
+    try {
+      setIsGenerating(true);
+      const response = await axios.get('https://gvi-pos-server.vercel.app/tdda/admin-report', {
+        params: {
+          userId: selectedUser,
+          month: selectedMonth
         }
-    };
+      });
+      
+      // Fix the summary.totalExpense if it's malformed
+      const fixedData = response.data;
+      if (typeof fixedData.summary.totalExpense === 'string' && fixedData.summary.totalExpense.includes('[object Object]')) {
+        fixedData.summary.totalExpense = fixedData.dailyExpenses.reduce((sum, day) => 
+          sum + (parseFloat(day.totalExpense) || 0), 0);
+      }
+      
+      setReportData(fixedData);
+      toast.success('Report generated successfully');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error(error.response?.data?.error || 'Failed to generate report');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
-    const [formData, setFormData] = useState(initialFormData);
-    const [isEditing, setIsEditing] = useState(false);
-    const [existingId, setExistingId] = useState(null);
+  // Export to Excel
+  const exportToExcel = () => {
+    if (!reportData) return;
+    
+    try {
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Prepare data for the worksheet
+      const data = [
+        ["Employee TD/DA Report", "", "", "", "", "", "", "", "", "", ""],
+        ["Name:", reportData.userInfo.name, "", "", "Designation:", reportData.userInfo.designation, "", "", "Month:", reportData.userInfo.month, ""],
+        ["Area:", reportData.userInfo.area, "", "", "", "", "", "", "", "", ""],
+        [],
+        ["Date", "Visited Place", "", "HQ", "Ex. HQ", "TRANSPORT BILL", "", "", "Hotel Bill", "Total Expense", "IMS On Day"],
+        ["", "From", "To", "", "", "Bus", "CNG", "Train", "", "", ""],
+        ...reportData.dailyExpenses.map(day => [
+          day.date,
+          day.from,
+          day.to,
+          day.hq,
+          day.exHq,
+          day.transport?.bus || "",
+          day.transport?.cng || "",
+          day.transport?.train || "",
+          day.hotelBill,
+          day.totalExpense,
+          day.imsOnDay
+        ]),
+        [],
+        ["Total Working Days:", reportData.summary.totalWorkingDays],
+        ["Total Expense:", typeof reportData.summary.totalExpense === 'number' 
+          ? reportData.summary.totalExpense.toFixed(2) 
+          : parseFloat(reportData.summary.totalExpense || 0).toFixed(2)]
+      ];
 
-    // Set user data on component mount
-    useEffect(() => {
-        if (user) {
-            setFormData(prev => ({
-                ...prev,
-                userId: user._id,
-                name: user.name,
-                designation: user.role,
-                area: user.zone
-            }));
-        }
-    }, [user]);
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      
+      // Set column widths
+      ws['!cols'] = [
+        {wch: 10}, {wch: 12}, {wch: 12}, {wch: 8}, {wch: 8}, 
+        {wch: 8}, {wch: 8}, {wch: 8}, {wch: 10}, {wch: 12}, {wch: 10}
+      ];
 
-    // Handle input changes for employee info
-    const handleEmployeeInfoChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+      // Merge cells
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+        { s: { r: 4, c: 1 }, e: { r: 4, c: 2 } },
+        { s: { r: 4, c: 5 }, e: { r: 4, c: 7 } }
+      ];
 
-    // Handle daily expense changes
-    const handleDailyExpenseChange = (dayIndex, field, value) => {
-        const updatedExpenses = [...formData.dailyExpenses];
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, "TDDA Report");
+      
+      // Generate file name
+      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(/\s+/g, '_')}_${reportData.userInfo.month}.xlsx`;
+      
+      // Export the workbook
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export report');
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 p-4 md:p-8 min-h-screen">
+      <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg overflow-hidden p-6">
+        <h1 className="text-2xl font-bold text-center mb-6">TD/DA Admin Panel</h1>
         
-        if (field.includes('.')) {
-            const [parent, child] = field.split('.');
-            updatedExpenses[dayIndex] = {
-                ...updatedExpenses[dayIndex],
-                [parent]: {
-                    ...updatedExpenses[dayIndex][parent],
-                    [child]: value
-                }
-            };
-        } else {
-            updatedExpenses[dayIndex] = {
-                ...updatedExpenses[dayIndex],
-                [field]: value
-            };
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            dailyExpenses: updatedExpenses
-        }));
-    };
-
-    // Handle summary changes
-    const handleSummaryChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            summary: {
-                ...prev.summary,
-                [name]: value
-            }
-        }));
-    };
-
-    // Handle sales changes
-    const handleSalesChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            sales: {
-                ...prev.sales,
-                [name]: value
-            }
-        }));
-    };
-
-    // Handle signature changes
-    const handleSignatureChange = (type, value) => {
-        setFormData(prev => ({
-            ...prev,
-            signature: {
-                ...prev.signature,
-                [type]: value
-            }
-        }));
-    };
-
-    // Calculate totals
-    const calculateTotals = () => {
-        const totalExpense = formData.dailyExpenses.reduce((sum, day) => {
-            return sum + (parseFloat(day.totalExpense) || 0);
-        }, 0);
-
-        setFormData(prev => ({
-            ...prev,
-            summary: {
-                ...prev.summary,
-                totalExpense: totalExpense.toFixed(2)
-            }
-        }));
-    };
-
-    // Submit or update form
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        try {
-            calculateTotals();
-
-            const url = isEditing 
-                ? `https://gvi-pos-server.vercel.app/tdda/${existingId}`
-                : 'https://gvi-pos-server.vercel.app/tdda';
-            
-            const method = isEditing ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('pos-token')}`
-                },
-                body: JSON.stringify(isEditing ? formData : { ...formData, _id: undefined })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to ${isEditing ? 'update' : 'submit'} TDDA form`);
-            }
-
-            const result = await response.json();
-            alert(`TDDA form ${isEditing ? 'updated' : 'submitted'} successfully!`);
-            
-            if (!isEditing && result.id) {
-                setExistingId(result.id);
-                setIsEditing(true);
-            }
-            
-        } catch (error) {
-            console.error(`Error ${isEditing ? 'updating' : 'submitting'} TDDA form:`, error);
-            alert(`Error ${isEditing ? 'updating' : 'submitting'} form. Please try again.`);
-        }
-    };
-
-    // Fetch existing TDDA data for the selected month
-    const fetchTDDA = async () => {
-        try {
-            if (!user?._id || !formData.month) return;
-
-            const response = await fetch(
-                `https://gvi-pos-server.vercel.app/tdda?userId=${user._id}&month=${formData.month}`, 
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('pos-token')}`
-                    }
-                }
-            );
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.length > 0) {
-                    setFormData(data[0]);
-                    setExistingId(data[0]._id);
-                    setIsEditing(true);
-                } else {
-                    // Reset to initial form if no data found for this month
-                    setFormData({
-                        ...initialFormData,
-                        userId: user._id,
-                        name: user.name,
-                        designation: user.role,
-                        area: user.zone,
-                        month: formData.month
-                    });
-                    setIsEditing(false);
-                    setExistingId(null);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching TDDA data:', error);
-        }
-    };
-
-    // Load existing data when month changes
-    useEffect(() => {
-        fetchTDDA();
-    }, [formData.month]);
-
-    return (
-        <div className="bg-gray-50 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg overflow-hidden p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Header */}
-                    <div className="text-center mb-6">
-                        <h2 className="text-xl font-bold">TA/DA BILL (RL)</h2>
-                        {isEditing && (
-                            <p className="text-green-600 mt-2">Editing existing record for {dayjs(formData.month).format('MMMM YYYY')}</p>
-                        )}
-                    </div>
-
-                    {/* Employee Info */}
-                    <div className="space-y-4 mb-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Name:</label>
-                                <input 
-                                    type="text" 
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Target:</label>
-                                <input 
-                                    type="text" 
-                                    name="target"
-                                    value={formData.target}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Designation:</label>
-                                <input 
-                                    type="text" 
-                                    name="designation"
-                                    value={formData.designation}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Secondary:</label>
-                                <input 
-                                    type="text" 
-                                    name="secondary"
-                                    value={formData.secondary}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Area:</label>
-                                <input 
-                                    type="text" 
-                                    name="area"
-                                    value={formData.area}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Collection:</label>
-                                <input 
-                                    type="text" 
-                                    name="collection"
-                                    value={formData.collection}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Date:</label>
-                                <input 
-                                    type="date" 
-                                    name="date"
-                                    value={formData.date}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Month:</label>
-                                <input 
-                                    type="month" 
-                                    name="month"
-                                    value={formData.month}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex items-center">
-                                <label className="w-24 font-medium">Region:</label>
-                                <input 
-                                    type="text" 
-                                    name="region"
-                                    value={formData.region}
-                                    onChange={handleEmployeeInfoChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Expense Table */}
-                    <div className="overflow-x-auto mb-6">
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th rowSpan={2} className="border border-gray-300 p-2">Date</th>
-                                    <th colSpan={2} className="border border-gray-300 p-2">Visited Place</th>
-                                    <th rowSpan={2} className="border border-gray-300 p-2">HQ</th>
-                                    <th rowSpan={2} className="border border-gray-300 p-2">Ex. HQ</th>
-                                    <th colSpan={3} className="border border-gray-300 p-2">TRANSPORT BILL</th>
-                                    <th rowSpan={2} className="border border-gray-300 p-2">Hotel Bill</th>
-                                    <th rowSpan={2} className="border border-gray-300 p-2">Total Expense</th>
-                                    <th rowSpan={2} className="border border-gray-300 p-2">IMS On Day</th>
-                                </tr>
-                                <tr className="bg-gray-100">
-                                    <th className="border border-gray-300 p-2">From</th>
-                                    <th className="border border-gray-300 p-2">TO</th>
-                                    <th className="border border-gray-300 p-2">Bus</th>
-                                    <th className="border border-gray-300 p-2">CNG</th>
-                                    <th className="border border-gray-300 p-2">Train</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {formData.dailyExpenses.map((dayExpense, dayIndex) => (
-                                    <tr key={dayIndex + 1}>
-                                        <td className="border border-gray-300 p-2">{dayIndex + 1}</td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.from}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'from', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.to}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'to', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.hq}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'hq', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.exHq}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'exHq', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.transport.bus}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'transport.bus', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.transport.cng}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'transport.cng', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.transport.train}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'transport.train', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.hotelBill}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'hotelBill', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.totalExpense}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'totalExpense', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                        <td className="border border-gray-300 p-2">
-                                            <input 
-                                                type="text" 
-                                                value={dayExpense.imsOnDay}
-                                                onChange={(e) => handleDailyExpenseChange(dayIndex, 'imsOnDay', e.target.value)}
-                                                className="w-full border-none focus:ring-0 p-1" 
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colSpan={10} className="border border-gray-300 p-2 font-medium">Grand Total</td>
-                                    <td className="border border-gray-300 p-2">{formData.summary.totalExpense}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    {/* Summary Section */}
-                    <div className="space-y-4 mb-6">
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Total Working Day</label>
-                                <input 
-                                    type="text" 
-                                    name="totalWorkingDay"
-                                    value={formData.summary.totalWorkingDay}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Daily Allowance</label>
-                                <input 
-                                    type="text" 
-                                    name="dailyAllowance"
-                                    value={formData.summary.dailyAllowance}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Hotel Bill</label>
-                                <input 
-                                    type="text" 
-                                    name="hotelBill"
-                                    value={formData.summary.hotelBill}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Others</label>
-                                <input 
-                                    type="text" 
-                                    name="others"
-                                    value={formData.summary.others}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Total Expense</label>
-                                <input 
-                                    type="text" 
-                                    name="totalExpense"
-                                    value={formData.summary.totalExpense}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Salary</label>
-                                <input 
-                                    type="text" 
-                                    name="salary"
-                                    value={formData.summary.salary}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Grand Total Expense</label>
-                                <input 
-                                    type="text" 
-                                    name="grandTotalExpense"
-                                    value={formData.summary.grandTotalExpense}
-                                    onChange={handleSummaryChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Footer Section */}
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Primary Sales</label>
-                                <input 
-                                    type="text" 
-                                    name="primarySales"
-                                    value={formData.sales.primarySales}
-                                    onChange={handleSalesChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Expense % On Secondary</label>
-                                <input 
-                                    type="text" 
-                                    name="expensePercentSecondary"
-                                    value={formData.sales.expensePercentSecondary}
-                                    onChange={handleSalesChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Expense % On Primary</label>
-                                <input 
-                                    type="text" 
-                                    name="expensePercentPrimary"
-                                    value={formData.sales.expensePercentPrimary}
-                                    onChange={handleSalesChange}
-                                    className="border border-gray-300 rounded px-3 py-2" 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Signature</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.signature.employee}
-                                    onChange={(e) => handleSignatureChange('employee', e.target.value)}
-                                    className="h-16 border border-gray-300 rounded" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Recommended by</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.signature.recommendedBy}
-                                    onChange={(e) => handleSignatureChange('recommendedBy', e.target.value)}
-                                    className="h-16 border border-gray-300 rounded" 
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="font-medium mb-1">Approved By</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.signature.approvedBy}
-                                    onChange={(e) => handleSignatureChange('approvedBy', e.target.value)}
-                                    className="h-16 border border-gray-300 rounded" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="mt-8 flex justify-end">
-                        <button 
-                            type="submit" 
-                            className={`${isEditing ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-2 px-6 rounded`}
-                        >
-                            {isEditing ? 'Update TA/DA Bill' : 'Submit TA/DA Bill'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
+            <select
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isLoading}
+            >
+              <option value="">Select a user</option>
+              {users?.map(user => (
+                <option key={user._id} value={user._id}>
+                  {user.name} ({user.designation || user.role})
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div className="flex items-end">
+            <button
+              onClick={generateReport}
+              disabled={isGenerating || !selectedUser}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded flex items-center justify-center ${
+                (isGenerating || !selectedUser) ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {isGenerating ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                "Generate Report"
+              )}
+            </button>
+          </div>
         </div>
-    );
+        
+        {/* Report Summary */}
+        {reportData && (
+          <div className="mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+              <h2 className="text-lg font-semibold text-blue-800 mb-2">Report Summary</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Employee Name</p>
+                  <p className="font-medium">{reportData.userInfo.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Designation</p>
+                  <p className="font-medium">{reportData.userInfo.designation}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Month</p>
+                  <p className="font-medium">{dayjs(reportData.userInfo.month).format('MMMM YYYY')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Working Days</p>
+                  <p className="font-medium">{reportData.summary.totalWorkingDays}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Expense</p>
+                  <p className="font-medium">
+                    {typeof reportData.summary.totalExpense === 'number' 
+                      ? reportData.summary.totalExpense.toFixed(2) 
+                      : parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded flex items-center justify-center mb-4"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to Excel
+            </button>
+          </div>
+        )}
+        
+        {/* Daily Expenses Table */}
+        {reportData && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 p-2">Date</th>
+                  <th className="border border-gray-300 p-2">From</th>
+                  <th className="border border-gray-300 p-2">To</th>
+                  <th className="border border-gray-300 p-2">HQ</th>
+                  <th className="border border-gray-300 p-2">Ex. HQ</th>
+                  <th className="border border-gray-300 p-2">Bus</th>
+                  <th className="border border-gray-300 p-2">CNG</th>
+                  <th className="border border-gray-300 p-2">Train</th>
+                  <th className="border border-gray-300 p-2">Hotel Bill</th>
+                  <th className="border border-gray-300 p-2">Total</th>
+                  <th className="border border-gray-300 p-2">IMS On Day</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.dailyExpenses.map((day, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="border border-gray-300 p-2 text-center">{day.date}</td>
+                    <td className="border border-gray-300 p-2">{day.from}</td>
+                    <td className="border border-gray-300 p-2">{day.to}</td>
+                    <td className="border border-gray-300 p-2">{day.hq || '-'}</td>
+                    <td className="border border-gray-300 p-2">{day.exHq || '-'}</td>
+                    <td className="border border-gray-300 p-2 text-right">{day.transport?.bus || '-'}</td>
+                    <td className="border border-gray-300 p-2 text-right">{day.transport?.cng || '-'}</td>
+                    <td className="border border-gray-300 p-2 text-right">{day.transport?.train || '-'}</td>
+                    <td className="border border-gray-300 p-2 text-right">{day.hotelBill || '-'}</td>
+                    <td className="border border-gray-300 p-2 text-right font-medium">
+                      {day.totalExpense || '-'}
+                    </td>
+                    <td className="border border-gray-300 p-2">{day.imsOnDay || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
-export default TDDA;
+export default TDDAdminPanel;
