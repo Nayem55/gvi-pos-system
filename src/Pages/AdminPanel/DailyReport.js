@@ -167,7 +167,8 @@ const DailyReport = () => {
                   <tr>
                     <th className="p-4 text-left font-medium text-gray-700">Date</th>
                     <th className="p-4 text-left font-medium text-gray-700">Products Sold</th>
-                    <th className="p-4 text-left font-medium text-gray-700">Total MRP</th>
+                    <th className="p-4 text-left font-medium text-gray-700">Route</th>
+                    <th className="p-4 text-left font-medium text-gray-700">Memo</th>
                     <th className="p-4 text-left font-medium text-gray-700">Total TP</th>
                   </tr>
                 </thead>
@@ -182,7 +183,8 @@ const DailyReport = () => {
                           </div>
                         ))}
                       </td>
-                      <td className="p-4 text-gray-800">৳{report.total_mrp.toFixed(2)}</td>
+                      <td className="p-4 text-gray-800">{report.route}</td>
+                      <td className="p-4 text-gray-800">{report.memo}</td>
                       <td className="p-4 text-gray-800">৳{report.total_tp.toFixed(2)}</td>
                     </tr>
                   ))}

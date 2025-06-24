@@ -335,13 +335,13 @@ const UserDashboard = () => {
             <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col">
               <span className="text-gray-500 text-sm">Monthly Target</span>
               <span className="text-2xl font-bold text-gray-800 mt-1">
-                ৳{target?.toLocaleString() || "N/A"}
+                {target?.toLocaleString() || "N/A"}
               </span>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col">
               <span className="text-gray-500 text-sm">Total TP</span>
               <span className="text-2xl font-bold text-gray-800 mt-1">
-                ৳
+                
                 {totalTP.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                 })}
@@ -422,7 +422,7 @@ const UserDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ৳{report.total_tp.toFixed(2)}
+                          {report.total_tp.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           {isEditable(report.sale_date) ? (
@@ -576,13 +576,13 @@ const UserDashboard = () => {
                         {/* Line Totals */}
                         <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
                           <div className="bg-gray-100 p-1 rounded text-center">
-                            <div>DP: ৳{product.dp.toFixed(2)}</div>
+                            <div>DP: {product.dp.toFixed(2)}</div>
                           </div>
                           <div className="bg-gray-100 p-1 rounded text-center">
-                            <div>TP: ৳{product.tp.toFixed(2)}</div>
+                            <div>TP: {product.tp.toFixed(2)}</div>
                           </div>
                           <div className="bg-gray-100 p-1 rounded text-center">
-                            <div>MRP: ৳{product.mrp.toFixed(2)}</div>
+                            <div>MRP: {product.mrp.toFixed(2)}</div>
                           </div>
                         </div>
                       </div>
@@ -594,13 +594,13 @@ const UserDashboard = () => {
                   <div>
                     <div className="text-sm text-gray-500">Total TP</div>
                     <div className="text-xl font-bold">
-                      ৳{editingReport.total_tp.toFixed(2)}
+                      {editingReport.total_tp.toFixed(2)}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-500">Total DP</div>
                     <div className="text-xl font-bold">
-                      ৳{editingReport.total_dp.toFixed(2)}
+                      {editingReport.total_dp.toFixed(2)}
                     </div>
                   </div>
                 </div>
