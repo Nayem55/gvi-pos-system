@@ -4,8 +4,9 @@ import * as XLSX from "xlsx";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import AdminSidebar from "../Component/AdminSidebar";
+// Replace your current imports with these:
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 const TDDAdminPanel = () => {
   const [users, setUsers] = useState([]);
@@ -316,27 +317,34 @@ const TDDAdminPanel = () => {
     if (!reportData) return;
 
     try {
-      // Create a new PDF document
       const doc = new jsPDF({
         orientation: "landscape",
       });
 
-      // Add title
+      // Header Title
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(68, 114, 196); // Blue color
-      doc.text("Employee TD/DA Report", 140, 15, { align: "center" });
+      doc.setTextColor(68, 114, 196);
+      doc.text(
+        "Employee TD/DA Report",
+        doc.internal.pageSize.getWidth() / 2,
+        15,
+        {
+          align: "center",
+        }
+      );
 
-      // Add employee info
+      // Employee Info Row
       doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0); // Black color
-      doc.text(`Name: ${reportData.userInfo.name}`, 15, 25);
-      doc.text(`Designation: ${reportData.userInfo.designation}`, 80, 25);
-      doc.text(`Month: ${reportData.userInfo.month}`, 140, 25);
-      doc.text(`Area: ${reportData.userInfo.area}`, 200, 25);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Name: ${reportData.userInfo.name}`, 10, 25);
+      doc.text(`Designation: ${reportData.userInfo.designation}`, 90, 25);
+      doc.text(`Month: ${reportData.userInfo.month}`, 170, 25);
+      doc.text(`Area: ${reportData.userInfo.area}`, 240, 25);
 
-      // Prepare data for the table
-      const tableData = reportData.dailyExpenses.map((day) => [
+      // Data rows
+      const body = reportData.dailyExpenses.map((day) => [
         day.date,
         day.from,
         day.to,
@@ -349,58 +357,83 @@ const TDDAdminPanel = () => {
         day.totalExpense || "-",
       ]);
 
-      // Add table
-      doc.autoTable({
+      // Use single autoTable with full-width and two header rows
+      autoTable(doc, {
         startY: 35,
+        margin: { left: 10, right: 10 },
+        tableWidth: "auto",
         head: [
           [
-            "Date",
-            "From",
-            "To",
-            "HQ",
-            "Ex. HQ",
-            "Bus",
-            "CNG",
-            "Train",
-            "Hotel Bill",
-            "Total",
+            { content: "Date" },
+            { content: "Visited Place", colSpan: 2 },
+            { content: "HQ"},
+            { content: "Ex. HQ"},
+            { content: "Transport Bill", colSpan: 3 },
+            { content: "Hotel Bill"},
+            { content: "Total"},
+          ],
+          [
+            "", // Date
+            "From", // Under Visited Place
+            "To", // Under Visited Place
+            "", // HQ
+            "", // Ex HQ
+            "Bus", // Under Transport
+            "CNG", // Under Transport
+            "Train", // Under Transport
+            "", // Hotel
+            "", // Total
           ],
         ],
-        body: tableData,
+        body: reportData.dailyExpenses.map((day) => [
+          day.date,
+          day.from,
+          day.to,
+          day.hq ? day.hqExHqAmount : "-",
+          day.exHq ? day.hqExHqAmount : "-",
+          day.transport?.bus || "-",
+          day.transport?.cng || "-",
+          day.transport?.train || "-",
+          day.hotelBill || "-",
+          day.totalExpense || "-",
+        ]),
         headStyles: {
-          fillColor: [68, 114, 196], // Blue color
-          textColor: [255, 255, 255], // White text
+          fillColor: [68, 114, 196],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
           halign: "center",
           valign: "middle",
-        },
-        alternateRowStyles: {
-          fillColor: [242, 242, 242], // Light gray
         },
         styles: {
+          fontSize: 10,
           halign: "center",
           valign: "middle",
-          cellPadding: 3,
+          cellPadding: 2,
+        },
+        alternateRowStyles: {
+          fillColor: [242, 242, 242],
         },
         columnStyles: {
-          0: { cellWidth: 15 }, // Date
-          1: { cellWidth: 15 }, // From
-          2: { cellWidth: 15 }, // To
-          3: { cellWidth: 10 }, // HQ
-          4: { cellWidth: 10 }, // Ex HQ
-          5: { cellWidth: 8 }, // Bus
-          6: { cellWidth: 8 }, // CNG
-          7: { cellWidth: 8 }, // Train
-          8: { cellWidth: 15 }, // Hotel Bill
-          9: { cellWidth: 15 }, // Total
+          0: { cellWidth: 30 }, // Date
+          1: { cellWidth: 30 }, // From
+          2: { cellWidth: 30 }, // To
+          3: { cellWidth: 25 }, // HQ
+          4: { cellWidth: 25 }, // Ex HQ
+          5: { cellWidth: 25 }, // Bus
+          6: { cellWidth: 25 }, // CNG
+          7: { cellWidth: 25 }, // Train
+          8: { cellWidth: 30 }, // Hotel
+          9: { cellWidth: 30 }, // Total
         },
       });
 
-      // Add summary
+      // Summary section
       const finalY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
       doc.text(
         `Total Working Days: ${reportData.summary.totalWorkingDays}`,
-        15,
+        10,
         finalY
       );
       doc.text(
@@ -409,19 +442,16 @@ const TDDAdminPanel = () => {
             ? reportData.summary.totalExpense.toFixed(2)
             : parseFloat(reportData.summary.totalExpense || 0).toFixed(2)
         }`,
-        80,
+        90,
         finalY
       );
 
-      // Generate file name
       const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
         /\s+/g,
         "_"
       )}_${reportData.userInfo.month}.pdf`;
 
-      // Save the PDF
       doc.save(fileName);
-
       toast.success("PDF report downloaded successfully");
     } catch (error) {
       console.error("Error exporting to PDF:", error);
