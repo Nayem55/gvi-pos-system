@@ -16,10 +16,9 @@ const api = axios.create({
 });
 
 const DealerSalesReport = () => {
-  // State for all raw data
-  const [allUsers, setAllUsers] = useState([]);
-  const [allSalesReports, setAllSalesReports] = useState({});
-  const [allTargets, setAllTargets] = useState({});
+  // State for sales data
+  const [salesData, setSalesData] = useState([]);
+  const [targetsData, setTargetsData] = useState({});
 
   // Filter and display state
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
@@ -31,29 +30,46 @@ const DealerSalesReport = () => {
 
   // Loading and error states
   const [loading, setLoading] = useState({
-    initialLoad: true,
     sales: false,
     targets: false,
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch all initial data
-  const fetchInitialData = useCallback(async () => {
+  // Get belt from zone name
+  const getBeltFromZone = useCallback((zoneName) => {
+    if (!zoneName) return "";
+    if (zoneName.includes("ZONE-01")) return "Belt-1";
+    if (zoneName.includes("ZONE-03")) return "Belt-3";
+    return "";
+  }, []);
+
+  // Fetch sales data with embedded user info
+  const fetchSalesData = useCallback(async () => {
     try {
-      setLoading((prev) => ({ ...prev, initialLoad: true }));
+      setLoading((prev) => ({ ...prev, sales: true }));
       setError(null);
 
-      // Fetch all users
-      const usersResponse = await api.get("/getAllUser");
-      setAllUsers(usersResponse.data);
+      const params = new URLSearchParams();
+      if (startDate && endDate) {
+        params.append("startDate", startDate);
+        params.append("endDate", endDate);
+      } else {
+        params.append("month", selectedMonth);
+      }
+
+      const response = await api.get(`/sales-reports?${params.toString()}`);
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error("Invalid data format received from server");
+      }
+      setSalesData(response.data);
     } catch (error) {
-      console.error("Error fetching initial data:", error);
-      setError("Failed to load initial data. Please try again.");
+      console.error("Error fetching sales data:", error);
+      setError(`Failed to load sales data: ${error.message}`);
     } finally {
-      setLoading((prev) => ({ ...prev, initialLoad: false }));
+      setLoading((prev) => ({ ...prev, sales: false }));
     }
-  }, []);
+  }, [selectedMonth, startDate, endDate]);
 
   // Fetch targets for the selected month
   const fetchTargets = useCallback(async () => {
@@ -62,19 +78,17 @@ const DealerSalesReport = () => {
       setError(null);
 
       const [year, month] = selectedMonth.split("-").map(Number);
-      const targetsResponse = await api.get("/targets", {
-        params: { year, month },
-      });
+      const response = await api.get("/targets", { params: { year, month } });
 
       const targetsMap = {};
-      targetsResponse.data.forEach((targetEntry) => {
+      response.data.forEach((targetEntry) => {
         targetEntry.targets.forEach((target) => {
           if (target.year === year && target.month === month) {
             targetsMap[targetEntry.userID] = target.tp;
           }
         });
       });
-      setAllTargets(targetsMap);
+      setTargetsData(targetsMap);
     } catch (error) {
       console.error("Error fetching targets:", error);
       setError("Failed to load targets. Please try again.");
@@ -83,158 +97,142 @@ const DealerSalesReport = () => {
     }
   }, [selectedMonth]);
 
-  // Fetch sales data when month/date range changes
-  const fetchReportData = useCallback(async () => {
-    if (allUsers.length === 0) return;
-
-    try {
-      setLoading((prev) => ({ ...prev, sales: true }));
-      setError(null);
-
-      // Prepare date parameters
-      let params = {};
-      if (startDate && endDate) {
-        params.startDate = startDate;
-        params.endDate = endDate;
-      } else {
-        params.month = selectedMonth;
-      }
-
-      // Fetch sales reports for all users
-      const salesPromises = allUsers.map((user) =>
-        api
-          .get(`/sales-reports/${user._id}`, { params })
-          .then((response) => ({ userId: user._id, reportData: response.data }))
-          .catch(() => ({ userId: user._id, reportData: [] }))
-      );
-
-      const salesResults = await Promise.all(salesPromises);
-      const salesData = salesResults.reduce((acc, { userId, reportData }) => {
-        acc[userId] = reportData;
-        return acc;
-      }, {});
-      setAllSalesReports(salesData);
-    } catch (error) {
-      console.error("Error fetching report data:", error);
-      setError("Failed to load report data. Please try again.");
-    } finally {
-      setLoading((prev) => ({ ...prev, sales: false }));
-    }
-  }, [allUsers, selectedMonth, startDate, endDate]);
-
-  // Get belt from zone name
-  const getBeltFromZone = useCallback((zoneName) => {
-    if (zoneName.includes("ZONE-01")) return "Belt-1";
-    if (zoneName.includes("ZONE-03")) return "Belt-3";
-    return "";
-  }, []);
-
-  // Get target for a user in the selected period
-  const getUserTarget = useCallback(
-    (userId) => {
-      return allTargets[userId] || 0;
-    },
-    [allTargets]
-  );
-
-  // Apply all filters to get the users to display
-  const filteredUsers = useMemo(() => {
-    return allUsers.filter((user) => {
-      const matchRole = selectedRole
-        ? user.role === selectedRole
-        : !["ASM", "RSM", "SOM"].includes(user.role);
-      const matchZone = selectedZone ? user.zone.includes(selectedZone) : true;
-      const belt = getBeltFromZone(user.zone);
-      const matchBelt = selectedBelt ? belt === selectedBelt : true;
-      return matchRole && matchZone && matchBelt;
-    });
-  }, [allUsers, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
-
-  // Aggregate reports data with proper calculations and filter out empty/zero sales
-  const aggregatedReports = useMemo(() => {
-    return filteredUsers
-      .map((user) => {
-        let totalReports = 0;
-        let totalTP = 0;
-
-        if (["ASM", "RSM", "SOM"].includes(user.role)) {
-          // For managers, calculate based on their team
-          const teamMembers = allUsers.filter((u) => u.zone.includes(user.zone));
-
-          // Sales data
-          totalReports = teamMembers.reduce(
-            (sum, member) => sum + (allSalesReports[member._id]?.length || 0),
-            0
-          );
-          totalTP = teamMembers.reduce(
-            (sum, member) =>
-              sum +
-              (allSalesReports[member._id]?.reduce(
-                (subSum, report) => subSum + (report.total_tp || 0),
-                0
-              ) || 0),
-            0
-          );
-        } else {
-          // For regular users
-          totalReports = allSalesReports[user._id]?.length || 0;
-          totalTP =
-            allSalesReports[user._id]?.reduce(
-              (sum, report) => sum + (report.total_tp || 0),
-              0
-            ) || 0;
+  // Main aggregation logic
+  const { aggregatedReports, summaryData } = useMemo(() => {
+    if (!salesData || salesData.length === 0) {
+      return {
+        aggregatedReports: [],
+        summaryData: {
+          totalSOs: 0,
+          achievedSOs: 0,
+          totalTP: 0,
+          asmTotals: {},
+          rsmTotals: {},
+          somTotals: {}
         }
+      };
+    }
 
-        // Skip users with no sales reports or zero TP
-        if (totalReports === 0 || totalTP === 0) return null;
+    // Group sales by SO
+    const salesByUser = salesData.reduce((acc, sale) => {
+      if (!sale.user || !sale.so) return acc;
 
-        const target = getUserTarget(user._id);
-        const achievement = target > 0 ? (totalTP / target) * 100 : 0;
+      const userId = sale.user;
+      if (!acc[userId]) {
+        acc[userId] = {
+          userId,
+          name: sale.so,
+          outlet: sale.outlet,
+          zone: sale.zone,
+          role: sale.role || "SO",
+          asm: sale.asm,
+          rsm: sale.rsm,
+          som: sale.som,
+          sales: [],
+          totalTP: 0,
+          totalDP: 0,
+          totalMRP: 0,
+        };
+      }
+      acc[userId].sales.push(sale);
+      acc[userId].totalTP += sale.total_tp || 0;
+      return acc;
+    }, {});
+
+    // Manager level aggregations
+    const managerLevels = ["ASM", "RSM", "SOM"];
+    const managerReports = {};
+    const managerTotals = {
+      ASM: {},
+      RSM: {},
+      SOM: {}
+    };
+
+    managerLevels.forEach((level) => {
+      const managers = [...new Set(salesData.map(s => s[level.toLowerCase()]))].filter(Boolean);
+      
+      managers.forEach(manager => {
+        const managerKey = `${level}_${manager}`;
+        const teamMembers = Object.values(salesByUser).filter(
+          user => user[level.toLowerCase()] === manager
+        );
+
+        const teamTP = teamMembers.reduce((sum, member) => sum + (member.totalTP || 0), 0);
+        
+        managerReports[managerKey] = {
+          userId: managerKey,
+          name: manager,
+          role: level,
+          zone: teamMembers[0]?.zone || '',
+          totalTP: teamTP,
+          salesCount: teamMembers.reduce((sum, m) => sum + (m.sales?.length || 0), 0),
+          teamMembers: teamMembers.map(m => m.userId),
+          isManager: true
+        };
+
+        // Store manager totals
+        managerTotals[level][manager] = teamTP;
+      });
+    });
+
+    // Combine all reports
+    const allReports = [...Object.values(salesByUser), ...Object.values(managerReports)];
+
+    // Apply filters
+    const filteredReports = allReports
+      .map((report) => {
+        const matchRole = selectedRole ? report.role === selectedRole : true;
+        const matchZone = selectedZone ? report.zone?.includes(selectedZone) : true;
+        const belt = getBeltFromZone(report.zone);
+        const matchBelt = selectedBelt ? belt === selectedBelt : true;
+
+        if (!matchRole || !matchZone || !matchBelt) return null;
+
+        const target = targetsData[report.userId] || 0;
+        const achievement = target > 0 ? (report.totalTP / target) * 100 : 0;
 
         return {
-          userId: user._id,
-          name: user.name,
-          outlet: user.outlet,
-          zone: user.zone,
-          role: user.role,
-          totalReports,
-          totalTP,
+          ...report,
           target,
           achievement,
+          belt,
+          salesCount: report.salesCount || report.sales?.length || 0
         };
       })
-      .filter(Boolean); // Remove null entries
-  }, [filteredUsers, allUsers, allSalesReports, getUserTarget]);
+      .filter(Boolean);
 
-  // Calculate totals for active dealers only
-  const { totalDealers, achievedTargetCount, totalTP } = useMemo(() => {
+    // Calculate summary data (SO only)
+    const soReports = Object.values(salesByUser);
+    const achievedSOs = soReports.filter(so => {
+      const target = targetsData[so.userId] || 0;
+      return target > 0 && ((so.totalTP / target) * 100) >= 100;
+    }).length;
+
     return {
-      totalDealers: aggregatedReports.length,
-      achievedTargetCount: aggregatedReports.filter(
-        (user) => user.achievement >= 100
-      ).length,
-      totalTP: aggregatedReports.reduce((sum, user) => sum + user.totalTP, 0),
+      aggregatedReports: filteredReports,
+      summaryData: {
+        totalSOs: soReports.length,
+        achievedSOs,
+        totalTP: soReports.reduce((sum, so) => sum + (so.totalTP || 0), 0),
+        asmTotals: managerTotals.ASM,
+        rsmTotals: managerTotals.RSM,
+        somTotals: managerTotals.SOM
+      }
     };
-  }, [aggregatedReports]);
+  }, [salesData, targetsData, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
 
-  // Initial data load
+  // Fetch data when filters change
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    fetchSalesData();
+  }, [fetchSalesData]);
 
-  // Fetch targets when month changes
   useEffect(() => {
     if (selectedMonth) {
       fetchTargets();
     }
   }, [selectedMonth, fetchTargets]);
 
-  // Fetch report data when month/date range changes
-  useEffect(() => {
-    fetchReportData();
-  }, [fetchReportData]);
-
-  const isLoading = loading.initialLoad || loading.sales || loading.targets;
+  const isLoading = loading.sales || loading.targets;
 
   const exportToExcel = () => {
     const exportData = aggregatedReports.map((report) => ({
@@ -242,9 +240,11 @@ const DealerSalesReport = () => {
       Outlet: report.outlet || "-",
       Zone: report.zone,
       Role: report.role,
+      Belt: report.belt,
       Target: report.target,
       "Total TP": report.totalTP.toFixed(2),
       "Achievement (%)": report.achievement.toFixed(1),
+      "Total Sales": report.salesCount,
     }));
 
     const wb = XLSX.utils.book_new();
@@ -253,9 +253,7 @@ const DealerSalesReport = () => {
 
     const fileName = `Dealer_Sales_Report_${
       selectedMonth ||
-      (startDate && endDate
-        ? `${startDate}_to_${endDate}`
-        : dayjs().format("YYYY-MM"))
+      (startDate && endDate ? `${startDate}_to_${endDate}` : dayjs().format("YYYY-MM"))
     }.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
@@ -289,24 +287,52 @@ const DealerSalesReport = () => {
           </div>
         )}
 
+        {/* Summary Section */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Active Dealers</h3>
-            <p className="text-xl font-bold">{totalDealers}</p>
+            <h3 className="text-lg font-semibold">Active SOs</h3>
+            <p className="text-xl font-bold">{summaryData.totalSOs}</p>
           </div>
           <div className="bg-green-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Target Achieved</h3>
             <p className="text-xl font-bold">
-              {achievedTargetCount} / {totalDealers}
+              {summaryData.achievedSOs} / {summaryData.totalSOs}
             </p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total TP</h3>
-            <p className="text-xl font-bold">{totalTP.toFixed(2)}</p>
+            <h3 className="text-lg font-semibold">Total TP (SO Only)</h3>
+            <p className="text-xl font-bold">{summaryData.totalTP.toFixed(2)}</p>
           </div>
         </div>
 
+        {/* Manager Summary Section */}
+        <div className="bg-gray-100 p-4 rounded-lg shadow mb-4">
+          <h3 className="text-lg font-semibold mb-2">Manager Summaries</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white p-3 rounded-lg text-center">
+              <h4 className="font-medium">ASM Total TP</h4>
+              <p className="text-lg font-bold">
+                {Object.values(summaryData.asmTotals).reduce((sum, tp) => sum + tp, 0).toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white p-3 rounded-lg text-center">
+              <h4 className="font-medium">RSM Total TP</h4>
+              <p className="text-lg font-bold">
+                {Object.values(summaryData.rsmTotals).reduce((sum, tp) => sum + tp, 0).toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white p-3 rounded-lg text-center">
+              <h4 className="font-medium">SOM Total TP</h4>
+              <p className="text-lg font-bold">
+                {Object.values(summaryData.somTotals).reduce((sum, tp) => sum + tp, 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters Section */}
         <div className="mb-4 flex flex-wrap gap-4 items-end">
+          {/* Date Filters */}
           <div>
             <label className="font-medium">Select Month:</label>
             <input
@@ -336,6 +362,7 @@ const DealerSalesReport = () => {
             />
           </div>
 
+          {/* Role Filter */}
           <div>
             <label className="font-medium">Role:</label>
             <select
@@ -345,14 +372,13 @@ const DealerSalesReport = () => {
             >
               <option value="">All Roles</option>
               <option value="SO">Sales Officer</option>
-              <option value="SELF">Self</option>
-              <option value="COMMISSION">Commission</option>
               <option value="ASM">ASM</option>
               <option value="RSM">RSM</option>
               <option value="SOM">SOM</option>
             </select>
           </div>
 
+          {/* Zone Filter */}
           <div>
             <label className="font-medium">Zone:</label>
             <select
@@ -374,6 +400,7 @@ const DealerSalesReport = () => {
             </select>
           </div>
 
+          {/* Belt Filter */}
           <div>
             <label className="font-medium">Belt:</label>
             <select
@@ -396,6 +423,7 @@ const DealerSalesReport = () => {
           </button>
         </div>
 
+        {/* Results Table */}
         {isLoading ? (
           <div className="flex justify-center items-center my-10">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
@@ -418,57 +446,75 @@ const DealerSalesReport = () => {
                   <th className="p-2 sticky top-0 bg-gray-100">Target (TP)</th>
                   <th className="p-2 sticky top-0 bg-gray-100">Sales (TP)</th>
                   <th className="p-2 sticky top-0 bg-gray-100">Achievement</th>
+                  <th className="p-2 sticky top-0 bg-gray-100">Sales Count</th>
                   <th className="p-2 sticky top-0 bg-gray-100">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {aggregatedReports.map((user) => (
-                  <tr key={user.userId} className="border hover:bg-gray-50">
-                    <td className="border p-2">{user.name}</td>
-                    <td className="border p-2">{user.outlet || "-"}</td>
-                    <td className="border p-2">{user.zone}</td>
-                    <td className="border p-2">{user.role}</td>
-                    <td className="border p-2">{user.target}</td>
-                    <td className="border p-2">{user.totalTP.toFixed(2)}</td>
+                {aggregatedReports.map((report) => (
+                  <tr
+                    key={report.userId}
+                    className={`border hover:bg-gray-50 ${
+                      report.isManager ? "bg-blue-50" : ""
+                    }`}
+                  >
+                    <td className="border p-2">
+                      {report.name}
+                      {report.isManager && (
+                        <span className="ml-2 text-xs text-blue-600">
+                          ({report.role})
+                        </span>
+                      )}
+                    </td>
+                    <td className="border p-2">{report.outlet || "-"}</td>
+                    <td className="border p-2">{report.zone}</td>
+                    <td className="border p-2">{report.role}</td>
+                    <td className="border p-2">{report.target}</td>
+                    <td className="border p-2">{report.totalTP.toFixed(2)}</td>
                     <td className="border p-2">
                       <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
-                            user.achievement >= 100
+                            report.achievement >= 100
                               ? "bg-green-500"
-                              : user.achievement >= 70
+                              : report.achievement >= 70
                               ? "bg-blue-500"
-                              : user.achievement >= 40
+                              : report.achievement >= 40
                               ? "bg-yellow-500"
                               : "bg-red-500"
                           }`}
                           style={{
-                            width: `${Math.min(100, user.achievement)}%`,
+                            width: `${Math.min(100, report.achievement)}%`,
                             transition: "width 0.5s ease-in-out",
                           }}
                         ></div>
-                        {user.target > 0 && (
+                        {report.target > 0 && (
                           <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
-                            {user.achievement.toFixed(1)}%
+                            {report.achievement.toFixed(1)}%
                           </span>
                         )}
                       </div>
                     </td>
+                    <td className="border p-2 text-center">
+                      {report.salesCount}
+                    </td>
                     <td className="border p-2">
-                      <button
-                        className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
-                        onClick={() =>
-                          navigate(
-                            `/sales-report/daily/${user.userId}?${
-                              startDate && endDate
-                                ? `startDate=${startDate}&endDate=${endDate}`
-                                : `month=${selectedMonth}`
-                            }`
-                          )
-                        }
-                      >
-                        Details
-                      </button>
+                      {!report.isManager && (
+                        <button
+                          className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
+                          onClick={() =>
+                            navigate(
+                              `/sales-report/daily/${report.userId}?${
+                                startDate && endDate
+                                  ? `startDate=${startDate}&endDate=${endDate}`
+                                  : `month=${selectedMonth}`
+                              }`
+                            )
+                          }
+                        >
+                          Details
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

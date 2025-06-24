@@ -36,6 +36,7 @@ import BrandWiseSalesReport from "../Pages/BrandsSaleReport";
 import BrandTargetPage from "../Pages/BrandTargetPage";
 import TDDA from "../Pages/TDDA";
 import TDDAdminPanel from "../Pages/TDDA";
+import SalarySheet from "../Pages/AdminPanel/SalarySheet";
 
 const router = createBrowserRouter([
   {
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
       {
         path: "/admin",
         element: <AdminHomePage/>,
+      },
+      {
+        path: "/admin/salary",
+        element: <SalarySheet/>,
       },
       {
         path: "/admin/products",
