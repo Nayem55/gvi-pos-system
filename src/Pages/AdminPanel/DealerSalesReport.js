@@ -97,9 +97,22 @@ const DealerSalesReport = () => {
     }
   }, [selectedMonth]);
 
+  // Filter sales data based on current filters (except role)
+  const filteredSalesData = useMemo(() => {
+    if (!salesData || salesData.length === 0) return [];
+
+    return salesData.filter((sale) => {
+      const belt = getBeltFromZone(sale.zone);
+      const matchZone = selectedZone ? sale.zone?.includes(selectedZone) : true;
+      const matchBelt = selectedBelt ? belt === selectedBelt : true;
+
+      return matchZone && matchBelt;
+    });
+  }, [salesData, selectedZone, selectedBelt, getBeltFromZone]);
+
   // Main aggregation logic
   const { aggregatedReports, summaryData } = useMemo(() => {
-    if (!salesData || salesData.length === 0) {
+    if (!filteredSalesData || filteredSalesData.length === 0) {
       return {
         aggregatedReports: [],
         summaryData: {
@@ -108,13 +121,13 @@ const DealerSalesReport = () => {
           totalTP: 0,
           asmTotals: {},
           rsmTotals: {},
-          somTotals: {}
-        }
+          somTotals: {},
+        },
       };
     }
 
     // Group sales by SO
-    const salesByUser = salesData.reduce((acc, sale) => {
+    const salesByUser = filteredSalesData.reduce((acc, sale) => {
       if (!sale.user || !sale.so) return acc;
 
       const userId = sale.user;
@@ -145,29 +158,37 @@ const DealerSalesReport = () => {
     const managerTotals = {
       ASM: {},
       RSM: {},
-      SOM: {}
+      SOM: {},
     };
 
     managerLevels.forEach((level) => {
-      const managers = [...new Set(salesData.map(s => s[level.toLowerCase()]))].filter(Boolean);
-      
-      managers.forEach(manager => {
+      const managers = [
+        ...new Set(filteredSalesData.map((s) => s[level.toLowerCase()])),
+      ].filter(Boolean);
+
+      managers.forEach((manager) => {
         const managerKey = `${level}_${manager}`;
         const teamMembers = Object.values(salesByUser).filter(
-          user => user[level.toLowerCase()] === manager
+          (user) => user[level.toLowerCase()] === manager
         );
 
-        const teamTP = teamMembers.reduce((sum, member) => sum + (member.totalTP || 0), 0);
-        
+        const teamTP = teamMembers.reduce(
+          (sum, member) => sum + (member.totalTP || 0),
+          0
+        );
+
         managerReports[managerKey] = {
           userId: managerKey,
           name: manager,
           role: level,
-          zone: teamMembers[0]?.zone || '',
+          zone: teamMembers[0]?.zone || "",
           totalTP: teamTP,
-          salesCount: teamMembers.reduce((sum, m) => sum + (m.sales?.length || 0), 0),
-          teamMembers: teamMembers.map(m => m.userId),
-          isManager: true
+          salesCount: teamMembers.reduce(
+            (sum, m) => sum + (m.sales?.length || 0),
+            0
+          ),
+          teamMembers: teamMembers.map((m) => m.userId),
+          isManager: true,
         };
 
         // Store manager totals
@@ -176,17 +197,18 @@ const DealerSalesReport = () => {
     });
 
     // Combine all reports
-    const allReports = [...Object.values(salesByUser), ...Object.values(managerReports)];
+    const allReports = [
+      ...Object.values(salesByUser),
+      ...Object.values(managerReports),
+    ];
 
-    // Apply filters
+    // Apply role filter to the final reports
     const filteredReports = allReports
       .map((report) => {
         const matchRole = selectedRole ? report.role === selectedRole : true;
-        const matchZone = selectedZone ? report.zone?.includes(selectedZone) : true;
         const belt = getBeltFromZone(report.zone);
-        const matchBelt = selectedBelt ? belt === selectedBelt : true;
 
-        if (!matchRole || !matchZone || !matchBelt) return null;
+        if (!matchRole) return null;
 
         const target = targetsData[report.userId] || 0;
         const achievement = target > 0 ? (report.totalTP / target) * 100 : 0;
@@ -196,16 +218,16 @@ const DealerSalesReport = () => {
           target,
           achievement,
           belt,
-          salesCount: report.salesCount || report.sales?.length || 0
+          salesCount: report.salesCount || report.sales?.length || 0,
         };
       })
       .filter(Boolean);
 
-    // Calculate summary data (SO only)
+    // Calculate summary data (SO only) from filtered data (before role filter)
     const soReports = Object.values(salesByUser);
-    const achievedSOs = soReports.filter(so => {
+    const achievedSOs = soReports.filter((so) => {
       const target = targetsData[so.userId] || 0;
-      return target > 0 && ((so.totalTP / target) * 100) >= 100;
+      return target > 0 && (so.totalTP / target) * 100 >= 100;
     }).length;
 
     return {
@@ -216,10 +238,10 @@ const DealerSalesReport = () => {
         totalTP: soReports.reduce((sum, so) => sum + (so.totalTP || 0), 0),
         asmTotals: managerTotals.ASM,
         rsmTotals: managerTotals.RSM,
-        somTotals: managerTotals.SOM
-      }
+        somTotals: managerTotals.SOM,
+      },
     };
-  }, [salesData, targetsData, selectedRole, selectedZone, selectedBelt, getBeltFromZone]);
+  }, [filteredSalesData, targetsData, selectedRole, getBeltFromZone]);
 
   // Fetch data when filters change
   useEffect(() => {
@@ -253,7 +275,9 @@ const DealerSalesReport = () => {
 
     const fileName = `Dealer_Sales_Report_${
       selectedMonth ||
-      (startDate && endDate ? `${startDate}_to_${endDate}` : dayjs().format("YYYY-MM"))
+      (startDate && endDate
+        ? `${startDate}_to_${endDate}`
+        : dayjs().format("YYYY-MM"))
     }.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
@@ -301,7 +325,9 @@ const DealerSalesReport = () => {
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Total TP (SO Only)</h3>
-            <p className="text-xl font-bold">{summaryData.totalTP.toFixed(2)}</p>
+            <p className="text-xl font-bold">
+              {summaryData.totalTP.toFixed(2)}
+            </p>
           </div>
         </div>
 
@@ -312,19 +338,25 @@ const DealerSalesReport = () => {
             <div className="bg-white p-3 rounded-lg text-center">
               <h4 className="font-medium">ASM Total TP</h4>
               <p className="text-lg font-bold">
-                {Object.values(summaryData.asmTotals).reduce((sum, tp) => sum + tp, 0).toFixed(2)}
+                {Object.values(summaryData.asmTotals)
+                  .reduce((sum, tp) => sum + tp, 0)
+                  .toFixed(2)}
               </p>
             </div>
             <div className="bg-white p-3 rounded-lg text-center">
               <h4 className="font-medium">RSM Total TP</h4>
               <p className="text-lg font-bold">
-                {Object.values(summaryData.rsmTotals).reduce((sum, tp) => sum + tp, 0).toFixed(2)}
+                {Object.values(summaryData.rsmTotals)
+                  .reduce((sum, tp) => sum + tp, 0)
+                  .toFixed(2)}
               </p>
             </div>
             <div className="bg-white p-3 rounded-lg text-center">
               <h4 className="font-medium">SOM Total TP</h4>
               <p className="text-lg font-bold">
-                {Object.values(summaryData.somTotals).reduce((sum, tp) => sum + tp, 0).toFixed(2)}
+                {Object.values(summaryData.somTotals)
+                  .reduce((sum, tp) => sum + tp, 0)
+                  .toFixed(2)}
               </p>
             </div>
           </div>
