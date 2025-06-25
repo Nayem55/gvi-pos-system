@@ -44,7 +44,6 @@ const SalarySheet = () => {
     return "";
   }, []);
 
-  console.log(stockData)
 
   // Fetch stock transaction data
   const fetchStockData = useCallback(async () => {
@@ -302,7 +301,7 @@ const SalarySheet = () => {
       switch (transaction.type.toLowerCase()) {
         case "primary":
           acc[userId].totalPrimary += transaction.quantity;
-          acc[userId].totalPrimaryValue += transaction.quantity * transaction.tp;
+          acc[userId].totalPrimaryValue += transaction.quantity * transaction.dp;
           break;
         case "secondary":
           acc[userId].totalSecondary += transaction.quantity;
@@ -310,11 +309,11 @@ const SalarySheet = () => {
           break;
         case "market return":
           acc[userId].totalMarketReturn += transaction.quantity;
-          acc[userId].totalMarketReturnValue += transaction.quantity * transaction.tp;
+          acc[userId].totalMarketReturnValue += transaction.quantity * transaction.dp;
           break;
         case "office return":
           acc[userId].totalOfficeReturn += transaction.quantity;
-          acc[userId].totalOfficeReturnValue += transaction.quantity * transaction.tp;
+          acc[userId].totalOfficeReturnValue += transaction.quantity * transaction.dp;
           break;
       }
       return acc;
