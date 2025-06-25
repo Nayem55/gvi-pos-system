@@ -110,18 +110,161 @@ const DealerSalesReport = () => {
     });
   }, [salesData, selectedZone, selectedBelt, getBeltFromZone]);
 
+  // Organize reports hierarchically by zone and then by role (SOM → RSM → ASM → SO)
+  // Updated organizeReportsHierarchically function
+  // Updated organizeReportsHierarchically function
+  // Updated organizeReportsHierarchically function
+  const organizeReportsHierarchically = (reports) => {
+    // Group by belt first
+    const reportsByBelt = reports.reduce((acc, report) => {
+      const belt = getBeltFromZone(report.zone) || "Unknown Belt";
+      if (!acc[belt]) {
+        acc[belt] = [];
+      }
+      acc[belt].push(report);
+      return acc;
+    }, {});
+
+    // For each belt, organize by role hierarchy
+    return Object.entries(reportsByBelt).map(([belt, beltReports]) => {
+      // Separate all roles
+      const soms = beltReports.filter((r) => r.role === "SOM");
+      const rsms = beltReports.filter((r) => r.role === "RSM");
+      const asms = beltReports.filter((r) => r.role === "ASM");
+      const salesOfficers = beltReports.filter((r) => r.role === "SO");
+
+      // Create maps for relationships
+      const soBySom = salesOfficers.reduce((acc, so) => {
+        const som = so.som || "Unknown SOM";
+        if (!acc[som]) acc[som] = [];
+        acc[som].push(so);
+        return acc;
+      }, {});
+
+      const soByRsm = salesOfficers.reduce((acc, so) => {
+        const rsm = so.rsm || "Unknown RSM";
+        if (!acc[rsm]) acc[rsm] = [];
+        acc[rsm].push(so);
+        return acc;
+      }, {});
+
+      const soByAsm = salesOfficers.reduce((acc, so) => {
+        const asm = so.asm || "Unknown ASM";
+        if (!acc[asm]) acc[asm] = [];
+        acc[asm].push(so);
+        return acc;
+      }, {});
+
+      // Build the hierarchical structure
+      const organizedReports = [];
+
+      // Add SOMs first
+      soms.forEach((som) => {
+        organizedReports.push(som);
+
+        // Find RSMs that report to this SOM
+        const somRsms = rsms.filter((rsm) =>
+          soBySom[rsm.name]?.some((so) => so.som === som.name)
+        );
+
+        // Add each RSM and their hierarchy
+        somRsms.forEach((rsm) => {
+          organizedReports.push(rsm);
+
+          // Find ASMs that report to this RSM
+          const rsmAsms = asms.filter((asm) =>
+            soByRsm[asm.name]?.some((so) => so.rsm === rsm.name)
+          );
+
+          // Add each ASM and their SOs
+          rsmAsms.forEach((asm) => {
+            organizedReports.push(asm);
+
+            // Add SOs for this ASM
+            const asmSos = soByAsm[asm.name] || [];
+            organizedReports.push(
+              ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+            );
+          });
+
+          // Add SOs that report directly to RSM (without ASM)
+          const directSos = (soByRsm[rsm.name] || []).filter((so) => !so.asm);
+          organizedReports.push(
+            ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+          );
+        });
+
+        // Add SOs that report directly to SOM (without RSM or ASM)
+        const directSos = (soBySom[som.name] || []).filter(
+          (so) => !so.rsm && !so.asm
+        );
+        organizedReports.push(
+          ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+        );
+      });
+
+      // Add any remaining RSMs not under a SOM
+      const remainingRsms = rsms.filter(
+        (rsm) => !organizedReports.some((r) => r.userId === rsm.userId)
+      );
+      remainingRsms.forEach((rsm) => {
+        organizedReports.push(rsm);
+
+        // Add ASMs under this RSM
+        const rsmAsms = asms.filter((asm) =>
+          soByRsm[asm.name]?.some((so) => so.rsm === rsm.name)
+        );
+
+        rsmAsms.forEach((asm) => {
+          organizedReports.push(asm);
+          const asmSos = soByAsm[asm.name] || [];
+          organizedReports.push(
+            ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+          );
+        });
+
+        // Add SOs directly under RSM
+        const directSos = (soByRsm[rsm.name] || []).filter((so) => !so.asm);
+        organizedReports.push(
+          ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+        );
+      });
+
+      // Add any remaining ASMs not under a RSM
+      const remainingAsms = asms.filter(
+        (asm) => !organizedReports.some((r) => r.userId === asm.userId)
+      );
+      remainingAsms.forEach((asm) => {
+        organizedReports.push(asm);
+        const asmSos = soByAsm[asm.name] || [];
+        organizedReports.push(
+          ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+        );
+      });
+
+      // Add any remaining SOs not under any manager
+      const remainingSos = salesOfficers.filter(
+        (so) => !organizedReports.some((r) => r.userId === so.userId)
+      );
+      organizedReports.push(
+        ...remainingSos.sort((a, b) => a.name.localeCompare(b.name))
+      );
+
+      return {
+        belt,
+        reports: organizedReports,
+      };
+    });
+  };
   // Main aggregation logic
-  const { aggregatedReports, summaryData } = useMemo(() => {
+  const { organizedReports, summaryData } = useMemo(() => {
     if (!filteredSalesData || filteredSalesData.length === 0) {
       return {
-        aggregatedReports: [],
+        organizedReports: [],
         summaryData: {
           totalSOs: 0,
           achievedSOs: 0,
           totalTP: 0,
-          asmTotals: {},
-          rsmTotals: {},
-          somTotals: {},
         },
       };
     }
@@ -155,11 +298,6 @@ const DealerSalesReport = () => {
     // Manager level aggregations
     const managerLevels = ["ASM", "RSM", "SOM"];
     const managerReports = {};
-    const managerTotals = {
-      ASM: {},
-      RSM: {},
-      SOM: {},
-    };
 
     managerLevels.forEach((level) => {
       const managers = [
@@ -176,6 +314,12 @@ const DealerSalesReport = () => {
           (sum, member) => sum + (member.totalTP || 0),
           0
         );
+        const managerTarget = teamMembers.reduce((sum, member) => {
+          return sum + (Number(targetsData[member.userId]) || 0);
+        }, 0);
+
+        const managerAchievement =
+          managerTarget > 0 ? (teamTP / managerTarget) * 100 : 0;
 
         managerReports[managerKey] = {
           userId: managerKey,
@@ -183,6 +327,8 @@ const DealerSalesReport = () => {
           role: level,
           zone: teamMembers[0]?.zone || "",
           totalTP: teamTP,
+          target: managerTarget,
+          achievement: managerAchievement,
           salesCount: teamMembers.reduce(
             (sum, m) => sum + (m.sales?.length || 0),
             0
@@ -190,9 +336,6 @@ const DealerSalesReport = () => {
           teamMembers: teamMembers.map((m) => m.userId),
           isManager: true,
         };
-
-        // Store manager totals
-        managerTotals[level][manager] = teamTP;
       });
     });
 
@@ -202,7 +345,7 @@ const DealerSalesReport = () => {
       ...Object.values(managerReports),
     ];
 
-    // Apply role filter to the final reports
+    // Apply filters
     const filteredReports = allReports
       .map((report) => {
         const matchRole = selectedRole ? report.role === selectedRole : true;
@@ -210,18 +353,24 @@ const DealerSalesReport = () => {
 
         if (!matchRole) return null;
 
-        const target = targetsData[report.userId] || 0;
+        const target = report.isManager
+          ? report.target // already calculated for managers
+          : targetsData[report.userId] || 0;
+
         const achievement = target > 0 ? (report.totalTP / target) * 100 : 0;
 
         return {
           ...report,
-          target,
+          target: Number(target).toFixed(2), // Format all targets consistently
           achievement,
           belt,
           salesCount: report.salesCount || report.sales?.length || 0,
         };
       })
       .filter(Boolean);
+
+    // Organize reports hierarchically
+    const organized = organizeReportsHierarchically(filteredReports);
 
     // Calculate summary data (SO only) from filtered data (before role filter)
     const soReports = Object.values(salesByUser);
@@ -231,14 +380,11 @@ const DealerSalesReport = () => {
     }).length;
 
     return {
-      aggregatedReports: filteredReports,
+      organizedReports: organized,
       summaryData: {
         totalSOs: soReports.length,
         achievedSOs,
         totalTP: soReports.reduce((sum, so) => sum + (so.totalTP || 0), 0),
-        asmTotals: managerTotals.ASM,
-        rsmTotals: managerTotals.RSM,
-        somTotals: managerTotals.SOM,
       },
     };
   }, [filteredSalesData, targetsData, selectedRole, getBeltFromZone]);
@@ -257,17 +403,20 @@ const DealerSalesReport = () => {
   const isLoading = loading.sales || loading.targets;
 
   const exportToExcel = () => {
-    const exportData = aggregatedReports.map((report) => ({
-      "User Name": report.name,
-      Outlet: report.outlet || "-",
-      Zone: report.zone,
-      Role: report.role,
-      Belt: report.belt,
-      Target: report.target,
-      "Total TP": report.totalTP.toFixed(2),
-      "Achievement (%)": report.achievement.toFixed(1),
-      "Total Sales": report.salesCount,
-    }));
+    // Flatten the organized reports for export
+    const exportData = organizedReports.flatMap((zoneGroup) =>
+      zoneGroup.reports.map((report) => ({
+        "User Name": report.name,
+        Outlet: report.outlet || "-",
+        Zone: report.zone,
+        Role: report.role,
+        Belt: report.belt,
+        Target: report.target,
+        "Total TP": report.totalTP.toFixed(2),
+        "Achievement (%)": report.achievement.toFixed(1),
+        "Total Sales": report.salesCount,
+      }))
+    );
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -299,7 +448,7 @@ const DealerSalesReport = () => {
           <button
             onClick={exportToExcel}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
-            disabled={isLoading || aggregatedReports.length === 0}
+            disabled={isLoading || organizedReports.length === 0}
           >
             Export to Excel
           </button>
@@ -324,41 +473,10 @@ const DealerSalesReport = () => {
             </p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total TP (SO Only)</h3>
+            <h3 className="text-lg font-semibold">Total TP</h3>
             <p className="text-xl font-bold">
               {summaryData.totalTP.toFixed(2)}
             </p>
-          </div>
-        </div>
-
-        {/* Manager Summary Section */}
-        <div className="bg-gray-100 p-4 rounded-lg shadow mb-4">
-          <h3 className="text-lg font-semibold mb-2">Manager Summaries</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white p-3 rounded-lg text-center">
-              <h4 className="font-medium">ASM Total TP</h4>
-              <p className="text-lg font-bold">
-                {Object.values(summaryData.asmTotals)
-                  .reduce((sum, tp) => sum + tp, 0)
-                  .toFixed(2)}
-              </p>
-            </div>
-            <div className="bg-white p-3 rounded-lg text-center">
-              <h4 className="font-medium">RSM Total TP</h4>
-              <p className="text-lg font-bold">
-                {Object.values(summaryData.rsmTotals)
-                  .reduce((sum, tp) => sum + tp, 0)
-                  .toFixed(2)}
-              </p>
-            </div>
-            <div className="bg-white p-3 rounded-lg text-center">
-              <h4 className="font-medium">SOM Total TP</h4>
-              <p className="text-lg font-bold">
-                {Object.values(summaryData.somTotals)
-                  .reduce((sum, tp) => sum + tp, 0)
-                  .toFixed(2)}
-              </p>
-            </div>
           </div>
         </div>
 
@@ -460,7 +578,7 @@ const DealerSalesReport = () => {
           <div className="flex justify-center items-center my-10">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
           </div>
-        ) : aggregatedReports.length === 0 ? (
+        ) : organizedReports.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-lg text-gray-600">
               No sales data found for the selected filters
@@ -468,90 +586,99 @@ const DealerSalesReport = () => {
           </div>
         ) : (
           <div className="relative overflow-auto max-h-[90vh]">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100 sticky top-0 z-10">
-                  <th className="p-2 sticky top-0 bg-gray-100">User</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Outlet</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Zone</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Role</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Target (TP)</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Sales (TP)</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Achievement</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Sales Count</th>
-                  <th className="p-2 sticky top-0 bg-gray-100">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {aggregatedReports.map((report) => (
-                  <tr
-                    key={report.userId}
-                    className={`border hover:bg-gray-50 ${
-                      report.isManager ? "bg-blue-50" : ""
-                    }`}
-                  >
-                    <td className="border p-2">
-                      {report.name}
-                      {report.isManager && (
-                        <span className="ml-2 text-xs text-blue-600">
-                          ({report.role})
-                        </span>
-                      )}
-                    </td>
-                    <td className="border p-2">{report.outlet || "-"}</td>
-                    <td className="border p-2">{report.zone}</td>
-                    <td className="border p-2">{report.role}</td>
-                    <td className="border p-2">{report.target}</td>
-                    <td className="border p-2">{report.totalTP.toFixed(2)}</td>
-                    <td className="border p-2">
-                      <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
-                            report.achievement >= 100
-                              ? "bg-green-500"
-                              : report.achievement >= 70
-                              ? "bg-blue-500"
-                              : report.achievement >= 40
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                          }`}
-                          style={{
-                            width: `${Math.min(100, report.achievement)}%`,
-                            transition: "width 0.5s ease-in-out",
-                          }}
-                        ></div>
-                        {report.target > 0 && (
-                          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
-                            {report.achievement.toFixed(1)}%
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="border p-2 text-center">
-                      {report.salesCount}
-                    </td>
-                    <td className="border p-2">
-                      {!report.isManager && (
-                        <button
-                          className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
-                          onClick={() =>
-                            navigate(
-                              `/sales-report/daily/${report.userId}?${
-                                startDate && endDate
-                                  ? `startDate=${startDate}&endDate=${endDate}`
-                                  : `month=${selectedMonth}`
-                              }`
-                            )
-                          }
-                        >
-                          Details
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {organizedReports.map((beltGroup, beltIndex) => (
+              <div key={beltIndex} className="mb-8">
+                <h3 className="text-lg font-bold bg-gray-200 p-2 sticky top-0 z-10">
+                  {beltGroup.belt}
+                </h3>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="p-2">User</th>
+                      <th className="p-2">Outlet</th>
+                      <th className="p-2">Zone</th>
+                      <th className="p-2">Role</th>
+                      <th className="p-2">Target (TP)</th>
+                      <th className="p-2">Sales (TP)</th>
+                      <th className="p-2">Achievement</th>
+                      <th className="p-2">Sales Count</th>
+                      <th className="p-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {beltGroup.reports.map((report, index) => (
+                      <tr
+                        key={`${beltIndex}-${index}`}
+                        className={`border hover:bg-gray-50 ${
+                          report.isManager ? "bg-blue-50" : ""
+                        }`}
+                      >
+                        <td className="border p-2">
+                          {report.name}
+                          {report.isManager && (
+                            <span className="ml-2 text-xs text-blue-600">
+                              ({report.role})
+                            </span>
+                          )}
+                        </td>
+                        <td className="border p-2">{report.outlet || "-"}</td>
+                        <td className="border p-2">{report.zone}</td>
+                        <td className="border p-2">{report.role}</td>
+                        <td className="border p-2">{report.target}</td>
+                        <td className="border p-2">
+                          {report.totalTP.toFixed(2)}
+                        </td>
+                        <td className="border p-2">
+                          <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
+                                report.achievement >= 100
+                                  ? "bg-green-500"
+                                  : report.achievement >= 70
+                                  ? "bg-blue-500"
+                                  : report.achievement >= 40
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(100, report.achievement)}%`,
+                                transition: "width 0.5s ease-in-out",
+                              }}
+                            ></div>
+                            {report.target > 0 && (
+                              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
+                                {report.achievement.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="border p-2 text-center">
+                          {report.salesCount}
+                        </td>
+                        <td className="border p-2">
+                          {!report.isManager && (
+                            <button
+                              className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
+                              onClick={() =>
+                                navigate(
+                                  `/sales-report/daily/${report.userId}?${
+                                    startDate && endDate
+                                      ? `startDate=${startDate}&endDate=${endDate}`
+                                      : `month=${selectedMonth}`
+                                  }`
+                                )
+                              }
+                            >
+                              Details
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         )}
       </div>
