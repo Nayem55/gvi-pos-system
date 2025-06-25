@@ -309,7 +309,7 @@ const SalarySheet = () => {
           break;
         case "market return":
           acc[userId].totalMarketReturn += transaction.quantity;
-          acc[userId].totalMarketReturnValue += transaction.quantity * transaction.dp;
+          acc[userId].totalMarketReturnValue += transaction.quantity * transaction.tp;
           break;
         case "office return":
           acc[userId].totalOfficeReturn += transaction.quantity;
@@ -441,10 +441,10 @@ const SalarySheet = () => {
         Role: report.role,
         Belt: report.belt,
         Target: report.target,
-        "Primary (TP)": report.totalPrimaryValue.toFixed(2),
+        "Primary (DP)": report.totalPrimaryValue.toFixed(2),
         "Secondary (TP)": report.totalSecondaryValue.toFixed(2),
         "Market Return (TP)": report.totalMarketReturnValue.toFixed(2),
-        "Office Return (TP)": report.totalOfficeReturnValue.toFixed(2),
+        "Office Return (DP)": report.totalOfficeReturnValue.toFixed(2),
         "Achievement (%)": report.achievement.toFixed(1),
         "Transaction Count": report.transactionCount,
       }))
@@ -643,10 +643,10 @@ const SalarySheet = () => {
                       <th className="p-2">Zone</th>
                       <th className="p-2">Role</th>
                       <th className="p-2">Target (TP)</th>
-                      <th className="p-2">Primary (TP)</th>
+                      <th className="p-2">Primary (DP)</th>
                       <th className="p-2">Secondary (TP)</th>
                       <th className="p-2">Market Return (TP)</th>
-                      <th className="p-2">Office Return (TP)</th>
+                      <th className="p-2">Office Return (DP)</th>
                       <th className="p-2">Achievement</th>
                       <th className="p-2">Transaction Count</th>
                       <th className="p-2">Action</th>
