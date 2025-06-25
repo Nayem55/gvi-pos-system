@@ -181,6 +181,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
               rsm: user.rsm,
               zone: user.zone,
               user: user.name,
+              userID: user._id,
               dp: item.editableDP,
               tp: item.editableTP,
             }

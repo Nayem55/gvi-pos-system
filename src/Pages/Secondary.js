@@ -239,6 +239,7 @@ export default function Secondary({ stock, setStock, getStockValue }) {
             quantity: item.pcs,
             date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
             user: user.name,
+            userID: user._id,
             dp: item.editableDP,
             tp: item.editableTP,
           }

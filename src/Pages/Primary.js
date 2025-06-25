@@ -180,6 +180,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
             quantity: item.primary,
             date: formattedDateTime,
             user: user.name,
+            userID: user._id,
             dp: item.editableDP,
             tp: item.editableTP,
           }

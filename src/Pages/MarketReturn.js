@@ -183,6 +183,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             quantity: item.marketReturn,
             date: formattedDateTime,
             user: user.name,
+            userID: user._id,
             dp: item.editableDP, // Changed from currentDP to editableDP
             tp: item.editableTP, // Changed from currentTP to editableTP
           }
