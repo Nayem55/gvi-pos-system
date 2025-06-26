@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 
 const API_CONFIG = {
   baseURL: "http://localhost:5000",
-  timeout: 50000,
+  timeout: 5000000,
 };
 
 const api = axios.create({
@@ -44,7 +44,6 @@ const SalarySheet = () => {
     return "";
   }, []);
 
-
   // Fetch stock transaction data
   const fetchStockData = useCallback(async () => {
     try {
@@ -59,11 +58,36 @@ const SalarySheet = () => {
         params.append("month", selectedMonth);
       }
 
-      const response = await api.get(`/api/stock-transactions-report?${params.toString()}`);
-      if (!response.data || !Array.isArray(response.data)) {
+      const response = await api.get(
+        `/api/user-stock-movement?${params.toString()}`
+      );
+      if (!response.data || !response.data.success) {
         throw new Error("Invalid data format received from server");
       }
-      setStockData(response.data);
+
+      // Process the new API response format
+      const processedData = response.data.data.flatMap((outletData) => {
+        return outletData.users.map((user) => ({
+          userId: user.userId,
+          name: user.name,
+          outlet: outletData.outlet,
+          zone: user.zone,
+          role: user.role,
+          asm: user.asm,
+          rsm: user.rsm,
+          som: user.som,
+          primary: user.primary,
+          secondary: user.secondary,
+          marketReturn: user.marketReturn,
+          officeReturn: user.officeReturn,
+          openingValueDP: outletData.openingValueDP,
+          openingValueTP: outletData.openingValueTP,
+          closingValueDP: outletData.closingValueDP,
+          closingValueTP: outletData.closingValueTP,
+        }));
+      });
+
+      setStockData(processedData);
     } catch (error) {
       console.error("Error fetching stock data:", error);
       setError(`Failed to load stock data: ${error.message}`);
@@ -267,57 +291,41 @@ const SalarySheet = () => {
           totalPrimary: 0,
           totalMarketReturn: 0,
           totalOfficeReturn: 0,
+          openingValue: 0,
+          closingValue: 0,
         },
       };
     }
 
-    // Group transactions by user
-    const transactionsByUser = filteredStockData.reduce((acc, transaction) => {
-      const userId = transaction.userID;
-      if (!acc[userId]) {
-        acc[userId] = {
-          userId,
-          name: transaction.user,
-          outlet: transaction.outlet,
-          zone: transaction.zone,
-          role: transaction.role || "SO",
-          asm: transaction.asm,
-          rsm: transaction.rsm,
-          som: transaction.som,
-          transactions: [],
-          totalPrimary: 0,
-          totalPrimaryValue: 0,
-          totalSecondary: 0,
-          totalSecondaryValue: 0,
-          totalMarketReturn: 0,
-          totalMarketReturnValue: 0,
-          totalOfficeReturn: 0,
-          totalOfficeReturnValue: 0,
-        };
-      }
-      acc[userId].transactions.push(transaction);
-      
-      // Aggregate based on transaction type
-      switch (transaction.type.toLowerCase()) {
-        case "primary":
-          acc[userId].totalPrimary += transaction.quantity;
-          acc[userId].totalPrimaryValue += transaction.quantity * transaction.dp;
-          break;
-        case "secondary":
-          acc[userId].totalSecondary += transaction.quantity;
-          acc[userId].totalSecondaryValue += transaction.quantity * transaction.tp;
-          break;
-        case "market return":
-          acc[userId].totalMarketReturn += transaction.quantity;
-          acc[userId].totalMarketReturnValue += transaction.quantity * transaction.tp;
-          break;
-        case "office return":
-          acc[userId].totalOfficeReturn += transaction.quantity;
-          acc[userId].totalOfficeReturnValue += transaction.quantity * transaction.dp;
-          break;
-      }
-      return acc;
-    }, {});
+    // Calculate summary data (SO only)
+    const soReports = filteredStockData.filter((r) => r.role === "SO");
+    const achievedSOs = soReports.filter((so) => {
+      const target = targetsData[so.userId] || 0;
+      return target > 0 && (so.secondary?.valueTP / target) * 100 >= 100;
+    }).length;
+
+    const summary = {
+      totalSOs: soReports.length,
+      achievedSOs,
+      totalSecondary: soReports.reduce(
+        (sum, so) => sum + (so.secondary?.valueTP || 0),
+        0
+      ),
+      totalPrimary: soReports.reduce(
+        (sum, so) => sum + (so.primary?.valueTP || 0),
+        0
+      ),
+      totalMarketReturn: soReports.reduce(
+        (sum, so) => sum + (so.marketReturn?.valueTP || 0),
+        0
+      ),
+      totalOfficeReturn: soReports.reduce(
+        (sum, so) => sum + (so.officeReturn?.valueTP || 0),
+        0
+      ),
+      openingValue: filteredStockData[0]?.openingValueTP || 0,
+      closingValue: filteredStockData[0]?.closingValueTP || 0,
+    };
 
     // Manager level aggregations
     const managerLevels = ["ASM", "RSM", "SOM"];
@@ -330,7 +338,7 @@ const SalarySheet = () => {
 
       managers.forEach((manager) => {
         const managerKey = `${level}_${manager}`;
-        const teamMembers = Object.values(transactionsByUser).filter(
+        const teamMembers = filteredStockData.filter(
           (user) => user[level.toLowerCase()] === manager
         );
 
@@ -340,7 +348,9 @@ const SalarySheet = () => {
 
         const managerAchievement = teamMembers.reduce((sum, member) => {
           const target = targetsData[member.userId] || 0;
-          return target > 0 ? sum + (member.totalSecondaryValue / target) * 100 : sum;
+          return target > 0
+            ? sum + ((member.secondary?.valueTP || 0) / target) * 100
+            : sum;
         }, 0);
 
         managerReports[managerKey] = {
@@ -348,17 +358,49 @@ const SalarySheet = () => {
           name: manager,
           role: level,
           zone: teamMembers[0]?.zone || "",
-          totalPrimary: teamMembers.reduce((sum, m) => sum + m.totalPrimary, 0),
-          totalPrimaryValue: teamMembers.reduce((sum, m) => sum + m.totalPrimaryValue, 0),
-          totalSecondary: teamMembers.reduce((sum, m) => sum + m.totalSecondary, 0),
-          totalSecondaryValue: teamMembers.reduce((sum, m) => sum + m.totalSecondaryValue, 0),
-          totalMarketReturn: teamMembers.reduce((sum, m) => sum + m.totalMarketReturn, 0),
-          totalMarketReturnValue: teamMembers.reduce((sum, m) => sum + m.totalMarketReturnValue, 0),
-          totalOfficeReturn: teamMembers.reduce((sum, m) => sum + m.totalOfficeReturn, 0),
-          totalOfficeReturnValue: teamMembers.reduce((sum, m) => sum + m.totalOfficeReturnValue, 0),
+          primary: {
+            valueTP: teamMembers.reduce(
+              (sum, m) => sum + (m.primary?.valueTP || 0),
+              0
+            ),
+            valueDP: teamMembers.reduce(
+              (sum, m) => sum + (m.primary?.valueDP || 0),
+              0
+            ),
+          },
+          secondary: {
+            valueTP: teamMembers.reduce(
+              (sum, m) => sum + (m.secondary?.valueTP || 0),
+              0
+            ),
+            valueDP: teamMembers.reduce(
+              (sum, m) => sum + (m.secondary?.valueDP || 0),
+              0
+            ),
+          },
+          marketReturn: {
+            valueTP: teamMembers.reduce(
+              (sum, m) => sum + (m.marketReturn?.valueTP || 0),
+              0
+            ),
+            valueDP: teamMembers.reduce(
+              (sum, m) => sum + (m.marketReturn?.valueDP || 0),
+              0
+            ),
+          },
+          officeReturn: {
+            valueTP: teamMembers.reduce(
+              (sum, m) => sum + (m.officeReturn?.valueTP || 0),
+              0
+            ),
+            valueDP: teamMembers.reduce(
+              (sum, m) => sum + (m.officeReturn?.valueDP || 0),
+              0
+            ),
+          },
           target: managerTarget,
           achievement: managerAchievement / teamMembers.length,
-          transactionCount: teamMembers.reduce((sum, m) => sum + (m.transactions?.length || 0), 0),
+          transactionCount: teamMembers.length,
           teamMembers: teamMembers.map((m) => m.userId),
           isManager: true,
         };
@@ -366,12 +408,9 @@ const SalarySheet = () => {
     });
 
     // Combine all reports
-    const allReports = [
-      ...Object.values(transactionsByUser),
-      ...Object.values(managerReports),
-    ];
+    const allReports = [...filteredStockData, ...Object.values(managerReports)];
 
-    // Apply filters
+    // Apply role filter
     const filteredReports = allReports
       .map((report) => {
         const matchRole = selectedRole ? report.role === selectedRole : true;
@@ -383,14 +422,15 @@ const SalarySheet = () => {
           ? report.target // already calculated for managers
           : targetsData[report.userId] || 0;
 
-        const achievement = target > 0 ? (report.totalSecondaryValue / target) * 100 : 0;
+        const achievement =
+          target > 0 ? ((report.secondary?.valueTP || 0) / target) * 100 : 0;
 
         return {
           ...report,
           target: Number(target).toFixed(2),
           achievement,
           belt,
-          transactionCount: report.transactionCount || report.transactions?.length || 0,
+          transactionCount: report.transactionCount || 1,
         };
       })
       .filter(Boolean);
@@ -398,23 +438,9 @@ const SalarySheet = () => {
     // Organize reports hierarchically
     const organized = organizeReportsHierarchically(filteredReports);
 
-    // Calculate summary data (SO only) from filtered data (before role filter)
-    const soReports = Object.values(transactionsByUser);
-    const achievedSOs = soReports.filter((so) => {
-      const target = targetsData[so.userId] || 0;
-      return target > 0 && (so.totalSecondaryValue / target) * 100 >= 100;
-    }).length;
-
     return {
       organizedReports: organized,
-      summaryData: {
-        totalSOs: soReports.length,
-        achievedSOs,
-        totalSecondary: soReports.reduce((sum, so) => sum + so.totalSecondaryValue, 0),
-        totalPrimary: soReports.reduce((sum, so) => sum + so.totalPrimaryValue, 0),
-        totalMarketReturn: soReports.reduce((sum, so) => sum + so.totalMarketReturnValue, 0),
-        totalOfficeReturn: soReports.reduce((sum, so) => sum + so.totalOfficeReturnValue, 0),
-      },
+      summaryData: summary,
     };
   }, [filteredStockData, targetsData, selectedRole, getBeltFromZone]);
 
@@ -441,10 +467,10 @@ const SalarySheet = () => {
         Role: report.role,
         Belt: report.belt,
         Target: report.target,
-        "Primary (DP)": report.totalPrimaryValue.toFixed(2),
-        "Secondary (TP)": report.totalSecondaryValue.toFixed(2),
-        "Market Return (TP)": report.totalMarketReturnValue.toFixed(2),
-        "Office Return (DP)": report.totalOfficeReturnValue.toFixed(2),
+        "Primary (DP)": report.primary?.valueDP.toFixed(2) || "0.00",
+        "Secondary (TP)": report.secondary?.valueTP.toFixed(2) || "0.00",
+        "Market Return (TP)": report.marketReturn?.valueTP.toFixed(2) || "0.00",
+        "Office Return (DP)": report.officeReturn?.valueDP.toFixed(2) || "0.00",
         "Achievement (%)": report.achievement.toFixed(1),
         "Transaction Count": report.transactionCount,
       }))
@@ -493,7 +519,7 @@ const SalarySheet = () => {
         )}
 
         {/* Summary Section */}
-        <div className="grid grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-7 gap-4 mb-4">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Active SOs</h3>
             <p className="text-xl font-bold">{summaryData.totalSOs}</p>
@@ -505,21 +531,35 @@ const SalarySheet = () => {
             </p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Secondary (TP)</h3>
+            <h3 className="text-lg font-semibold">Opening (TP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.totalSecondary.toFixed(2)}
+              {summaryData.openingValue.toFixed(2)}
             </p>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Primary (TP)</h3>
+            <h3 className="text-lg font-semibold">Primary (TP)</h3>
             <p className="text-xl font-bold">
               {summaryData.totalPrimary.toFixed(2)}
             </p>
           </div>
           <div className="bg-red-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Total Returns (TP)</h3>
+            <h3 className="text-lg font-semibold">Secondary (TP)</h3>
             <p className="text-xl font-bold">
-              {(summaryData.totalMarketReturn + summaryData.totalOfficeReturn).toFixed(2)}
+              {summaryData.totalSecondary.toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-pink-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Returns (TP)</h3>
+            <p className="text-xl font-bold">
+              {(
+                summaryData.totalMarketReturn + summaryData.totalOfficeReturn
+              ).toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-indigo-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Closing (TP)</h3>
+            <p className="text-xl font-bold">
+              {summaryData.closingValue.toFixed(2)}
             </p>
           </div>
         </div>
@@ -643,12 +683,13 @@ const SalarySheet = () => {
                       <th className="p-2">Zone</th>
                       <th className="p-2">Role</th>
                       <th className="p-2">Target (TP)</th>
+                      <th className="p-2">Opening (TP)</th>
                       <th className="p-2">Primary (DP)</th>
                       <th className="p-2">Secondary (TP)</th>
                       <th className="p-2">Market Return (TP)</th>
                       <th className="p-2">Office Return (DP)</th>
+                      <th className="p-2">Closing (TP)</th>
                       <th className="p-2">Achievement</th>
-                      <th className="p-2">Transaction Count</th>
                       <th className="p-2">Action</th>
                     </tr>
                   </thead>
@@ -673,16 +714,28 @@ const SalarySheet = () => {
                         <td className="border p-2">{report.role}</td>
                         <td className="border p-2">{report.target}</td>
                         <td className="border p-2">
-                          {report.totalPrimaryValue.toFixed(2)}
+                          {report.openingValueTP?.toFixed(2) || "0.00"}
                         </td>
                         <td className="border p-2">
-                          {report.totalSecondaryValue.toFixed(2)}
+                          {report.primary?.valueDP.toFixed(2) || "0.00"}
                         </td>
                         <td className="border p-2">
-                          {report.totalMarketReturnValue.toFixed(2)}
+                          {report.secondary?.valueTP.toFixed(2) || "0.00"}
                         </td>
                         <td className="border p-2">
-                          {report.totalOfficeReturnValue.toFixed(2)}
+                          {report.marketReturn?.valueTP.toFixed(2) || "0.00"}
+                        </td>
+                        <td className="border p-2">
+                          {report.officeReturn?.valueDP.toFixed(2) || "0.00"}
+                        </td>
+                        <td className="border p-2">
+                          {(
+                            (report.openingValueTP || 0) +
+                            (report.primary?.valueTP || 0) +
+                            (report.marketReturn?.valueTP || 0) -
+                            (report.secondary?.valueTP || 0) -
+                            (report.officeReturn?.valueDP || 0)
+                          ).toFixed(2)}
                         </td>
                         <td className="border p-2">
                           <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
