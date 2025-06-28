@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
+import MarketReturn from './../MarketReturn';
 
 const API_CONFIG = {
   baseURL: "http://localhost:5000",
@@ -145,149 +146,159 @@ const SalarySheet = () => {
     });
   }, [stockData, selectedZone, selectedBelt, getBeltFromZone]);
 
-  // Organize reports hierarchically by zone and then by role (SOM → RSM → ASM → SO)
-  const organizeReportsHierarchically = (reports) => {
-    // Group by belt first
-    const reportsByBelt = reports.reduce((acc, report) => {
-      const belt = getBeltFromZone(report.zone) || "Unknown Belt";
-      if (!acc[belt]) {
-        acc[belt] = [];
-      }
-      acc[belt].push(report);
+// Organize reports hierarchically by zone and then by role (SOM → RSM → ASM → SO)
+const organizeReportsHierarchically = (reports) => {
+  // Group by belt first
+  const reportsByBelt = reports.reduce((acc, report) => {
+    const belt = getBeltFromZone(report.zone) || "Unknown Belt";
+    if (!acc[belt]) { 
+      acc[belt] = [];
+    }
+    acc[belt].push(report);
+    return acc;
+  }, {});
+
+  // For each belt, organize by role hierarchy
+  return Object.entries(reportsByBelt).map(([belt, beltReports]) => {
+    // Separate all roles
+    const soms = beltReports.filter((r) => r.role === "SOM");
+    const rsms = beltReports.filter((r) => r.role === "RSM");
+    const asms = beltReports.filter((r) => r.role === "ASM");
+    const salesOfficers = beltReports.filter((r) => r.role === "SO");
+
+    // Create maps for relationships based on zone hierarchy
+    const soBySom = salesOfficers.reduce((acc, so) => {
+      const som = soms.find(s => so.zone.includes(s.zone))?.name || "Unknown SOM";
+      if (!acc[som]) acc[som] = [];
+      acc[som].push(so);
       return acc;
     }, {});
 
-    // For each belt, organize by role hierarchy
-    return Object.entries(reportsByBelt).map(([belt, beltReports]) => {
-      // Separate all roles
-      const soms = beltReports.filter((r) => r.role === "SOM");
-      const rsms = beltReports.filter((r) => r.role === "RSM");
-      const asms = beltReports.filter((r) => r.role === "ASM");
-      const salesOfficers = beltReports.filter((r) => r.role === "SO");
+    const soByRsm = salesOfficers.reduce((acc, so) => {
+      const rsm = rsms.find(r => so.zone.includes(r.zone))?.name || "Unknown RSM";
+      if (!acc[rsm]) acc[rsm] = [];
+      acc[rsm].push(so);
+      return acc;
+    }, {});
 
-      // Create maps for relationships
-      const soBySom = salesOfficers.reduce((acc, so) => {
-        const som = so.som || "Unknown SOM";
-        if (!acc[som]) acc[som] = [];
-        acc[som].push(so);
-        return acc;
-      }, {});
+    const soByAsm = salesOfficers.reduce((acc, so) => {
+      const asm = asms.find(a => so.zone.includes(a.zone))?.name || "Unknown ASM";
+      if (!acc[asm]) acc[asm] = [];
+      acc[asm].push(so);
+      return acc;
+    }, {});
 
-      const soByRsm = salesOfficers.reduce((acc, so) => {
-        const rsm = so.rsm || "Unknown RSM";
-        if (!acc[rsm]) acc[rsm] = [];
-        acc[rsm].push(so);
-        return acc;
-      }, {});
+    // Build the hierarchical structure
+    const organizedReports = [];
 
-      const soByAsm = salesOfficers.reduce((acc, so) => {
-        const asm = so.asm || "Unknown ASM";
-        if (!acc[asm]) acc[asm] = [];
-        acc[asm].push(so);
-        return acc;
-      }, {});
+    // Add SOMs first with their original zones
+    soms.forEach((som) => {
+      organizedReports.push(som);
 
-      // Build the hierarchical structure
-      const organizedReports = [];
-
-      // Add SOMs first
-      soms.forEach((som) => {
-        organizedReports.push(som);
-
-        // Find RSMs that report to this SOM
-        const somRsms = rsms.filter((rsm) =>
-          soBySom[rsm.name]?.some((so) => so.som === som.name)
-        );
-
-        // Add each RSM and their hierarchy
-        somRsms.forEach((rsm) => {
-          organizedReports.push(rsm);
-
-          // Find ASMs that report to this RSM
-          const rsmAsms = asms.filter((asm) =>
-            soByRsm[asm.name]?.some((so) => so.rsm === rsm.name)
-          );
-
-          // Add each ASM and their SOs
-          rsmAsms.forEach((asm) => {
-            organizedReports.push(asm);
-
-            // Add SOs for this ASM
-            const asmSos = soByAsm[asm.name] || [];
-            organizedReports.push(
-              ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
-            );
-          });
-
-          // Add SOs that report directly to RSM (without ASM)
-          const directSos = (soByRsm[rsm.name] || []).filter((so) => !so.asm);
-          organizedReports.push(
-            ...directSos.sort((a, b) => a.name.localeCompare(b.name))
-          );
-        });
-
-        // Add SOs that report directly to SOM (without RSM or ASM)
-        const directSos = (soBySom[som.name] || []).filter(
-          (so) => !so.rsm && !so.asm
-        );
-        organizedReports.push(
-          ...directSos.sort((a, b) => a.name.localeCompare(b.name))
-        );
-      });
-
-      // Add any remaining RSMs not under a SOM
-      const remainingRsms = rsms.filter(
-        (rsm) => !organizedReports.some((r) => r.userId === rsm.userId)
+      // Find RSMs that report to this SOM (whose zone contains SOM's zone)
+      const somRsms = rsms.filter((rsm) => 
+        rsm.zone.includes(som.zone) || soBySom[som.name]?.some(so => so.rsm === rsm.name)
       );
-      remainingRsms.forEach((rsm) => {
+
+      // Add each RSM and their hierarchy
+      somRsms.forEach((rsm) => {
         organizedReports.push(rsm);
 
-        // Add ASMs under this RSM
-        const rsmAsms = asms.filter((asm) =>
-          soByRsm[asm.name]?.some((so) => so.rsm === rsm.name)
+        // Find ASMs that report to this RSM (whose zone contains RSM's zone)
+        const rsmAsms = asms.filter((asm) => 
+          asm.zone.includes(rsm.zone) || soByRsm[rsm.name]?.some(so => so.asm === asm.name)
         );
 
+        // Add each ASM and their SOs
         rsmAsms.forEach((asm) => {
           organizedReports.push(asm);
-          const asmSos = soByAsm[asm.name] || [];
+
+          // Add SOs for this ASM (whose zone contains ASM's zone)
+          const asmSos = (soByAsm[asm.name] || []).filter(so => 
+            so.zone.includes(asm.zone)
+          );
           organizedReports.push(
             ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
           );
         });
 
-        // Add SOs directly under RSM
-        const directSos = (soByRsm[rsm.name] || []).filter((so) => !so.asm);
+        // Add SOs that report directly to RSM (without ASM)
+        const directSos = (soByRsm[rsm.name] || []).filter(
+          (so) => !so.asm && so.zone.includes(rsm.zone)
+        );
         organizedReports.push(
           ...directSos.sort((a, b) => a.name.localeCompare(b.name))
         );
       });
 
-      // Add any remaining ASMs not under a RSM
-      const remainingAsms = asms.filter(
-        (asm) => !organizedReports.some((r) => r.userId === asm.userId)
+      // Add SOs that report directly to SOM (without RSM or ASM)
+      const directSos = (soBySom[som.name] || []).filter(
+        (so) => !so.rsm && !so.asm && so.zone.includes(som.zone)
       );
-      remainingAsms.forEach((asm) => {
+      organizedReports.push(
+        ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+      );
+    });
+
+    // Add any remaining RSMs not under a SOM
+    const remainingRsms = rsms.filter(
+      (rsm) => !organizedReports.some((r) => r.userId === rsm.userId)
+    );
+    remainingRsms.forEach((rsm) => {
+      organizedReports.push(rsm);
+
+      // Add ASMs under this RSM
+      const rsmAsms = asms.filter((asm) => 
+        asm.zone.includes(rsm.zone) || soByRsm[rsm.name]?.some(so => so.asm === asm.name)
+      );
+
+      rsmAsms.forEach((asm) => {
         organizedReports.push(asm);
-        const asmSos = soByAsm[asm.name] || [];
+        const asmSos = (soByAsm[asm.name] || []).filter(so => 
+          so.zone.includes(asm.zone)
+        );
         organizedReports.push(
           ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
         );
       });
 
-      // Add any remaining SOs not under any manager
-      const remainingSos = salesOfficers.filter(
-        (so) => !organizedReports.some((r) => r.userId === so.userId)
+      // Add SOs directly under RSM
+      const directSos = (soByRsm[rsm.name] || []).filter(
+        (so) => !so.asm && so.zone.includes(rsm.zone)
       );
       organizedReports.push(
-        ...remainingSos.sort((a, b) => a.name.localeCompare(b.name))
+        ...directSos.sort((a, b) => a.name.localeCompare(b.name))
       );
-
-      return {
-        belt,
-        reports: organizedReports,
-      };
     });
-  };
+
+    // Add any remaining ASMs not under a RSM
+    const remainingAsms = asms.filter(
+      (asm) => !organizedReports.some((r) => r.userId === asm.userId)
+    );
+    remainingAsms.forEach((asm) => {
+      organizedReports.push(asm);
+      const asmSos = (soByAsm[asm.name] || []).filter(so => 
+        so.zone.includes(asm.zone)
+      );
+      organizedReports.push(
+        ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+      );
+    });
+
+    // Add any remaining SOs not under any manager
+    const remainingSos = salesOfficers.filter(
+      (so) => !organizedReports.some((r) => r.userId === so.userId)
+    );
+    organizedReports.push(
+      ...remainingSos.sort((a, b) => a.name.localeCompare(b.name))
+    );
+
+    return {
+      belt,
+      reports: organizedReports,
+    };
+  });
+};
 
   // Main aggregation logic
   const { organizedReports, summaryData } = useMemo(() => {
@@ -307,12 +318,64 @@ const SalarySheet = () => {
       };
     }
 
+    // Create a map of all users for quick lookup
+    const allUsersMap = filteredStockData.reduce((acc, user) => {
+      acc[user.userId] = user;
+      return acc;
+    }, {});
+
+    // Helper function to extract manager zone
+    const getManagerZone = (managerName, level) => {
+      // First try to find manager in the original data
+      const manager = Object.values(allUsersMap).find(
+        u => u.name === managerName && u.role === level
+      );
+      
+      if (manager) return manager.zone;
+      
+      // Fallback: extract from team members' zones based on hierarchy
+      const teamMembers = filteredStockData.filter(
+        user => user[level.toLowerCase()] === managerName
+      );
+      
+      if (teamMembers.length === 0) return "";
+      
+      // For SOM: find the common "Zone-XX" part
+      if (level === "SOM") {
+        const zoneParts = teamMembers[0].zone.split('-');
+        return `ZONE-${zoneParts[zoneParts.length - 1]}`;
+      }
+      
+      // For RSM: find the common regional part (e.g., "Dhaka-1-Zone-1")
+      if (level === "RSM") {
+        const sampleZone = teamMembers[0].zone;
+        const zoneParts = sampleZone.split('-');
+        return `ZONE-${zoneParts[zoneParts.length - 1]}`;
+      }
+      
+      // For ASM: use the first team member's zone
+      return teamMembers[0].zone;
+    };
+
     // Calculate summary data (SO only)
     const soReports = filteredStockData.filter((r) => r.role === "SO");
     const achievedSOs = soReports.filter((so) => {
       const target = targetsData[so.userId] || 0;
       return target > 0 && (so.secondary?.valueTP / target) * 100 >= 100;
     }).length;
+
+    // Calculate totals using DP values except for secondary and market return
+    const uniqueOutlets = new Set();
+    let totalOpeningValueDP = 0;
+    let totalClosingValueDP = 0;
+
+    filteredStockData.forEach((data) => {
+      if (!uniqueOutlets.has(data.outlet)) {
+        totalOpeningValueDP += data.openingValueDP || 0;
+        totalClosingValueDP += data.closingValueDP || 0;
+        uniqueOutlets.add(data.outlet);
+      }
+    });
 
     const summary = {
       totalSOs: soReports.length,
@@ -322,7 +385,7 @@ const SalarySheet = () => {
         0
       ),
       totalPrimary: soReports.reduce(
-        (sum, so) => sum + (so.primary?.valueTP || 0),
+        (sum, so) => sum + (so.primary?.valueDP || 0),
         0
       ),
       totalMarketReturn: soReports.reduce(
@@ -330,11 +393,11 @@ const SalarySheet = () => {
         0
       ),
       totalOfficeReturn: soReports.reduce(
-        (sum, so) => sum + (so.officeReturn?.valueTP || 0),
+        (sum, so) => sum + (so.officeReturn?.valueDP || 0),
         0
       ),
-      openingValue: filteredStockData[0]?.openingValueDP || 0, // Changed to DP
-      closingValue: filteredStockData[0]?.closingValueDP || 0, // Changed to DP
+      openingValue: totalOpeningValueDP,
+      closingValue: totalClosingValueDP,
     };
 
     // Manager level aggregations
@@ -346,11 +409,14 @@ const SalarySheet = () => {
         ...new Set(filteredStockData.map((t) => t[level.toLowerCase()])),
       ].filter(Boolean);
 
-      managers.forEach((manager) => {
-        const managerKey = `${level}_${manager}`;
+      managers.forEach((managerName) => {
+        const managerKey = `${level}_${managerName}`;
         const teamMembers = filteredStockData.filter(
-          (user) => user[level.toLowerCase()] === manager
+          (user) => user[level.toLowerCase()] === managerName
         );
+
+        // Get the manager's proper zone
+        const managerZone = getManagerZone(managerName, level);
 
         const managerTarget = teamMembers.reduce((sum, member) => {
           return sum + (Number(targetsData[member.userId]) || 0);
@@ -363,34 +429,25 @@ const SalarySheet = () => {
             : sum;
         }, 0);
 
-        // Calculate manager's opening values as sum of team members' opening DP
-        // But ensure we don't double-count outlets
-        const uniqueOutlets = new Set();
+        // Calculate manager's values without double-counting outlets
+        const teamUniqueOutlets = new Set();
         let teamOpeningValueDP = 0;
-        let teamOpeningValueTP = 0;
         let teamClosingValueDP = 0;
-        let teamClosingValueTP = 0;
 
         teamMembers.forEach((member) => {
-          if (!uniqueOutlets.has(member.outlet)) {
+          if (!teamUniqueOutlets.has(member.outlet)) {
             teamOpeningValueDP += member.openingValueDP || 0;
-            teamOpeningValueTP += member.openingValueTP || 0;
             teamClosingValueDP += member.closingValueDP || 0;
-            teamClosingValueTP += member.closingValueTP || 0;
-            uniqueOutlets.add(member.outlet);
+            teamUniqueOutlets.add(member.outlet);
           }
         });
 
         managerReports[managerKey] = {
           userId: managerKey,
-          name: manager,
+          name: managerName,
           role: level,
-          zone: teamMembers[0]?.zone || "",
+          zone: managerZone, // Now using the properly determined zone
           primary: {
-            valueTP: teamMembers.reduce(
-              (sum, m) => sum + (m.primary?.valueTP || 0),
-              0
-            ),
             valueDP: teamMembers.reduce(
               (sum, m) => sum + (m.primary?.valueDP || 0),
               0
@@ -401,35 +458,21 @@ const SalarySheet = () => {
               (sum, m) => sum + (m.secondary?.valueTP || 0),
               0
             ),
-            valueDP: teamMembers.reduce(
-              (sum, m) => sum + (m.secondary?.valueDP || 0),
-              0
-            ),
           },
           marketReturn: {
             valueTP: teamMembers.reduce(
               (sum, m) => sum + (m.marketReturn?.valueTP || 0),
               0
             ),
-            valueDP: teamMembers.reduce(
-              (sum, m) => sum + (m.marketReturn?.valueDP || 0),
-              0
-            ),
           },
           officeReturn: {
-            valueTP: teamMembers.reduce(
-              (sum, m) => sum + (m.officeReturn?.valueTP || 0),
-              0
-            ),
             valueDP: teamMembers.reduce(
               (sum, m) => sum + (m.officeReturn?.valueDP || 0),
               0
             ),
           },
           openingValueDP: teamOpeningValueDP,
-          openingValueTP: teamOpeningValueTP,
           closingValueDP: teamClosingValueDP,
-          closingValueTP: teamClosingValueTP,
           target: managerTarget,
           achievement: managerAchievement / teamMembers.length,
           transactionCount: teamMembers.length,
@@ -451,7 +494,7 @@ const SalarySheet = () => {
         if (!matchRole) return null;
 
         const target = report.isManager
-          ? report.target // already calculated for managers
+          ? report.target
           : targetsData[report.userId] || 0;
 
         const achievement =
@@ -551,8 +594,8 @@ const SalarySheet = () => {
         )}
 
         {/* Summary Section */}
-        <div className="grid grid-cols-7 gap-4 mb-4">
-          <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
+        <div className="grid grid-cols-6 gap-4 mb-4">
+          {/* <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Active SOs</h3>
             <p className="text-xl font-bold">{summaryData.totalSOs}</p>
           </div>
@@ -561,7 +604,7 @@ const SalarySheet = () => {
             <p className="text-xl font-bold">
               {summaryData.achievedSOs} / {summaryData.totalSOs}
             </p>
-          </div>
+          </div> */}
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Opening (DP)</h3>
             <p className="text-xl font-bold">
@@ -569,7 +612,7 @@ const SalarySheet = () => {
             </p>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Primary (TP)</h3>
+            <h3 className="text-lg font-semibold">Primary (DP)</h3>
             <p className="text-xl font-bold">
               {summaryData.totalPrimary.toFixed(2)}
             </p>
@@ -580,12 +623,16 @@ const SalarySheet = () => {
               {summaryData.totalSecondary.toFixed(2)}
             </p>
           </div>
-          <div className="bg-pink-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Returns (TP)</h3>
+          <div className="bg-red-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Market Return (TP)</h3>
             <p className="text-xl font-bold">
-              {(
-                summaryData.totalMarketReturn + summaryData.totalOfficeReturn
-              ).toFixed(2)}
+              {summaryData.totalMarketReturn.toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-red-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">Office Return (DP)</h3>
+            <p className="text-xl font-bold">
+              {summaryData.totalOfficeReturn.toFixed(2)}
             </p>
           </div>
           <div className="bg-indigo-100 p-4 rounded-lg shadow text-center">
