@@ -49,7 +49,7 @@ const SalarySheet = () => {
     try {
       setLoading((prev) => ({ ...prev, stock: true }));
       setError(null);
-
+  
       const params = new URLSearchParams();
       if (startDate && endDate) {
         params.append("startDate", startDate);
@@ -57,36 +57,46 @@ const SalarySheet = () => {
       } else {
         params.append("month", selectedMonth);
       }
-
+  
       const response = await api.get(
         `/api/user-stock-movement?${params.toString()}`
       );
       if (!response.data || !response.data.success) {
         throw new Error("Invalid data format received from server");
       }
-
-      // Process the new API response format
+  
+      // Process the API response and filter duplicates
+      const userMap = new Map(); // To track unique users
       const processedData = response.data.data.flatMap((outletData) => {
-        return outletData.users.map((user) => ({
-          userId: user.userId,
-          name: user.name,
-          outlet: outletData.outlet,
-          zone: user.zone,
-          role: user.role,
-          asm: user.asm,
-          rsm: user.rsm,
-          som: user.som,
-          primary: user.primary,
-          secondary: user.secondary,
-          marketReturn: user.marketReturn,
-          officeReturn: user.officeReturn,
-          openingValueDP: outletData.openingValueDP,
-          openingValueTP: outletData.openingValueTP,
-          closingValueDP: outletData.closingValueDP,
-          closingValueTP: outletData.closingValueTP,
-        }));
+        return outletData.users
+          .filter((user) => {
+            // If user already exists in map, filter them out
+            if (userMap.has(user.userId)) {
+              return false;
+            }
+            userMap.set(user.userId, true); // Mark user as processed
+            return true;
+          })
+          .map((user) => ({
+            userId: user.userId,
+            name: user.name,
+            outlet: outletData.outlet,
+            zone: user.zone,
+            role: user.role,
+            asm: user.asm,
+            rsm: user.rsm,
+            som: user.som,
+            primary: user.primary,
+            secondary: user.secondary,
+            marketReturn: user.marketReturn,
+            officeReturn: user.officeReturn,
+            openingValueDP: outletData.openingValueDP,
+            openingValueTP: outletData.openingValueTP,
+            closingValueDP: outletData.closingValueDP,
+            closingValueTP: outletData.closingValueTP,
+          }));
       });
-
+  
       setStockData(processedData);
     } catch (error) {
       console.error("Error fetching stock data:", error);
@@ -323,8 +333,8 @@ const SalarySheet = () => {
         (sum, so) => sum + (so.officeReturn?.valueTP || 0),
         0
       ),
-      openingValue: filteredStockData[0]?.openingValueTP || 0,
-      closingValue: filteredStockData[0]?.closingValueTP || 0,
+      openingValue: filteredStockData[0]?.openingValueDP || 0, // Changed to DP
+      closingValue: filteredStockData[0]?.closingValueDP || 0, // Changed to DP
     };
 
     // Manager level aggregations
@@ -352,6 +362,24 @@ const SalarySheet = () => {
             ? sum + ((member.secondary?.valueTP || 0) / target) * 100
             : sum;
         }, 0);
+
+        // Calculate manager's opening values as sum of team members' opening DP
+        // But ensure we don't double-count outlets
+        const uniqueOutlets = new Set();
+        let teamOpeningValueDP = 0;
+        let teamOpeningValueTP = 0;
+        let teamClosingValueDP = 0;
+        let teamClosingValueTP = 0;
+
+        teamMembers.forEach((member) => {
+          if (!uniqueOutlets.has(member.outlet)) {
+            teamOpeningValueDP += member.openingValueDP || 0;
+            teamOpeningValueTP += member.openingValueTP || 0;
+            teamClosingValueDP += member.closingValueDP || 0;
+            teamClosingValueTP += member.closingValueTP || 0;
+            uniqueOutlets.add(member.outlet);
+          }
+        });
 
         managerReports[managerKey] = {
           userId: managerKey,
@@ -398,6 +426,10 @@ const SalarySheet = () => {
               0
             ),
           },
+          openingValueDP: teamOpeningValueDP,
+          openingValueTP: teamOpeningValueTP,
+          closingValueDP: teamClosingValueDP,
+          closingValueTP: teamClosingValueTP,
           target: managerTarget,
           achievement: managerAchievement / teamMembers.length,
           transactionCount: teamMembers.length,
@@ -531,7 +563,7 @@ const SalarySheet = () => {
             </p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Opening (TP)</h3>
+            <h3 className="text-lg font-semibold">Opening (DP)</h3>
             <p className="text-xl font-bold">
               {summaryData.openingValue.toFixed(2)}
             </p>
@@ -557,7 +589,7 @@ const SalarySheet = () => {
             </p>
           </div>
           <div className="bg-indigo-100 p-4 rounded-lg shadow text-center">
-            <h3 className="text-lg font-semibold">Closing (TP)</h3>
+            <h3 className="text-lg font-semibold">Closing (DP)</h3>
             <p className="text-xl font-bold">
               {summaryData.closingValue.toFixed(2)}
             </p>
@@ -683,12 +715,12 @@ const SalarySheet = () => {
                       <th className="p-2">Zone</th>
                       <th className="p-2">Role</th>
                       <th className="p-2">Target (TP)</th>
-                      <th className="p-2">Opening (TP)</th>
+                      <th className="p-2">Opening (DP)</th>
                       <th className="p-2">Primary (DP)</th>
                       <th className="p-2">Secondary (TP)</th>
                       <th className="p-2">Market Return (TP)</th>
                       <th className="p-2">Office Return (DP)</th>
-                      <th className="p-2">Closing (TP)</th>
+                      <th className="p-2">Closing (DP)</th>
                       <th className="p-2">Achievement</th>
                       <th className="p-2">Action</th>
                     </tr>
@@ -714,7 +746,7 @@ const SalarySheet = () => {
                         <td className="border p-2">{report.role}</td>
                         <td className="border p-2">{report.target}</td>
                         <td className="border p-2">
-                          {report.openingValueTP?.toFixed(2) || "0.00"}
+                          {report.openingValueDP?.toFixed(2) || "0.00"}
                         </td>
                         <td className="border p-2">
                           {report.primary?.valueDP.toFixed(2) || "0.00"}
@@ -729,13 +761,7 @@ const SalarySheet = () => {
                           {report.officeReturn?.valueDP.toFixed(2) || "0.00"}
                         </td>
                         <td className="border p-2">
-                          {(
-                            (report.openingValueTP || 0) +
-                            (report.primary?.valueTP || 0) +
-                            (report.marketReturn?.valueTP || 0) -
-                            (report.secondary?.valueTP || 0) -
-                            (report.officeReturn?.valueDP || 0)
-                          ).toFixed(2)}
+                          {report.closingValueDP?.toFixed(2) || "0.00"}
                         </td>
                         <td className="border p-2">
                           <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
