@@ -76,6 +76,8 @@ export default function PaymentVoucher({
 
       await axios.post("https://gvi-pos-server.vercel.app/money-transfer", {
         outlet: user.outlet,
+        userId: user._id,
+        SO: user.name,
         amount: parseFloat(formData.amount),
         asm: user.asm,
         rsm: user.rsm,
