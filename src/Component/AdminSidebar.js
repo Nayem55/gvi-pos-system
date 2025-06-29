@@ -14,6 +14,7 @@ import {
   Box,
   PlusCircle,
   Edit3,
+  SheetIcon,
 } from "lucide-react";
 import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
 import { BsCash, BsCashCoin, BsShop } from "react-icons/bs";
@@ -49,6 +50,11 @@ const AdminSidebar = () => {
       name: "TA/DA Report",
       path: "/admin/tada",
       icon: <BiSolidReport size={20} />,
+    },
+    {
+      name: "Salary Sheet",
+      path: "/admin/salary",
+      icon: <SheetIcon size={20} />,
     },
   ];
 

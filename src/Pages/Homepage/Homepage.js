@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import OpeningStock from "../OpeningStock";
 import Primary from "../Primary";
 import Secondary from "../Secondary";
@@ -8,55 +8,114 @@ import axios from "axios";
 import PaymentVoucher from "../../Component/PaymentVoucher";
 import PosVoucher from "../PosVoucher";
 import TadaVoucher from "../TadaVoucher";
+import AttendanceVoucher from "../CheckInOut";
+import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
   const [stock, setStock] = useState(0); // Total stock
   const [currentDue, setCurrentDue] = useState(0); // Total due
   const user = JSON.parse(localStorage.getItem("pos-user"));
+  const attendanceUser = JSON.parse(localStorage.getItem("attendance-user"));
+  const [locationError, setLocationError] = useState("");
+  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user && user.outlet) {
-      getStockValue(user.outlet); // Pass outlet name from the user object
+      getStockValue(user.outlet);
     }
-  }, []);
+  }, [user]);
 
-  // const getStockValue = async (outletName) => {
-  //   try {
-  //     const response = await axios.get(
-  //       `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
-  //     );
-  //     const stockValue = response.data.totalCurrentDP;
-  //     setStock({dp:response.data.totalCurrentDP,tp:response.data.totalCurrentTP}); // Update the stock state with the received value
-  //   } catch (error) {
-  //     console.error("Error fetching stock value:", error);
-  //   }
-  // };
+  const fetchUserData = useCallback(async () => {
+    if (!attendanceUser) return;
+
+    try {
+      setDataLoading(true);
+      const response = await axios.get(
+        `https://attendance-app-server-blue.vercel.app/getUser/${attendanceUser?._id}`
+      );
+      localStorage.setItem("attendance-user", JSON.stringify(response.data));
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [attendanceUser]);
+
+  const fetchUserLocation = async () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        const error = "Geolocation is not supported by your browser.";
+        setLocationError(error);
+        reject(error);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setIsLocationEnabled(true);
+          resolve({ latitude, longitude });
+        },
+        (error) => {
+          let errorMessage = "An unknown error occurred.";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Location access denied. Please allow location permissions.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Location information is unavailable.";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Request timed out. Please try again.";
+              break;
+          }
+          setLocationError(errorMessage);
+          setIsLocationEnabled(false);
+          reject(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    });
+  };
+
+  useEffect(() => {
+    if (!attendanceUser) {
+      navigate("/login");
+    } else {
+      fetchUserData();
+      fetchUserLocation().catch(() => {}); // Silently handle location errors
+    }
+  }, [attendanceUser, navigate, fetchUserData]);
+
   const getStockValue = async (outletName) => {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
-      const response = await axios.get(
-        `https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`
-      );
-      const due = await axios.get(
-        `https://gvi-pos-server.vercel.app/current-due/${encodedOutletName}`
-      );
+      const [stockResponse, dueResponse] = await Promise.all([
+        axios.get(`https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`),
+        axios.get(`https://gvi-pos-server.vercel.app/current-due/${encodedOutletName}`)
+      ]);
 
-      setCurrentDue(due.data.current_due);
+      setCurrentDue(dueResponse.data.current_due);
       setStock({
-        dp: response.data.totalCurrentDP,
-        tp: response.data.totalCurrentTP,
+        dp: stockResponse.data.totalCurrentDP,
+        tp: stockResponse.data.totalCurrentTP,
       });
     } catch (error) {
-      console.error("Error fetching stock value:", error);
+      console.error("Error fetching stock data:", error);
     }
   };
 
   return (
     <div className="py-4 w-full max-w-md mx-auto min-h-screen">
-      {/* Dropdown for Stock Operations */}
       <div className="p-4 sm:py-4">
-        {/* <p className="p-1 text-sm mb-1 font-bold text-secondary">Select Your Voucher</p> */}
         <select
           value={selectedTab}
           onChange={(e) => setSelectedTab(e.target.value)}
@@ -67,13 +126,13 @@ export default function Home() {
           <option value="secondary">Secondary</option>
           <option value="pos">POS</option>
           <option value="officeReturn">Office Return</option>
-          <option value="marketReturn">Market Return</option> 
-          <option value="payment">Payment</option> 
-          <option value="tada">TA/DA</option> 
+          <option value="marketReturn">Market Return</option>
+          <option value="payment">Payment</option>
+          <option value="tada">TA/DA</option>
+          <option value="attendance">Check In/Out</option>
         </select>
       </div>
 
-      {/* Render Selected Tab */}
       {selectedTab === "opening" && (
         <OpeningStock
           user={user}
@@ -145,6 +204,9 @@ export default function Home() {
           currentDue={currentDue}
           getStockValue={getStockValue}
         />
+      )}
+      {selectedTab === "attendance" && (
+        <AttendanceVoucher/>
       )}
     </div>
   );
