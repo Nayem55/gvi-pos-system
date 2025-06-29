@@ -19,6 +19,7 @@ const SalarySheet = () => {
   // State for stock transaction data
   const [stockData, setStockData] = useState([]);
   const [targetsData, setTargetsData] = useState({});
+  const [attendanceData, setAttendanceData] = useState({});
 
   // Filter and display state
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
@@ -32,6 +33,7 @@ const SalarySheet = () => {
   const [loading, setLoading] = useState({
     stock: false,
     targets: false,
+    attendance: false,
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -42,6 +44,73 @@ const SalarySheet = () => {
     if (zoneName.includes("ZONE-01")) return "Belt-1";
     if (zoneName.includes("ZONE-03")) return "Belt-3";
     return "";
+  }, []);
+
+  // Fetch attendance data
+  const fetchAttendanceData = useCallback(async (month) => {
+    try {
+      setLoading(prev => ({ ...prev, attendance: true }));
+      const [year, monthNumber] = month.split("-");
+      const dayCount = dayjs(month).daysInMonth();
+      
+      const usersResponse = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
+      const users = usersResponse.data.filter(user => user.attendance_id);
+      
+      const attendanceRecords = {};
+      
+      await Promise.all(users.map(async (user) => {
+        try {
+          const checkInsResponse = await axios.get(
+            `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
+            { params: { month: monthNumber, year } }
+          );
+          const checkOutsResponse = await axios.get(
+            `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
+            { params: { month: monthNumber, year } }
+          );
+
+          const checkIns = checkInsResponse.data;
+          const checkOuts = checkOutsResponse.data;
+
+          const dailyTimes = {};
+          for (let day = 1; day <= dayCount; day++) {
+            const date = `${year}-${monthNumber}-${String(day).padStart(2, "0")}`;
+            const checkIn = checkIns.find(
+              (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
+            );
+            const checkOut = checkOuts.find(
+              (checkout) => dayjs(checkout.time).format("YYYY-MM-DD") === date
+            );
+
+            dailyTimes[day] = {
+              in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
+              out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
+              present: checkIn
+            };
+          }
+
+          attendanceRecords[user._id] = {
+            dailyTimes,
+            presentDays: Object.values(dailyTimes).filter(day => day.present).length,
+            totalDays: dayCount
+          };
+        } catch (error) {
+          console.error(`Error fetching attendance for user ${user._id}:`, error);
+          attendanceRecords[user._id] = {
+            dailyTimes: {},
+            presentDays: 0,
+            totalDays: dayCount
+          };
+        }
+      }));
+
+      setAttendanceData(attendanceRecords);
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+      setAttendanceData({});
+    } finally {
+      setLoading(prev => ({ ...prev, attendance: false }));
+    }
   }, []);
 
   // Fetch stock transaction data
@@ -65,7 +134,6 @@ const SalarySheet = () => {
         throw new Error("Invalid data format received from server");
       }
   
-      // Process the API response and filter duplicates
       const userMap = new Map();
       const processedData = response.data.data.flatMap((outletData) => {
         return outletData.users
@@ -130,7 +198,7 @@ const SalarySheet = () => {
     }
   }, [selectedMonth]);
 
-  // Filter stock data based on current filters
+  // Filter stock data based on current filters (except role)
   const filteredStockData = useMemo(() => {
     if (!stockData || stockData.length === 0) return [];
 
@@ -143,21 +211,27 @@ const SalarySheet = () => {
     });
   }, [stockData, selectedZone, selectedBelt, getBeltFromZone]);
 
-  // Organize reports hierarchically
+  // Organize reports hierarchically by zone and then by role (SOM → RSM → ASM → SO)
   const organizeReportsHierarchically = (reports) => {
+    // Group by belt first
     const reportsByBelt = reports.reduce((acc, report) => {
       const belt = getBeltFromZone(report.zone) || "Unknown Belt";
-      if (!acc[belt]) acc[belt] = [];
+      if (!acc[belt]) { 
+        acc[belt] = [];
+      }
       acc[belt].push(report);
       return acc;
     }, {});
 
+    // For each belt, organize by role hierarchy
     return Object.entries(reportsByBelt).map(([belt, beltReports]) => {
+      // Separate all roles
       const soms = beltReports.filter((r) => r.role === "SOM");
       const rsms = beltReports.filter((r) => r.role === "RSM");
       const asms = beltReports.filter((r) => r.role === "ASM");
       const salesOfficers = beltReports.filter((r) => r.role === "SO");
 
+      // Create maps for relationships based on zone hierarchy
       const soBySom = salesOfficers.reduce((acc, so) => {
         const som = soms.find(s => so.zone.includes(s.zone))?.name || "Unknown SOM";
         if (!acc[som]) acc[som] = [];
@@ -179,45 +253,66 @@ const SalarySheet = () => {
         return acc;
       }, {});
 
+      // Build the hierarchical structure
       const organizedReports = [];
 
+      // Add SOMs first with their original zones
       soms.forEach((som) => {
         organizedReports.push(som);
+
+        // Find RSMs that report to this SOM
         const somRsms = rsms.filter((rsm) => 
           rsm.zone.includes(som.zone) || soBySom[som.name]?.some(so => so.rsm === rsm.name)
         );
 
+        // Add each RSM and their hierarchy
         somRsms.forEach((rsm) => {
           organizedReports.push(rsm);
+
+          // Find ASMs that report to this RSM
           const rsmAsms = asms.filter((asm) => 
             asm.zone.includes(rsm.zone) || soByRsm[rsm.name]?.some(so => so.asm === asm.name)
           );
 
+          // Add each ASM and their SOs
           rsmAsms.forEach((asm) => {
             organizedReports.push(asm);
+
+            // Add SOs for this ASM
             const asmSos = (soByAsm[asm.name] || []).filter(so => 
               so.zone.includes(asm.zone)
             );
-            organizedReports.push(...asmSos.sort((a, b) => a.name.localeCompare(b.name)));
+            organizedReports.push(
+              ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+            );
           });
 
+          // Add SOs that report directly to RSM (without ASM)
           const directSos = (soByRsm[rsm.name] || []).filter(
             (so) => !so.asm && so.zone.includes(rsm.zone)
           );
-          organizedReports.push(...directSos.sort((a, b) => a.name.localeCompare(b.name)));
+          organizedReports.push(
+            ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+          );
         });
 
+        // Add SOs that report directly to SOM (without RSM or ASM)
         const directSos = (soBySom[som.name] || []).filter(
           (so) => !so.rsm && !so.asm && so.zone.includes(som.zone)
         );
-        organizedReports.push(...directSos.sort((a, b) => a.name.localeCompare(b.name)));
+        organizedReports.push(
+          ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+        );
       });
 
+      // Add any remaining RSMs not under a SOM
       const remainingRsms = rsms.filter(
         (rsm) => !organizedReports.some((r) => r.userId === rsm.userId)
       );
       remainingRsms.forEach((rsm) => {
         organizedReports.push(rsm);
+
+        // Add ASMs under this RSM
         const rsmAsms = asms.filter((asm) => 
           asm.zone.includes(rsm.zone) || soByRsm[rsm.name]?.some(so => so.asm === asm.name)
         );
@@ -227,15 +322,21 @@ const SalarySheet = () => {
           const asmSos = (soByAsm[asm.name] || []).filter(so => 
             so.zone.includes(asm.zone)
           );
-          organizedReports.push(...asmSos.sort((a, b) => a.name.localeCompare(b.name)));
+          organizedReports.push(
+            ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+          );
         });
 
+        // Add SOs directly under RSM
         const directSos = (soByRsm[rsm.name] || []).filter(
           (so) => !so.asm && so.zone.includes(rsm.zone)
         );
-        organizedReports.push(...directSos.sort((a, b) => a.name.localeCompare(b.name)));
+        organizedReports.push(
+          ...directSos.sort((a, b) => a.name.localeCompare(b.name))
+        );
       });
 
+      // Add any remaining ASMs not under a RSM
       const remainingAsms = asms.filter(
         (asm) => !organizedReports.some((r) => r.userId === asm.userId)
       );
@@ -244,13 +345,18 @@ const SalarySheet = () => {
         const asmSos = (soByAsm[asm.name] || []).filter(so => 
           so.zone.includes(asm.zone)
         );
-        organizedReports.push(...asmSos.sort((a, b) => a.name.localeCompare(b.name)));
+        organizedReports.push(
+          ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
+        );
       });
 
+      // Add any remaining SOs not under any manager
       const remainingSos = salesOfficers.filter(
         (so) => !organizedReports.some((r) => r.userId === so.userId)
       );
-      organizedReports.push(...remainingSos.sort((a, b) => a.name.localeCompare(b.name)));
+      organizedReports.push(
+        ...remainingSos.sort((a, b) => a.name.localeCompare(b.name))
+      );
 
       return {
         belt,
@@ -278,42 +384,53 @@ const SalarySheet = () => {
       };
     }
 
+    // Create a map of all users for quick lookup
     const allUsersMap = filteredStockData.reduce((acc, user) => {
       acc[user.userId] = user;
       return acc;
     }, {});
 
+    // Helper function to extract manager zone
     const getManagerZone = (managerName, level) => {
+      // First try to find manager in the original data
       const manager = Object.values(allUsersMap).find(
         u => u.name === managerName && u.role === level
       );
+      
       if (manager) return manager.zone;
       
+      // Fallback: extract from team members' zones based on hierarchy
       const teamMembers = filteredStockData.filter(
         user => user[level.toLowerCase()] === managerName
       );
+      
       if (teamMembers.length === 0) return "";
       
+      // For SOM: find the common "Zone-XX" part
       if (level === "SOM") {
         const zoneParts = teamMembers[0].zone.split('-');
         return `ZONE-${zoneParts[zoneParts.length - 1]}`;
       }
       
+      // For RSM: find the common regional part (e.g., "Dhaka-1-Zone-1")
       if (level === "RSM") {
         const sampleZone = teamMembers[0].zone;
         const zoneParts = sampleZone.split('-');
         return `ZONE-${zoneParts[zoneParts.length - 1]}`;
       }
       
+      // For ASM: use the first team member's zone
       return teamMembers[0].zone;
     };
 
+    // Calculate summary data (SO only)
     const soReports = filteredStockData.filter((r) => r.role === "SO");
     const achievedSOs = soReports.filter((so) => {
       const target = targetsData[so.userId] || 0;
       return target > 0 && (so.secondary?.valueTP / target) * 100 >= 100;
     }).length;
 
+    // Calculate totals using DP values except for secondary and market return
     const uniqueOutlets = new Set();
     let totalOpeningValueDP = 0;
     let totalClosingValueDP = 0;
@@ -353,6 +470,7 @@ const SalarySheet = () => {
       closingValue: totalClosingValueDP,
     };
 
+    // Manager level aggregations
     const managerLevels = ["ASM", "RSM", "SOM"];
     const managerReports = {};
 
@@ -367,6 +485,7 @@ const SalarySheet = () => {
           (user) => user[level.toLowerCase()] === managerName
         );
 
+        // Get the manager's proper zone
         const managerZone = getManagerZone(managerName, level);
 
         const managerTarget = teamMembers.reduce((sum, member) => {
@@ -380,6 +499,7 @@ const SalarySheet = () => {
             : sum;
         }, 0);
 
+        // Calculate manager's values without double-counting outlets
         const teamUniqueOutlets = new Set();
         let teamOpeningValueDP = 0;
         let teamClosingValueDP = 0;
@@ -438,8 +558,10 @@ const SalarySheet = () => {
       });
     });
 
+    // Combine all reports
     const allReports = [...filteredStockData, ...Object.values(managerReports)];
 
+    // Apply role filter
     const filteredReports = allReports
       .map((report) => {
         const matchRole = selectedRole ? report.role === selectedRole : true;
@@ -464,6 +586,7 @@ const SalarySheet = () => {
       })
       .filter(Boolean);
 
+    // Organize reports hierarchically
     const organized = organizeReportsHierarchically(filteredReports);
 
     return {
@@ -480,28 +603,38 @@ const SalarySheet = () => {
   useEffect(() => {
     if (selectedMonth) {
       fetchTargets();
+      fetchAttendanceData(selectedMonth);
     }
-  }, [selectedMonth, fetchTargets]);
+  }, [selectedMonth, fetchTargets, fetchAttendanceData]);
 
-  const isLoading = loading.stock || loading.targets;
+  const isLoading = loading.stock || loading.targets || loading.attendance;
 
   const exportToExcel = () => {
+    // Flatten the organized reports for export
     const exportData = organizedReports.flatMap((zoneGroup) =>
-      zoneGroup.reports.map((report) => ({
-        "User Name": report.name,
-        Outlet: report.outlet || "-",
-        Zone: report.zone,
-        Role: report.role,
-        Belt: report.belt,
-        Target: report.target,
-        "Primary (DP)": report.primary?.valueDP.toFixed(2) || "0.00",
-        "Secondary (TP)": report.secondary?.valueTP.toFixed(2) || "0.00",
-        "Market Return (TP)": report.marketReturn?.valueTP.toFixed(2) || "0.00",
-        "Office Return (DP)": report.officeReturn?.valueDP.toFixed(2) || "0.00",
-        "Collection": report.collection?.amount.toFixed(2) || "0.00",
-        "Achievement (%)": report.achievement.toFixed(1),
-        "Transaction Count": report.transactionCount,
-      }))
+      zoneGroup.reports.map((report) => {
+        const userAttendance = attendanceData[report.userId] || {
+          presentDays: 0,
+          totalDays: dayjs(selectedMonth).daysInMonth()
+        };
+        
+        return {
+          "User Name": report.name,
+          Outlet: report.outlet || "-",
+          Zone: report.zone,
+          Role: report.role,
+          Belt: report.belt,
+          Target: report.target,
+          "Primary (DP)": report.primary?.valueDP.toFixed(2) || "0.00",
+          "Secondary (TP)": report.secondary?.valueTP.toFixed(2) || "0.00",
+          "Market Return (TP)": report.marketReturn?.valueTP.toFixed(2) || "0.00",
+          "Office Return (DP)": report.officeReturn?.valueDP.toFixed(2) || "0.00",
+          "Collection": report.collection?.amount.toFixed(2) || "0.00",
+          "Attendance": `${userAttendance.presentDays}/${userAttendance.totalDays}`,
+          "Achievement (%)": report.achievement.toFixed(1),
+          "Transaction Count": report.transactionCount,
+        };
+      })
     );
 
     const wb = XLSX.utils.book_new();
@@ -594,6 +727,7 @@ const SalarySheet = () => {
 
         {/* Filters Section */}
         <div className="mb-4 flex flex-wrap gap-4 items-end">
+          {/* Date Filters */}
           <div>
             <label className="font-medium">Select Month:</label>
             <input
@@ -623,6 +757,7 @@ const SalarySheet = () => {
             />
           </div>
 
+          {/* Role Filter */}
           <div>
             <label className="font-medium">Role:</label>
             <select
@@ -638,6 +773,7 @@ const SalarySheet = () => {
             </select>
           </div>
 
+          {/* Zone Filter */}
           <div>
             <label className="font-medium">Zone:</label>
             <select
@@ -659,6 +795,7 @@ const SalarySheet = () => {
             </select>
           </div>
 
+          {/* Belt Filter */}
           <div>
             <label className="font-medium">Belt:</label>
             <select
@@ -694,7 +831,7 @@ const SalarySheet = () => {
           </div>
         ) : (
           <div className="relative overflow-auto max-h-[90vh]">
-            {organizedReports.map((beltGroup, beltIndex) => 
+            {organizedReports.map((beltGroup, beltIndex) => (
               <div key={beltIndex} className="mb-8">
                 <h3 className="text-lg font-bold bg-gray-200 p-2 sticky top-0 z-10">
                   {beltGroup.belt}
@@ -714,103 +851,113 @@ const SalarySheet = () => {
                       <th className="p-2">Office Return (DP)</th>
                       <th className="p-2">Closing (DP)</th>
                       <th className="p-2">Collection</th>
+                      <th className="p-2">Attendance</th>
                       <th className="p-2">Achievement</th>
                       <th className="p-2">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {beltGroup.reports.map((report, index) => (
-                      <tr
-                        key={`${beltIndex}-${index}`}
-                        className={`border hover:bg-gray-50 ${
-                          report.isManager ? "bg-blue-50" : ""
-                        }`}
-                      >
-                        <td className="border p-2">
-                          {report.name}
-                          {report.isManager && (
-                            <span className="ml-2 text-xs text-blue-600">
-                              ({report.role})
-                            </span>
-                          )}
-                        </td>
-                        <td className="border p-2">{report.outlet || "-"}</td>
-                        <td className="border p-2">{report.zone}</td>
-                        <td className="border p-2">{report.role}</td>
-                        <td className="border p-2">{report.target}</td>
-                        <td className="border p-2">
-                          {report.openingValueDP?.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          {report.primary?.valueDP.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          {report.secondary?.valueTP.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          {report.marketReturn?.valueTP.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          {report.officeReturn?.valueDP.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          {report.closingValueDP?.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          {report.collection?.amount.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="border p-2">
-                          <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
-                                report.achievement >= 100
-                                  ? "bg-green-500"
-                                  : report.achievement >= 70
-                                  ? "bg-blue-500"
-                                  : report.achievement >= 40
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                              }`}
-                              style={{
-                                width: `${Math.min(100, report.achievement)}%`,
-                                transition: "width 0.5s ease-in-out",
-                              }}
-                            ></div>
-                            {report.target > 0 && (
-                              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
-                                {report.achievement.toFixed(1)}%
+                    {beltGroup.reports.map((report, index) => {
+                      const userAttendance = attendanceData[report.userId] || {
+                        presentDays: 0,
+                        totalDays: dayjs(selectedMonth).daysInMonth()
+                      };
+                      
+                      return (
+                        <tr
+                          key={`${beltIndex}-${index}`}
+                          className={`border hover:bg-gray-50 ${
+                            report.isManager ? "bg-blue-50" : ""
+                          }`}
+                        >
+                          <td className="border p-2">
+                            {report.name}
+                            {report.isManager && (
+                              <span className="ml-2 text-xs text-blue-600">
+                                ({report.role})
                               </span>
                             )}
-                          </div>
-                        </td>
-                        <td className="border p-2">
-                          {!report.isManager && (
-                            <button
-                              className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
-                              onClick={() =>
-                                navigate(
-                                  `/stock-transactions/daily/${report.userId}?${
-                                    startDate && endDate
-                                      ? `startDate=${startDate}&endDate=${endDate}`
-                                      : `month=${selectedMonth}`
-                                  }`
-                                )
-                              }
-                            >
-                              Details
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="border p-2">{report.outlet || "-"}</td>
+                          <td className="border p-2">{report.zone}</td>
+                          <td className="border p-2">{report.role}</td>
+                          <td className="border p-2">{report.target}</td>
+                          <td className="border p-2">
+                            {report.openingValueDP?.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {report.primary?.valueDP.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {report.secondary?.valueTP.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {report.marketReturn?.valueTP.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {report.officeReturn?.valueDP.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {report.closingValueDP?.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {report.collection?.amount.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="border p-2">
+                            {userAttendance.presentDays}/{userAttendance.totalDays}
+                          </td>
+                          <td className="border p-2">
+                            <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
+                                  report.achievement >= 100
+                                    ? "bg-green-500"
+                                    : report.achievement >= 70
+                                    ? "bg-blue-500"
+                                    : report.achievement >= 40
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, report.achievement)}%`,
+                                  transition: "width 0.5s ease-in-out",
+                                }}
+                              ></div>
+                              {report.target > 0 && (
+                                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
+                                  {report.achievement.toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="border p-2">
+                            {!report.isManager && (
+                              <button
+                                className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
+                                onClick={() =>
+                                  navigate(
+                                    `/stock-transactions/daily/${report.userId}?${
+                                      startDate && endDate
+                                        ? `startDate=${startDate}&endDate=${endDate}`
+                                        : `month=${selectedMonth}`
+                                    }`
+                                  )
+                                }
+                              >
+                                Details
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-            )}
-            </div>
-          )
-        }
+            ))}
           </div>
+        )}
+      </div>
     </div>
   );
 };
