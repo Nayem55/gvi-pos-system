@@ -28,6 +28,7 @@ const SalarySheet = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
+  const [tddaData, setTddaData] = useState({});
   const [loading, setLoading] = useState({
     stock: false,
     targets: false,
@@ -38,7 +39,7 @@ const SalarySheet = () => {
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
+  
   const getBeltFromZone = useCallback((zoneName) => {
     if (!zoneName) return "";
     if (zoneName.includes("ZONE-01")) return "Belt-1";
@@ -54,7 +55,6 @@ const SalarySheet = () => {
         { params: { month } }
       );
       setWorkingDaysData(response.data.workingDays);
-      console.log(response.data.workingDays)
     } catch (error) {
       console.error("Error fetching working days:", error);
       setWorkingDaysData(0);
@@ -117,112 +117,123 @@ const SalarySheet = () => {
     }
   }, []);
 
-  const fetchAttendanceData = useCallback(
-    async (month) => {
-      try {
-        setLoading((prev) => ({ ...prev, attendance: true }));
-        const [year, monthNumber] = month.split("-");
-        const dayCount = dayjs(month).daysInMonth();
-        const usersResponse = await axios.get(
-          "https://gvi-pos-server.vercel.app/getAllUser"
-        );
-        const users = usersResponse.data.filter((user) => user.attendance_id);
-        const attendanceRecords = {};
+  const fetchAttendanceData = useCallback(async (month) => {
+    try {
+      setLoading((prev) => ({ ...prev, attendance: true }));
+      const [year, monthNumber] = month.split("-");
+      const dayCount = dayjs(month).daysInMonth();
+      const usersResponse = await axios.get(
+        "https://gvi-pos-server.vercel.app/getAllUser"
+      );
+      const users = usersResponse.data.filter((user) => user.attendance_id);
+      const attendanceRecords = {};
 
-        await Promise.all(
-          users.map(async (user) => {
-            try {
-              const checkInsResponse = await axios.get(
-                `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
-                { params: { month: monthNumber, year } }
+      await Promise.all(
+        users.map(async (user) => {
+          try {
+            const checkInsResponse = await axios.get(
+              `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
+              { params: { month: monthNumber, year } }
+            );
+            const checkOutsResponse = await axios.get(
+              `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
+              { params: { month: monthNumber, year } }
+            );
+
+            const checkIns = checkInsResponse.data;
+            const checkOuts = checkOutsResponse.data;
+            let presentDays = 0;
+            let checkInCount = 0;
+            const dailyAttendance = {};
+
+            for (let day = 1; day <= dayCount; day++) {
+              const date = `${year}-${monthNumber}-${String(day).padStart(
+                2,
+                "0"
+              )}`;
+              const checkIn = checkIns.find(
+                (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
               );
-              const checkOutsResponse = await axios.get(
-                `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
-                { params: { month: monthNumber, year } }
+              const checkOut = checkOuts.find(
+                (checkout) => dayjs(checkout.time).format("YYYY-MM-DD") === date
               );
 
-              const checkIns = checkInsResponse.data;
-              const checkOuts = checkOutsResponse.data;
-              let presentDays = 0;
-              let checkInCount = 0;
-              const dailyAttendance = {};
-
-              for (let day = 1; day <= dayCount; day++) {
-                const date = `${year}-${monthNumber}-${String(day).padStart(
-                  2,
-                  "0"
-                )}`;
-                const checkIn = checkIns.find(
-                  (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
-                );
-                const checkOut = checkOuts.find(
-                  (checkout) =>
-                    dayjs(checkout.time).format("YYYY-MM-DD") === date
-                );
-
-                const isPresent = checkIn;
-                if (isPresent) {
-                  presentDays++;
-                  checkInCount++;
-                }
-
-                dailyAttendance[day] = {
-                  in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
-                  out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
-                  present: isPresent,
-                };
+              const isPresent = checkIn;
+              if (isPresent) {
+                presentDays++;
+                checkInCount++;
               }
 
-              const holidaysCount = holidaysData.filter(
-                (holiday) => dayjs(holiday.date).format("YYYY-MM") === month
-              ).length;
-
-              const approvedLeave = leaveData[user._id] || 0;
-              const totalWorkingDays = workingDaysData;
-              const absentDays =
-                totalWorkingDays - presentDays - approvedLeave - holidaysCount;
-              const extraDays = Math.max(0, checkInCount - totalWorkingDays);
-
-              attendanceRecords[user._id] = {
-                dailyAttendance,
-                totalWorkingDays,
-                holidays: dayCount - totalWorkingDays,
-                approvedLeave,
-                absentDays,
-                extraDays,
-                presentDays,
-                checkInCount,
-              };
-            } catch (error) {
-              console.error(
-                `Error fetching attendance for user ${user._id}:`,
-                error
-              );
-              attendanceRecords[user._id] = {
-                dailyAttendance: {},
-                totalWorkingDays: workingDaysData,
-                holidays: 0,
-                approvedLeave: 0,
-                absentDays: 0,
-                extraDays: 0,
-                presentDays: 0,
-                checkInCount: 0,
+              dailyAttendance[day] = {
+                in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
+                out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
+                present: isPresent,
               };
             }
-          })
-        );
 
-        setAttendanceData(attendanceRecords);
-      } catch (error) {
-        console.error("Error fetching attendance data:", error);
-        setAttendanceData({});
-      } finally {
-        setLoading((prev) => ({ ...prev, attendance: false }));
-      }
-    },
-    []
-  );
+            const holidaysCount = holidaysData.filter(
+              (holiday) => dayjs(holiday.date).format("YYYY-MM") === month
+            ).length;
 
+            const approvedLeave = leaveData[user._id] || 0;
+            const totalWorkingDays = workingDaysData;
+            const absentDays =
+              totalWorkingDays - presentDays - approvedLeave - holidaysCount;
+            const extraDays = Math.max(0, checkInCount - totalWorkingDays);
+
+            attendanceRecords[user._id] = {
+              dailyAttendance,
+              totalWorkingDays,
+              holidays: dayCount - totalWorkingDays,
+              approvedLeave,
+              absentDays,
+              extraDays,
+              presentDays,
+              checkInCount,
+            };
+          } catch (error) {
+            console.error(
+              `Error fetching attendance for user ${user._id}:`,
+              error
+            );
+            attendanceRecords[user._id] = {
+              dailyAttendance: {},
+              totalWorkingDays: workingDaysData,
+              holidays: 0,
+              approvedLeave: 0,
+              absentDays: 0,
+              extraDays: 0,
+              presentDays: 0,
+              checkInCount: 0,
+            };
+          }
+        })
+      );
+
+      setAttendanceData(attendanceRecords);
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+      setAttendanceData({});
+    } finally {
+      setLoading((prev) => ({ ...prev, attendance: false }));
+    }
+  }, []);
+
+  const fetchTddaData = useCallback(async (month) => {
+    try {
+      setLoading((prev) => ({ ...prev, tdda: true }));
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/api/tdda-summary",
+        { params: { month } }
+      );
+      setTddaData(response.data.data);
+    } catch (error) {
+      console.error("Error fetching TDDA data:", error);
+      setTddaData({});
+    } finally {
+      setLoading((prev) => ({ ...prev, tdda: false }));
+    }
+  }, []);
 
   const fetchStockData = useCallback(async () => {
     try {
@@ -467,6 +478,7 @@ const SalarySheet = () => {
           totalMarketReturn: 0,
           totalOfficeReturn: 0,
           totalCollection: 0,
+          totalTddaExpense: 0,
           openingValue: 0,
           closingValue: 0,
         },
@@ -538,6 +550,11 @@ const SalarySheet = () => {
       ),
       totalCollection: soReports.reduce(
         (sum, so) => sum + (so.collection?.amount || 0),
+        0
+      ),
+      totalTddaExpense: soReports.reduce(
+        // Add this line
+        (sum, so) => sum + (tddaData[so.userId] || 0),
         0
       ),
       openingValue: totalOpeningValueDP,
@@ -661,7 +678,7 @@ const SalarySheet = () => {
       organizedReports: organized,
       summaryData: summary,
     };
-  }, [filteredStockData, targetsData, selectedRole, getBeltFromZone]);
+  }, [filteredStockData, targetsData, selectedRole, getBeltFromZone, tddaData]);
 
   useEffect(() => {
     fetchStockData();
@@ -674,6 +691,7 @@ const SalarySheet = () => {
       fetchHolidays(selectedMonth);
       fetchLeaveData(selectedMonth);
       fetchAttendanceData(selectedMonth);
+      fetchTddaData(selectedMonth); // Add this line
     }
   }, [
     selectedMonth,
@@ -682,6 +700,7 @@ const SalarySheet = () => {
     fetchHolidays,
     fetchLeaveData,
     fetchAttendanceData,
+    fetchTddaData, // Add this to dependencies
   ]);
 
   const isLoading =
@@ -690,7 +709,8 @@ const SalarySheet = () => {
     loading.attendance ||
     loading.workingDays ||
     loading.holidays ||
-    loading.leaves;
+    loading.leaves ||
+    loading.tdda; // Add tdda loading check
 
   const exportToExcel = () => {
     const exportData = organizedReports.flatMap((zoneGroup) =>
@@ -719,6 +739,7 @@ const SalarySheet = () => {
           "Office Return (DP)":
             report.officeReturn?.valueDP.toFixed(2) || "0.00",
           Collection: report.collection?.amount.toFixed(2) || "0.00",
+          "TD/DA Expense": (tddaData[report.userId]).toFixed(2), // Add this line
           "Total Working Days": userAttendance.totalWorkingDays,
           Holidays: userAttendance.holidays,
           "Approved Leave": userAttendance.approvedLeave,
@@ -774,7 +795,7 @@ const SalarySheet = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-7 gap-4 mb-4">
+        <div className="grid grid-cols-8 gap-4 mb-4">
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Opening (DP)</h3>
             <p className="text-xl font-bold">
@@ -815,6 +836,12 @@ const SalarySheet = () => {
             <h3 className="text-lg font-semibold">Collections</h3>
             <p className="text-xl font-bold">
               {summaryData.totalCollection?.toFixed(2) || "0.00"}
+            </p>
+          </div>
+          <div className="bg-orange-100 p-4 rounded-lg shadow text-center">
+            <h3 className="text-lg font-semibold">TD/DA Expense</h3>
+            <p className="text-xl font-bold">
+              {summaryData.totalTddaExpense?.toFixed(2) || "0.00"}
             </p>
           </div>
         </div>
@@ -946,6 +973,7 @@ const SalarySheet = () => {
                         <th className="p-2">Absent</th>
                         <th className="p-2">Extra Days</th>
                         <th className="p-2">Check-Ins</th>
+                        <th className="p-2">TD/DA</th>
                         <th className="p-2">Achievement</th>
                         <th className="p-2">Action</th>
                       </tr>
@@ -1007,7 +1035,7 @@ const SalarySheet = () => {
                               {report.collection?.amount?.toFixed(2) || "0.00"}
                             </td>
                             <td className="border p-2 text-center">
-                              {userAttendance.totalWorkingDays}
+                              {workingDaysData}
                             </td>
                             <td className="border p-2 text-center">
                               {userAttendance.holidays}
@@ -1016,13 +1044,18 @@ const SalarySheet = () => {
                               {userAttendance.approvedLeave}
                             </td>
                             <td className="border p-2 text-center">
-                              {userAttendance.absentDays>0?userAttendance.absentDays:0}
+                              {userAttendance.absentDays > 0
+                                ? userAttendance.absentDays
+                                : 0}
                             </td>
                             <td className="border p-2 text-center">
                               {userAttendance.extraDays}
                             </td>
                             <td className="border p-2 text-center">
                               {userAttendance.checkInCount}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {(tddaData[report.userId] || 0).toFixed(2)}
                             </td>
                             <td className="border p-2 text-right">
                               <span
@@ -1040,13 +1073,16 @@ const SalarySheet = () => {
                             <td className="border p-2 text-center">
                               <button
                                 onClick={() =>
-                                  navigate(`/sales-report/daily/${report.userId}`, {
-                                    state: {
-                                      month: selectedMonth,
-                                      startDate,
-                                      endDate,
-                                    },
-                                  })
+                                  navigate(
+                                    `/sales-report/daily/${report.userId}`,
+                                    {
+                                      state: {
+                                        month: selectedMonth,
+                                        startDate,
+                                        endDate,
+                                      },
+                                    }
+                                  )
                                 }
                                 className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
                               >
