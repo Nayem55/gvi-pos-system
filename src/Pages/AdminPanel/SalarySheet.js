@@ -16,29 +16,29 @@ const api = axios.create({
 });
 
 const SalarySheet = () => {
-  // State for stock transaction data
   const [stockData, setStockData] = useState([]);
   const [targetsData, setTargetsData] = useState({});
   const [attendanceData, setAttendanceData] = useState({});
-
-  // Filter and display state
+  const [workingDaysData, setWorkingDaysData] = useState(0); // Initialize as 0 instead of {}
+  const [holidaysData, setHolidaysData] = useState([]);
+  const [leaveData, setLeaveData] = useState({});
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
-
-  // Loading and error states
   const [loading, setLoading] = useState({
     stock: false,
     targets: false,
     attendance: false,
+    workingDays: false,
+    holidays: false,
+    leaves: false,
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Get belt from zone name
   const getBeltFromZone = useCallback((zoneName) => {
     if (!zoneName) return "";
     if (zoneName.includes("ZONE-01")) return "Belt-1";
@@ -46,79 +46,189 @@ const SalarySheet = () => {
     return "";
   }, []);
 
-  // Fetch attendance data
-  const fetchAttendanceData = useCallback(async (month) => {
+  const fetchWorkingDays = useCallback(async (month) => {
     try {
-      setLoading(prev => ({ ...prev, attendance: true }));
-      const [year, monthNumber] = month.split("-");
-      const dayCount = dayjs(month).daysInMonth();
-      
-      const usersResponse = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
-      const users = usersResponse.data.filter(user => user.attendance_id);
-      
-      const attendanceRecords = {};
-      
-      await Promise.all(users.map(async (user) => {
-        try {
-          const checkInsResponse = await axios.get(
-            `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
-            { params: { month: monthNumber, year } }
-          );
-          const checkOutsResponse = await axios.get(
-            `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
-            { params: { month: monthNumber, year } }
-          );
-
-          const checkIns = checkInsResponse.data;
-          const checkOuts = checkOutsResponse.data;
-
-          const dailyTimes = {};
-          for (let day = 1; day <= dayCount; day++) {
-            const date = `${year}-${monthNumber}-${String(day).padStart(2, "0")}`;
-            const checkIn = checkIns.find(
-              (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
-            );
-            const checkOut = checkOuts.find(
-              (checkout) => dayjs(checkout.time).format("YYYY-MM-DD") === date
-            );
-
-            dailyTimes[day] = {
-              in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
-              out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
-              present: checkIn
-            };
-          }
-
-          attendanceRecords[user._id] = {
-            dailyTimes,
-            presentDays: Object.values(dailyTimes).filter(day => day.present).length,
-            totalDays: dayCount
-          };
-        } catch (error) {
-          console.error(`Error fetching attendance for user ${user._id}:`, error);
-          attendanceRecords[user._id] = {
-            dailyTimes: {},
-            presentDays: 0,
-            totalDays: dayCount
-          };
-        }
-      }));
-
-      setAttendanceData(attendanceRecords);
+      setLoading((prev) => ({ ...prev, workingDays: true }));
+      const response = await axios.get(
+        `https://attendance-app-server-blue.vercel.app/api/workingdays`,
+        { params: { month } }
+      );
+      setWorkingDaysData(response.data.workingDays);
+      console.log(response.data.workingDays)
     } catch (error) {
-      console.error("Error fetching attendance data:", error);
-      setAttendanceData({});
+      console.error("Error fetching working days:", error);
+      setWorkingDaysData(0);
     } finally {
-      setLoading(prev => ({ ...prev, attendance: false }));
+      setLoading((prev) => ({ ...prev, workingDays: false }));
     }
   }, []);
 
-  // Fetch stock transaction data
+  const fetchHolidays = useCallback(async (month) => {
+    try {
+      setLoading((prev) => ({ ...prev, holidays: true }));
+      const [year, monthNumber] = month.split("-");
+      const response = await axios.get(
+        `https://attendance-app-server-blue.vercel.app/api/holidays`,
+        { params: { year, month: monthNumber } }
+      );
+      setHolidaysData(response.data.holidays || []);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+      setHolidaysData([]);
+    } finally {
+      setLoading((prev) => ({ ...prev, holidays: false }));
+    }
+  }, []);
+
+  const fetchLeaveData = useCallback(async (month) => {
+    try {
+      setLoading((prev) => ({ ...prev, leaves: true }));
+      const [year, monthNumber] = month.split("-");
+      const usersResponse = await axios.get(
+        "https://gvi-pos-server.vercel.app/getAllUser"
+      );
+      const users = usersResponse.data.filter((user) => user.attendance_id);
+      const leaveRecords = {};
+
+      await Promise.all(
+        users.map(async (user) => {
+          try {
+            const response = await axios.get(
+              `https://attendance-app-server-blue.vercel.app/api/leave-requests/user/${user.attendance_id}/monthly`,
+              { params: { month: monthNumber, year } }
+            );
+            leaveRecords[user._id] = response.data.leaveDays || 0;
+          } catch (error) {
+            console.error(
+              `Error fetching leave data for user ${user._id}:`,
+              error
+            );
+            leaveRecords[user._id] = 0;
+          }
+        })
+      );
+
+      setLeaveData(leaveRecords);
+    } catch (error) {
+      console.error("Error fetching leave data:", error);
+      setLeaveData({});
+    } finally {
+      setLoading((prev) => ({ ...prev, leaves: false }));
+    }
+  }, []);
+
+  const fetchAttendanceData = useCallback(
+    async (month) => {
+      try {
+        setLoading((prev) => ({ ...prev, attendance: true }));
+        const [year, monthNumber] = month.split("-");
+        const dayCount = dayjs(month).daysInMonth();
+        const usersResponse = await axios.get(
+          "https://gvi-pos-server.vercel.app/getAllUser"
+        );
+        const users = usersResponse.data.filter((user) => user.attendance_id);
+        const attendanceRecords = {};
+
+        await Promise.all(
+          users.map(async (user) => {
+            try {
+              const checkInsResponse = await axios.get(
+                `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
+                { params: { month: monthNumber, year } }
+              );
+              const checkOutsResponse = await axios.get(
+                `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
+                { params: { month: monthNumber, year } }
+              );
+
+              const checkIns = checkInsResponse.data;
+              const checkOuts = checkOutsResponse.data;
+              let presentDays = 0;
+              let checkInCount = 0;
+              const dailyAttendance = {};
+
+              for (let day = 1; day <= dayCount; day++) {
+                const date = `${year}-${monthNumber}-${String(day).padStart(
+                  2,
+                  "0"
+                )}`;
+                const checkIn = checkIns.find(
+                  (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
+                );
+                const checkOut = checkOuts.find(
+                  (checkout) =>
+                    dayjs(checkout.time).format("YYYY-MM-DD") === date
+                );
+
+                const isPresent = checkIn;
+                if (isPresent) {
+                  presentDays++;
+                  checkInCount++;
+                }
+
+                dailyAttendance[day] = {
+                  in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
+                  out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
+                  present: isPresent,
+                };
+              }
+
+              const holidaysCount = holidaysData.filter(
+                (holiday) => dayjs(holiday.date).format("YYYY-MM") === month
+              ).length;
+
+              const approvedLeave = leaveData[user._id] || 0;
+              const totalWorkingDays = workingDaysData;
+              const absentDays =
+                totalWorkingDays - presentDays - approvedLeave - holidaysCount;
+              const extraDays = Math.max(0, checkInCount - totalWorkingDays);
+
+              attendanceRecords[user._id] = {
+                dailyAttendance,
+                totalWorkingDays,
+                holidays: dayCount - totalWorkingDays,
+                approvedLeave,
+                absentDays,
+                extraDays,
+                presentDays,
+                checkInCount,
+              };
+            } catch (error) {
+              console.error(
+                `Error fetching attendance for user ${user._id}:`,
+                error
+              );
+              attendanceRecords[user._id] = {
+                dailyAttendance: {},
+                totalWorkingDays: workingDaysData,
+                holidays: 0,
+                approvedLeave: 0,
+                absentDays: 0,
+                extraDays: 0,
+                presentDays: 0,
+                checkInCount: 0,
+              };
+            }
+          })
+        );
+
+        setAttendanceData(attendanceRecords);
+      } catch (error) {
+        console.error("Error fetching attendance data:", error);
+        setAttendanceData({});
+      } finally {
+        setLoading((prev) => ({ ...prev, attendance: false }));
+      }
+    },
+    []
+  );
+
+
   const fetchStockData = useCallback(async () => {
     try {
       setLoading((prev) => ({ ...prev, stock: true }));
       setError(null);
-  
+
       const params = new URLSearchParams();
       if (startDate && endDate) {
         params.append("startDate", startDate);
@@ -126,14 +236,14 @@ const SalarySheet = () => {
       } else {
         params.append("month", selectedMonth);
       }
-  
+
       const response = await api.get(
         `/api/user-stock-movement?${params.toString()}`
       );
       if (!response.data || !response.data.success) {
         throw new Error("Invalid data format received from server");
       }
-  
+
       const userMap = new Map();
       const processedData = response.data.data.flatMap((outletData) => {
         return outletData.users
@@ -162,7 +272,7 @@ const SalarySheet = () => {
             closingValueTP: outletData.closingValueTP,
           }));
       });
-  
+
       setStockData(processedData);
     } catch (error) {
       console.error("Error fetching stock data:", error);
@@ -172,7 +282,6 @@ const SalarySheet = () => {
     }
   }, [selectedMonth, startDate, endDate]);
 
-  // Fetch targets for the selected month
   const fetchTargets = useCallback(async () => {
     try {
       setLoading((prev) => ({ ...prev, targets: true }));
@@ -198,88 +307,75 @@ const SalarySheet = () => {
     }
   }, [selectedMonth]);
 
-  // Filter stock data based on current filters (except role)
   const filteredStockData = useMemo(() => {
     if (!stockData || stockData.length === 0) return [];
-
     return stockData.filter((data) => {
       const belt = getBeltFromZone(data.zone);
       const matchZone = selectedZone ? data.zone?.includes(selectedZone) : true;
       const matchBelt = selectedBelt ? belt === selectedBelt : true;
-
       return matchZone && matchBelt;
     });
   }, [stockData, selectedZone, selectedBelt, getBeltFromZone]);
 
-  // Organize reports hierarchically by zone and then by role (SOM → RSM → ASM → SO)
   const organizeReportsHierarchically = (reports) => {
-    // Group by belt first
     const reportsByBelt = reports.reduce((acc, report) => {
       const belt = getBeltFromZone(report.zone) || "Unknown Belt";
-      if (!acc[belt]) { 
-        acc[belt] = [];
-      }
+      if (!acc[belt]) acc[belt] = [];
       acc[belt].push(report);
       return acc;
     }, {});
 
-    // For each belt, organize by role hierarchy
     return Object.entries(reportsByBelt).map(([belt, beltReports]) => {
-      // Separate all roles
       const soms = beltReports.filter((r) => r.role === "SOM");
       const rsms = beltReports.filter((r) => r.role === "RSM");
       const asms = beltReports.filter((r) => r.role === "ASM");
       const salesOfficers = beltReports.filter((r) => r.role === "SO");
 
-      // Create maps for relationships based on zone hierarchy
       const soBySom = salesOfficers.reduce((acc, so) => {
-        const som = soms.find(s => so.zone.includes(s.zone))?.name || "Unknown SOM";
+        const som =
+          soms.find((s) => so.zone.includes(s.zone))?.name || "Unknown SOM";
         if (!acc[som]) acc[som] = [];
         acc[som].push(so);
         return acc;
       }, {});
 
       const soByRsm = salesOfficers.reduce((acc, so) => {
-        const rsm = rsms.find(r => so.zone.includes(r.zone))?.name || "Unknown RSM";
+        const rsm =
+          rsms.find((r) => so.zone.includes(r.zone))?.name || "Unknown RSM";
         if (!acc[rsm]) acc[rsm] = [];
         acc[rsm].push(so);
         return acc;
       }, {});
 
       const soByAsm = salesOfficers.reduce((acc, so) => {
-        const asm = asms.find(a => so.zone.includes(a.zone))?.name || "Unknown ASM";
+        const asm =
+          asms.find((a) => so.zone.includes(a.zone))?.name || "Unknown ASM";
         if (!acc[asm]) acc[asm] = [];
         acc[asm].push(so);
         return acc;
       }, {});
 
-      // Build the hierarchical structure
       const organizedReports = [];
 
-      // Add SOMs first with their original zones
       soms.forEach((som) => {
         organizedReports.push(som);
-
-        // Find RSMs that report to this SOM
-        const somRsms = rsms.filter((rsm) => 
-          rsm.zone.includes(som.zone) || soBySom[som.name]?.some(so => so.rsm === rsm.name)
+        const somRsms = rsms.filter(
+          (rsm) =>
+            rsm.zone.includes(som.zone) ||
+            soBySom[som.name]?.some((so) => so.rsm === rsm.name)
         );
 
-        // Add each RSM and their hierarchy
         somRsms.forEach((rsm) => {
           organizedReports.push(rsm);
-
-          // Find ASMs that report to this RSM
-          const rsmAsms = asms.filter((asm) => 
-            asm.zone.includes(rsm.zone) || soByRsm[rsm.name]?.some(so => so.asm === asm.name)
+          const rsmAsms = asms.filter(
+            (asm) =>
+              asm.zone.includes(rsm.zone) ||
+              soByRsm[rsm.name]?.some((so) => so.asm === asm.name)
           );
 
-          // Add each ASM and their SOs
           rsmAsms.forEach((asm) => {
             organizedReports.push(asm);
-
-            // Add SOs for this ASM
-            const asmSos = (soByAsm[asm.name] || []).filter(so => 
+            const asmSos = (soByAsm[asm.name] || []).filter((so) =>
               so.zone.includes(asm.zone)
             );
             organizedReports.push(
@@ -287,7 +383,6 @@ const SalarySheet = () => {
             );
           });
 
-          // Add SOs that report directly to RSM (without ASM)
           const directSos = (soByRsm[rsm.name] || []).filter(
             (so) => !so.asm && so.zone.includes(rsm.zone)
           );
@@ -296,7 +391,6 @@ const SalarySheet = () => {
           );
         });
 
-        // Add SOs that report directly to SOM (without RSM or ASM)
         const directSos = (soBySom[som.name] || []).filter(
           (so) => !so.rsm && !so.asm && so.zone.includes(som.zone)
         );
@@ -305,21 +399,20 @@ const SalarySheet = () => {
         );
       });
 
-      // Add any remaining RSMs not under a SOM
       const remainingRsms = rsms.filter(
         (rsm) => !organizedReports.some((r) => r.userId === rsm.userId)
       );
       remainingRsms.forEach((rsm) => {
         organizedReports.push(rsm);
-
-        // Add ASMs under this RSM
-        const rsmAsms = asms.filter((asm) => 
-          asm.zone.includes(rsm.zone) || soByRsm[rsm.name]?.some(so => so.asm === asm.name)
+        const rsmAsms = asms.filter(
+          (asm) =>
+            asm.zone.includes(rsm.zone) ||
+            soByRsm[rsm.name]?.some((so) => so.asm === asm.name)
         );
 
         rsmAsms.forEach((asm) => {
           organizedReports.push(asm);
-          const asmSos = (soByAsm[asm.name] || []).filter(so => 
+          const asmSos = (soByAsm[asm.name] || []).filter((so) =>
             so.zone.includes(asm.zone)
           );
           organizedReports.push(
@@ -327,7 +420,6 @@ const SalarySheet = () => {
           );
         });
 
-        // Add SOs directly under RSM
         const directSos = (soByRsm[rsm.name] || []).filter(
           (so) => !so.asm && so.zone.includes(rsm.zone)
         );
@@ -336,13 +428,12 @@ const SalarySheet = () => {
         );
       });
 
-      // Add any remaining ASMs not under a RSM
       const remainingAsms = asms.filter(
         (asm) => !organizedReports.some((r) => r.userId === asm.userId)
       );
       remainingAsms.forEach((asm) => {
         organizedReports.push(asm);
-        const asmSos = (soByAsm[asm.name] || []).filter(so => 
+        const asmSos = (soByAsm[asm.name] || []).filter((so) =>
           so.zone.includes(asm.zone)
         );
         organizedReports.push(
@@ -350,7 +441,6 @@ const SalarySheet = () => {
         );
       });
 
-      // Add any remaining SOs not under any manager
       const remainingSos = salesOfficers.filter(
         (so) => !organizedReports.some((r) => r.userId === so.userId)
       );
@@ -365,7 +455,6 @@ const SalarySheet = () => {
     });
   };
 
-  // Main aggregation logic
   const { organizedReports, summaryData } = useMemo(() => {
     if (!filteredStockData || filteredStockData.length === 0) {
       return {
@@ -384,53 +473,38 @@ const SalarySheet = () => {
       };
     }
 
-    // Create a map of all users for quick lookup
     const allUsersMap = filteredStockData.reduce((acc, user) => {
       acc[user.userId] = user;
       return acc;
     }, {});
 
-    // Helper function to extract manager zone
     const getManagerZone = (managerName, level) => {
-      // First try to find manager in the original data
       const manager = Object.values(allUsersMap).find(
-        u => u.name === managerName && u.role === level
+        (u) => u.name === managerName && u.role === level
       );
-      
       if (manager) return manager.zone;
-      
-      // Fallback: extract from team members' zones based on hierarchy
       const teamMembers = filteredStockData.filter(
-        user => user[level.toLowerCase()] === managerName
+        (user) => user[level.toLowerCase()] === managerName
       );
-      
       if (teamMembers.length === 0) return "";
-      
-      // For SOM: find the common "Zone-XX" part
       if (level === "SOM") {
-        const zoneParts = teamMembers[0].zone.split('-');
+        const zoneParts = teamMembers[0].zone.split("-");
         return `ZONE-${zoneParts[zoneParts.length - 1]}`;
       }
-      
-      // For RSM: find the common regional part (e.g., "Dhaka-1-Zone-1")
       if (level === "RSM") {
         const sampleZone = teamMembers[0].zone;
-        const zoneParts = sampleZone.split('-');
+        const zoneParts = sampleZone.split("-");
         return `ZONE-${zoneParts[zoneParts.length - 1]}`;
       }
-      
-      // For ASM: use the first team member's zone
       return teamMembers[0].zone;
     };
 
-    // Calculate summary data (SO only)
     const soReports = filteredStockData.filter((r) => r.role === "SO");
     const achievedSOs = soReports.filter((so) => {
       const target = targetsData[so.userId] || 0;
       return target > 0 && (so.secondary?.valueTP / target) * 100 >= 100;
     }).length;
 
-    // Calculate totals using DP values except for secondary and market return
     const uniqueOutlets = new Set();
     let totalOpeningValueDP = 0;
     let totalClosingValueDP = 0;
@@ -470,7 +544,6 @@ const SalarySheet = () => {
       closingValue: totalClosingValueDP,
     };
 
-    // Manager level aggregations
     const managerLevels = ["ASM", "RSM", "SOM"];
     const managerReports = {};
 
@@ -485,7 +558,6 @@ const SalarySheet = () => {
           (user) => user[level.toLowerCase()] === managerName
         );
 
-        // Get the manager's proper zone
         const managerZone = getManagerZone(managerName, level);
 
         const managerTarget = teamMembers.reduce((sum, member) => {
@@ -499,7 +571,6 @@ const SalarySheet = () => {
             : sum;
         }, 0);
 
-        // Calculate manager's values without double-counting outlets
         const teamUniqueOutlets = new Set();
         let teamOpeningValueDP = 0;
         let teamClosingValueDP = 0;
@@ -558,10 +629,8 @@ const SalarySheet = () => {
       });
     });
 
-    // Combine all reports
     const allReports = [...filteredStockData, ...Object.values(managerReports)];
 
-    // Apply role filter
     const filteredReports = allReports
       .map((report) => {
         const matchRole = selectedRole ? report.role === selectedRole : true;
@@ -586,7 +655,6 @@ const SalarySheet = () => {
       })
       .filter(Boolean);
 
-    // Organize reports hierarchically
     const organized = organizeReportsHierarchically(filteredReports);
 
     return {
@@ -595,7 +663,6 @@ const SalarySheet = () => {
     };
   }, [filteredStockData, targetsData, selectedRole, getBeltFromZone]);
 
-  // Fetch data when filters change
   useEffect(() => {
     fetchStockData();
   }, [fetchStockData]);
@@ -603,21 +670,41 @@ const SalarySheet = () => {
   useEffect(() => {
     if (selectedMonth) {
       fetchTargets();
+      fetchWorkingDays(selectedMonth);
+      fetchHolidays(selectedMonth);
+      fetchLeaveData(selectedMonth);
       fetchAttendanceData(selectedMonth);
     }
-  }, [selectedMonth, fetchTargets, fetchAttendanceData]);
+  }, [
+    selectedMonth,
+    fetchTargets,
+    fetchWorkingDays,
+    fetchHolidays,
+    fetchLeaveData,
+    fetchAttendanceData,
+  ]);
 
-  const isLoading = loading.stock || loading.targets || loading.attendance;
+  const isLoading =
+    loading.stock ||
+    loading.targets ||
+    loading.attendance ||
+    loading.workingDays ||
+    loading.holidays ||
+    loading.leaves;
 
   const exportToExcel = () => {
-    // Flatten the organized reports for export
     const exportData = organizedReports.flatMap((zoneGroup) =>
       zoneGroup.reports.map((report) => {
         const userAttendance = attendanceData[report.userId] || {
+          totalWorkingDays: workingDaysData,
+          holidays: 0,
+          approvedLeave: 0,
+          absentDays: 0,
+          extraDays: 0,
           presentDays: 0,
-          totalDays: dayjs(selectedMonth).daysInMonth()
+          checkInCount: 0,
         };
-        
+
         return {
           "User Name": report.name,
           Outlet: report.outlet || "-",
@@ -627,10 +714,18 @@ const SalarySheet = () => {
           Target: report.target,
           "Primary (DP)": report.primary?.valueDP.toFixed(2) || "0.00",
           "Secondary (TP)": report.secondary?.valueTP.toFixed(2) || "0.00",
-          "Market Return (TP)": report.marketReturn?.valueTP.toFixed(2) || "0.00",
-          "Office Return (DP)": report.officeReturn?.valueDP.toFixed(2) || "0.00",
-          "Collection": report.collection?.amount.toFixed(2) || "0.00",
-          "Attendance": `${userAttendance.presentDays}/${userAttendance.totalDays}`,
+          "Market Return (TP)":
+            report.marketReturn?.valueTP.toFixed(2) || "0.00",
+          "Office Return (DP)":
+            report.officeReturn?.valueDP.toFixed(2) || "0.00",
+          Collection: report.collection?.amount.toFixed(2) || "0.00",
+          "Total Working Days": userAttendance.totalWorkingDays,
+          Holidays: userAttendance.holidays,
+          "Approved Leave": userAttendance.approvedLeave,
+          Absent: userAttendance.absentDays,
+          "Extra Days": userAttendance.extraDays,
+          "Present Days": userAttendance.presentDays,
+          "Total Check-Ins": userAttendance.checkInCount,
           "Achievement (%)": report.achievement.toFixed(1),
           "Transaction Count": report.transactionCount,
         };
@@ -679,7 +774,6 @@ const SalarySheet = () => {
           </div>
         )}
 
-        {/* Summary Section */}
         <div className="grid grid-cols-7 gap-4 mb-4">
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Opening (DP)</h3>
@@ -725,9 +819,7 @@ const SalarySheet = () => {
           </div>
         </div>
 
-        {/* Filters Section */}
         <div className="mb-4 flex flex-wrap gap-4 items-end">
-          {/* Date Filters */}
           <div>
             <label className="font-medium">Select Month:</label>
             <input
@@ -757,7 +849,6 @@ const SalarySheet = () => {
             />
           </div>
 
-          {/* Role Filter */}
           <div>
             <label className="font-medium">Role:</label>
             <select
@@ -773,7 +864,6 @@ const SalarySheet = () => {
             </select>
           </div>
 
-          {/* Zone Filter */}
           <div>
             <label className="font-medium">Zone:</label>
             <select
@@ -795,7 +885,6 @@ const SalarySheet = () => {
             </select>
           </div>
 
-          {/* Belt Filter */}
           <div>
             <label className="font-medium">Belt:</label>
             <select
@@ -818,7 +907,6 @@ const SalarySheet = () => {
           </button>
         </div>
 
-        {/* Results Table */}
         {isLoading ? (
           <div className="flex justify-center items-center my-10">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
@@ -836,123 +924,141 @@ const SalarySheet = () => {
                 <h3 className="text-lg font-bold bg-gray-200 p-2 sticky top-0 z-10">
                   {beltGroup.belt}
                 </h3>
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="p-2">User</th>
-                      <th className="p-2">Outlet</th>
-                      <th className="p-2">Zone</th>
-                      <th className="p-2">Role</th>
-                      <th className="p-2">Target (TP)</th>
-                      <th className="p-2">Opening (DP)</th>
-                      <th className="p-2">Primary (DP)</th>
-                      <th className="p-2">Secondary (TP)</th>
-                      <th className="p-2">Market Return (TP)</th>
-                      <th className="p-2">Office Return (DP)</th>
-                      <th className="p-2">Closing (DP)</th>
-                      <th className="p-2">Collection</th>
-                      <th className="p-2">Attendance</th>
-                      <th className="p-2">Achievement</th>
-                      <th className="p-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {beltGroup.reports.map((report, index) => {
-                      const userAttendance = attendanceData[report.userId] || {
-                        presentDays: 0,
-                        totalDays: dayjs(selectedMonth).daysInMonth()
-                      };
-                      
-                      return (
-                        <tr
-                          key={`${beltIndex}-${index}`}
-                          className={`border hover:bg-gray-50 ${
-                            report.isManager ? "bg-blue-50" : ""
-                          }`}
-                        >
-                          <td className="border p-2">
-                            {report.name}
-                            {report.isManager && (
-                              <span className="ml-2 text-xs text-blue-600">
-                                ({report.role})
-                              </span>
-                            )}
-                          </td>
-                          <td className="border p-2">{report.outlet || "-"}</td>
-                          <td className="border p-2">{report.zone}</td>
-                          <td className="border p-2">{report.role}</td>
-                          <td className="border p-2">{report.target}</td>
-                          <td className="border p-2">
-                            {report.openingValueDP?.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {report.primary?.valueDP.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {report.secondary?.valueTP.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {report.marketReturn?.valueTP.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {report.officeReturn?.valueDP.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {report.closingValueDP?.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {report.collection?.amount.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="border p-2">
-                            {userAttendance.presentDays}/{userAttendance.totalDays}
-                          </td>
-                          <td className="border p-2">
-                            <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="p-2">User</th>
+                        <th className="p-2">Outlet</th>
+                        <th className="p-2">Zone</th>
+                        <th className="p-2">Role</th>
+                        <th className="p-2">Target (TP)</th>
+                        <th className="p-2">Opening (DP)</th>
+                        <th className="p-2">Primary (DP)</th>
+                        <th className="p-2">Secondary (TP)</th>
+                        <th className="p-2">Market Return (TP)</th>
+                        <th className="p-2">Office Return (DP)</th>
+                        <th className="p-2">Closing (DP)</th>
+                        <th className="p-2">Collection</th>
+                        <th className="p-2">Working Days</th>
+                        <th className="p-2">Holidays</th>
+                        <th className="p-2">Approved Leave</th>
+                        <th className="p-2">Absent</th>
+                        <th className="p-2">Extra Days</th>
+                        <th className="p-2">Check-Ins</th>
+                        <th className="p-2">Achievement</th>
+                        <th className="p-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {beltGroup.reports.map((report, index) => {
+                        const userAttendance = attendanceData[
+                          report.userId
+                        ] || {
+                          totalWorkingDays: workingDaysData,
+                          holidays: 0,
+                          approvedLeave: 0,
+                          absentDays: 0,
+                          extraDays: 0,
+                          presentDays: 0,
+                          checkInCount: 0,
+                        };
+
+                        return (
+                          <tr
+                            key={`${beltIndex}-${index}`}
+                            className={`border hover:bg-gray-50 ${
+                              report.isManager ? "bg-blue-50" : ""
+                            }`}
+                          >
+                            <td className="border p-2">
+                              {report.name}
+                              {report.isManager && " (Manager)"}
+                            </td>
+                            <td className="border p-2">
+                              {report.outlet || "-"}
+                            </td>
+                            <td className="border p-2">{report.zone}</td>
+                            <td className="border p-2">{report.role}</td>
+                            <td className="border p-2 text-right">
+                              {Number(report.target).toLocaleString()}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.openingValueDP?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.primary?.valueDP?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.secondary?.valueTP?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.marketReturn?.valueTP?.toFixed(2) ||
+                                "0.00"}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.officeReturn?.valueDP?.toFixed(2) ||
+                                "0.00"}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.closingValueDP?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="border p-2 text-right">
+                              {report.collection?.amount?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {userAttendance.totalWorkingDays}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {userAttendance.holidays}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {userAttendance.approvedLeave}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {userAttendance.absentDays>0?userAttendance.absentDays:0}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {userAttendance.extraDays}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {userAttendance.checkInCount}
+                            </td>
+                            <td className="border p-2 text-right">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
                                   report.achievement >= 100
-                                    ? "bg-green-500"
-                                    : report.achievement >= 70
-                                    ? "bg-blue-500"
-                                    : report.achievement >= 40
-                                    ? "bg-yellow-500"
-                                    : "bg-red-500"
+                                    ? "bg-green-100 text-green-800"
+                                    : report.achievement >= 80
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
-                                style={{
-                                  width: `${Math.min(100, report.achievement)}%`,
-                                  transition: "width 0.5s ease-in-out",
-                                }}
-                              ></div>
-                              {report.target > 0 && (
-                                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
-                                  {report.achievement.toFixed(1)}%
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            {!report.isManager && (
+                              >
+                                {report.achievement.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="border p-2 text-center">
                               <button
-                                className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
                                 onClick={() =>
-                                  navigate(
-                                    `/stock-transactions/daily/${report.userId}?${
-                                      startDate && endDate
-                                        ? `startDate=${startDate}&endDate=${endDate}`
-                                        : `month=${selectedMonth}`
-                                    }`
-                                  )
+                                  navigate(`/sales-report/daily/${report.userId}`, {
+                                    state: {
+                                      month: selectedMonth,
+                                      startDate,
+                                      endDate,
+                                    },
+                                  })
                                 }
+                                className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
                               >
                                 Details
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
           </div>
