@@ -29,6 +29,8 @@ const SalarySheet = () => {
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedBelt, setSelectedBelt] = useState("");
   const [tddaData, setTddaData] = useState({});
+  const dayCount = dayjs(selectedMonth).daysInMonth();
+
   const [loading, setLoading] = useState({
     stock: false,
     targets: false,
@@ -39,7 +41,7 @@ const SalarySheet = () => {
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  
+
   const getBeltFromZone = useCallback((zoneName) => {
     if (!zoneName) return "";
     if (zoneName.includes("ZONE-01")) return "Belt-1";
@@ -121,7 +123,6 @@ const SalarySheet = () => {
     try {
       setLoading((prev) => ({ ...prev, attendance: true }));
       const [year, monthNumber] = month.split("-");
-      const dayCount = dayjs(month).daysInMonth();
       const usersResponse = await axios.get(
         "https://gvi-pos-server.vercel.app/getAllUser"
       );
@@ -184,7 +185,7 @@ const SalarySheet = () => {
             attendanceRecords[user._id] = {
               dailyAttendance,
               totalWorkingDays,
-              holidays: dayCount - totalWorkingDays,
+              holidays: dayCount - workingDaysData,
               approvedLeave,
               absentDays,
               extraDays,
@@ -739,9 +740,9 @@ const SalarySheet = () => {
           "Office Return (DP)":
             report.officeReturn?.valueDP.toFixed(2) || "0.00",
           Collection: report.collection?.amount.toFixed(2) || "0.00",
-          "TD/DA Expense": (tddaData[report.userId]).toFixed(2), // Add this line
-          "Total Working Days": userAttendance.totalWorkingDays,
-          Holidays: userAttendance.holidays,
+          "TD/DA Expense": tddaData[report.userId].toFixed(2), // Add this line
+          "Total Working Days": workingDaysData,
+          Holidays: dayCount - workingDaysData,
           "Approved Leave": userAttendance.approvedLeave,
           Absent: userAttendance.absentDays,
           "Extra Days": userAttendance.extraDays,
@@ -1038,7 +1039,7 @@ const SalarySheet = () => {
                               {workingDaysData}
                             </td>
                             <td className="border p-2 text-center">
-                              {userAttendance.holidays}
+                              {dayCount-workingDaysData}
                             </td>
                             <td className="border p-2 text-center">
                               {userAttendance.approvedLeave}
