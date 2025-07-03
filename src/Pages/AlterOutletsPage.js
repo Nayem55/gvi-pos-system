@@ -80,7 +80,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       await axios.put(
-        `http://localhost:5000/update-outlet/${currentOutlet.originalOutletName}`,
+        `https://gvi-pos-server.vercel.app/update-outlet/${currentOutlet.originalOutletName}`,
         {
           name: currentOutlet.outlet_name,
           proprietorName: currentOutlet.proprietor_name,
