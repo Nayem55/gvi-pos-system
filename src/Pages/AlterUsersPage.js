@@ -152,6 +152,7 @@ const AlterUsersPage = () => {
                   <tr className="bg-gray-100 text-left">
                     <th className="p-3 border-b font-medium">Name</th>
                     <th className="p-3 border-b font-medium">Phone</th>
+                    <th className="p-3 border-b font-medium">Password</th>
                     <th className="p-3 border-b font-medium">Role</th>
                     <th className="p-3 border-b font-medium">Outlet</th>
                     <th className="p-3 border-b font-medium">Status</th>
@@ -163,6 +164,7 @@ const AlterUsersPage = () => {
                     <tr key={user._id} className="hover:bg-gray-50">
                       <td className="p-3 border-b">{user.name}</td>
                       <td className="p-3 border-b">{user.number}</td>
+                      <td className="p-3 border-b">{user.password}</td>
                       <td className="p-3 border-b">{user.role}</td>
                       <td className="p-3 border-b">{user.outlet || "-"}</td>
                       <td className="p-3 border-b">
@@ -233,7 +235,7 @@ const AlterUsersPage = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
                   <input
-                    type="password"
+                    type="text"
                     value={editingUser.password}
                     onChange={(e) => handleInputChange(e, "password")}
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
