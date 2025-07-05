@@ -17,10 +17,11 @@ import {
   SheetIcon,
 } from "lucide-react";
 import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
-import { BsCash, BsCashCoin, BsShop } from "react-icons/bs";
+import { BsCashCoin, BsShop } from "react-icons/bs";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dashboardDropdownOpen, setDashboardDropdownOpen] = useState(false);
   const [salesDropdownOpen, setSalesDropdownOpen] = useState(false);
   const [salesDropdown1Open, setSalesDropdown1Open] = useState(false);
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
@@ -28,9 +29,7 @@ const AdminSidebar = () => {
   const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
   const location = useLocation();
 
-  // Sidebar navigation items
   const navItems = [
-    { name: "Dashboard", path: "/admin", icon: <Grid size={20} /> },
     {
       name: "Manage Stock",
       path: "/admin/manage-stock",
@@ -71,25 +70,65 @@ const AdminSidebar = () => {
       {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-full bg-gray-900 text-white w-72 p-5 shadow-lg transform transition-transform duration-300 ease-in-out 
-        ${
-          isOpen ? "translate-x-0" : "-translate-x-64"
-        } md:translate-x-0 md:relative md:h-screen`}
+        ${isOpen ? "translate-x-0" : "-translate-x-64"} md:translate-x-0 md:relative md:h-screen`}
         style={{ position: "sticky", top: 0 }}
       >
         <h2 className="text-xl font-bold mb-6 text-left">Admin Panel</h2>
 
-        {/* Navigation Links */}
         <nav className="space-y-2">
+          {/* Dashboard Dropdown */}
+          <div>
+            <button
+              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
+              onClick={() => setDashboardDropdownOpen(!dashboardDropdownOpen)}
+            >
+              <span className="flex items-center gap-3">
+                <Grid size={20} />
+                Dashboard
+              </span>
+              <ChevronDown
+                size={16}
+                className={dashboardDropdownOpen ? "rotate-180" : ""}
+              />
+            </button>
+            {dashboardDropdownOpen && (
+              <div className="ml-6 mt-2 space-y-2">
+                <Link
+                  to="/admin"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  POS
+                </Link>
+                <a
+                  href="https://rl.luvit.com.bd/admin-panel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  Attendance
+                </a>
+                {/* <a
+                  href="https://attendance.luvit.com.bd/admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                >
+                  AMD / GVI / NMT
+                </a> */}
+              </div>
+            )}
+          </div>
+
+          {/* Static Navigation Items */}
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 
-                ${
-                  location.pathname === item.path
-                    ? "bg-gray-700"
-                    : "hover:bg-gray-800"
-                }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 ${
+                location.pathname === item.path
+                  ? "bg-gray-700"
+                  : "hover:bg-gray-800"
+              }`}
             >
               {item.icon}
               <span>{item.name}</span>
@@ -154,25 +193,25 @@ const AdminSidebar = () => {
               <div className="ml-6 mt-2 space-y-2">
                 <Link
                   to="/admin/create-product"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Package size={16} /> Product
                 </Link>
                 <Link
                   to="/admin/create-category"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <BiCategoryAlt size={16} /> Category
                 </Link>
                 <Link
                   to="/admin/create-user"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Users size={16} /> User
                 </Link>
                 <Link
                   to="/admin/create-outlet"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <BsShop size={16} /> Outlet
                 </Link>
@@ -199,25 +238,25 @@ const AdminSidebar = () => {
               <div className="ml-6 mt-2 space-y-2">
                 <Link
                   to="/admin/alter-products"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Package size={16} /> Products
                 </Link>
                 <Link
                   to="/admin/alter-categories"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <BiCategoryAlt size={16} /> Category
                 </Link>
                 <Link
                   to="/admin/alter-users"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Users size={16} /> Users
                 </Link>
                 <Link
                   to="/admin/alter-outlets"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800 flex items-center gap-2"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
                 >
                   <BsShop size={16} /> Outlets
                 </Link>
@@ -225,10 +264,10 @@ const AdminSidebar = () => {
             )}
           </div>
 
-          {/* Monthly Sales Movement Dropdown */}
+          {/* Sales Movement Dropdown */}
           <div>
             <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
+              className="flex items-center justify-between w-full px-4 py-3 rounded-md hover:bg-gray-800"
               onClick={() => setSalesDropdownOpen(!salesDropdownOpen)}
             >
               <span className="flex items-center gap-3">
@@ -244,25 +283,25 @@ const AdminSidebar = () => {
               <div className="ml-6 mt-2 space-y-2">
                 <Link
                   to="/admin/sales-movement/dealer-wise"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
                 >
                   User Wise
                 </Link>
                 <Link
                   to="/admin/sales-movement/brand-wise"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
                 >
                   Brand Wise
                 </Link>
                 <Link
                   to="/admin/sales-movement/product-wise"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
                 >
                   Product Wise
                 </Link>
                 <Link
                   to="/admin/sales-movement/category-wise"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
                 >
                   Category Wise
                 </Link>
@@ -273,7 +312,7 @@ const AdminSidebar = () => {
           {/* Stock Movement Dropdown */}
           <div>
             <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
+              className="flex items-center justify-between w-full px-4 py-3 rounded-md hover:bg-gray-800"
               onClick={() => setSalesDropdown1Open(!salesDropdown1Open)}
             >
               <span className="flex items-center gap-3">
@@ -288,13 +327,13 @@ const AdminSidebar = () => {
               <div className="ml-6 mt-2 space-y-2">
                 <Link
                   to="/stock-movement/dealer"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
                 >
                   Dealer Wise
                 </Link>
                 <Link
                   to="/stock-movement/group"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
+                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
                 >
                   Group Wise
                 </Link>
