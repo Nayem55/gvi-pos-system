@@ -37,6 +37,7 @@ import BrandTargetPage from "../Pages/BrandTargetPage";
 import TDDA from "../Pages/TDDA";
 import TDDAdminPanel from "../Pages/TDDA";
 import SalarySheet from "../Pages/AdminPanel/SalarySheet";
+import OrderRequests from "../Pages/AdminPanel/OrderRequests";
 
 const router = createBrowserRouter([
   {
@@ -171,6 +172,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/manage-stock",
         element: <ManageStock/>,
+      },
+      {
+        path: "/admin/order-requests",
+        element: <OrderRequests/>,
       },
       {
         path: "/admin/users",

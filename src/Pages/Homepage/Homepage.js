@@ -11,6 +11,7 @@ import TadaVoucher from "../TadaVoucher";
 import AttendanceVoucher from "../CheckInOut";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
+import PrimaryRequest from "../PrimaryRequest";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -143,7 +144,7 @@ export default function Home() {
         />
       )}
       {selectedTab === "primary" && (
-        <Primary
+        <PrimaryRequest
           user={user}
           stock={stock}
           setStock={setStock}

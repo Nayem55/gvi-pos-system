@@ -15,6 +15,7 @@ import {
   PlusCircle,
   Edit3,
   SheetIcon,
+  ListOrderedIcon,
 } from "lucide-react";
 import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
 import { BsCashCoin, BsShop } from "react-icons/bs";
@@ -54,6 +55,11 @@ const AdminSidebar = () => {
       name: "Salary Sheet",
       path: "/admin/salary",
       icon: <SheetIcon size={20} />,
+    },
+    {
+      name: "Order Requests",
+      path: "/admin/order-requests",
+      icon: <ListOrderedIcon size={20} />,
     },
   ];
 
