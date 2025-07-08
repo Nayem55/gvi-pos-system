@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
-import {
-  ShoppingCart,
-  DollarSign,
-  Box,
-  TrendingUp,
-  Star,
-  Tag,
-  Users,
-} from "lucide-react";
 import AdminSidebar from "../../Component/AdminSidebar";
+import {
+  DollarSign,
+  BarChart2,
+  PieChart as PieChartIcon,
+  List,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -21,115 +18,78 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   ResponsiveContainer,
 } from "recharts";
 
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
 const AdminHomePage = () => {
-  const [salesData, setSalesData] = useState([]);
-  const [categoryData, setCategoryData] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
-  const [topCategories, setTopCategories] = useState([]);
-  const [topDealers, setTopDealers] = useState([]);
-  const [dailySales, setDailySales] = useState([]);
-  const [summary, setSummary] = useState({
-    totalSold: 0,
-    totalTP: 0,
-    totalMRP: 0,
-  });
+  const [zoneData, setZoneData] = useState([]);
+  const [totalSales, setTotalSales] = useState(0);
+  const [zone1Sales, setZone1Sales] = useState(0);
+  const [zone2Sales, setZone2Sales] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
+  const [year, setYear] = useState(dayjs().year());
+  const [month, setMonth] = useState(dayjs().month() + 1);
 
   useEffect(() => {
-    fetchSalesData({ month });
-    fetchCategoryData();
-    fetchTopData();
-    fetchDailySalesData(month);
-  }, [month]);
+    fetchZoneData();
+  }, [year, month]);
 
-  const fetchSalesData = async (params) => {
+  const fetchZoneData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/api/sales/product-wise",
-        { params }
+      
+      // Fetch zone-wise sales data
+      const salesRes = await axios.get(
+        "http://localhost:5000/sales/zone-wise",
+        {
+          params: {
+            month: `${year}-${month.toString().padStart(2, '0')}`,
+            year 
+          }
+        }
       );
-      setSalesData(response.data);
-      calculateSummary(response.data);
-    } catch (err) {
-      setError("Failed to fetch sales data");
+      
+      // Process the data
+      processZoneData(salesRes.data);
+      
+    } catch (error) {
+      console.error("Error fetching zone data:", error);
     } finally {
       setLoading(false);
     }
   };
-  console.log(salesData)
 
-  const calculateSummary = (data) => {
-    const totalSold = data.reduce(
-      (sum, item) => sum + (item.total_quantity || 0),
+  const processZoneData = (salesData) => {
+    // Calculate total sales
+    const totalSalesValue = salesData.reduce(
+      (sum, zone) => sum + (zone.total_tp || 0), 
       0
     );
-    const totalTP = data.reduce((sum, item) => sum + (item.total_tp || 0), 0);
-    const totalMRP = data.reduce((sum, item) => sum + (item.total_mrp || 0), 0);
-    // const totalDP = data.reduce((sum, item) => sum + (item.total_dp || 0), 0);
-    setSummary({ totalSold, totalTP, totalMRP });
+    
+    setTotalSales(totalSalesValue);
+    
+    // Calculate zone-specific data
+    let zone1Total = 0;
+    let zone2Total = 0;
+    
+    salesData.forEach(zone => {
+      if (zone._id.includes("ZONE-01")) {
+        zone1Total += zone.total_tp || 0;
+      } else if (zone._id.includes("ZONE-03")) {
+        zone2Total += zone.total_tp || 0;
+      }
+    });
+    
+    setZone1Sales(zone1Total);
+    setZone2Sales(zone2Total);
+    
+    setZoneData(salesData);
   };
 
-  const fetchCategoryData = async () => {
-    try {
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/sales/category-wise",
-        { params: { month } }
-      );
-      setCategoryData(response.data);
-    } catch (error) {
-      console.error("Error fetching category data:", error);
-    }
-  };
-
-  const fetchTopData = async () => {
-    try {
-      const [productsRes, categoriesRes, dealersRes] = await Promise.all([
-        axios.get("https://gvi-pos-server.vercel.app/top-products", {
-          params: { month },
-        }),
-        axios.get("https://gvi-pos-server.vercel.app/top-categories", {
-          params: { month },
-        }),
-        axios.get("https://gvi-pos-server.vercel.app/top-dealers", {
-          params: { month },
-        }),
-      ]);
-      setTopProducts(productsRes.data);
-      setTopCategories(categoriesRes.data);
-      setTopDealers(dealersRes.data);
-    } catch (error) {
-      console.error("Error fetching top data:", error);
-    }
-  };
-
-  const fetchDailySalesData = async (month) => {
-    try {
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/daily-sales",
-        { params: { month } }
-      );
-      setDailySales(response.data.sales || []);
-    } catch (error) {
-      console.error("Error fetching daily sales:", error);
-    }
-  };
-
-  const totalCategories = categoryData.length;
-
-  const getLast12Months = () => {
-    const months = [];
-    for (let i = 0; i < 12; i++) {
-      months.push(dayjs().subtract(i, "month").format("YYYY-MM"));
-    }
-    return months;
+  const formatZoneName = (name) => {
+    return name.replace(/-/g, ' ');
   };
 
   return (
@@ -138,156 +98,171 @@ const AdminHomePage = () => {
       <div className="p-6 bg-gray-100 min-h-screen w-full">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <TrendingUp size={24} /> Admin Dashboard
+            <BarChart2 size={24} /> Zone Sales Dashboard
           </h1>
-          <div>
-            <label htmlFor="month" className="mr-2 font-medium">
-              Select Month:
-            </label>
-            <select
-              id="month"
-              className="px-3 py-2 border rounded-md"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-            >
-              {getLast12Months().map((m) => (
-                <option key={m} value={m}>
-                  {dayjs(m).format("MMMM YYYY")}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="bg-blue-100 p-6 rounded-lg shadow-md">
-            <div className="flex items-center gap-3">
-              <DollarSign size={24} className="text-blue-500" />
-              <h3 className="text-xl font-semibold">Total MRP</h3>
+          <div className="flex gap-4">
+            <div>
+              <label htmlFor="year" className="mr-2 font-medium">
+                Year:
+              </label>
+              <select
+                id="year"
+                className="px-3 py-2 border rounded-md"
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+              >
+                {[2023, 2024, 2025].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
             </div>
-            <p className="text-2xl font-bold mt-2">৳{summary.totalMRP.toFixed(2)}</p>
-          </div>
-          <div className="bg-green-100 p-6 rounded-lg shadow-md">
-            <div className="flex items-center gap-3">
-              <DollarSign size={24} className="text-green-500" />
-              <h3 className="text-xl font-semibold">Total TP</h3>
+            <div>
+              <label htmlFor="month" className="mr-2 font-medium">
+                Month:
+              </label>
+              <select
+                id="month"
+                className="px-3 py-2 border rounded-md"
+                value={month}
+                onChange={(e) => setMonth(parseInt(e.target.value))}
+              >
+                {Array.from({length: 12}, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>{dayjs().month(m - 1).format("MMMM")}</option>
+                ))}
+              </select>
             </div>
-            <p className="text-2xl font-bold mt-2">৳{summary.totalTP.toFixed(2)}</p>
           </div>
-          <div className="bg-yellow-100 p-6 rounded-lg shadow-md">
-            <div className="flex items-center gap-3">
-              <ShoppingCart size={24} className="text-yellow-500" />
-              <h3 className="text-xl font-semibold">Products Sold</h3>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <>
+            {/* Summary Cards - Top Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              {/* Total Sales */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="flex items-center gap-3 mb-4">
+                  <DollarSign size={24} className="text-blue-500" />
+                  <h3 className="text-xl font-semibold">Total Sales</h3>
+                </div>
+                <p className="text-3xl font-bold">৳{totalSales.toLocaleString()}</p>
+              </div>
+
+              {/* Zone 01 Sales */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="flex items-center gap-3 mb-4">
+                  <DollarSign size={24} className="text-green-500" />
+                  <h3 className="text-xl font-semibold">Zone 01 Sales</h3>
+                </div>
+                <p className="text-3xl font-bold">৳{zone1Sales.toLocaleString()}</p>
+              </div>
+
+              {/* Zone 02 Sales */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="flex items-center gap-3 mb-4">
+                  <DollarSign size={24} className="text-purple-500" />
+                  <h3 className="text-xl font-semibold">Zone 03 Sales</h3>
+                </div>
+                <p className="text-3xl font-bold">৳{zone2Sales.toLocaleString()}</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold mt-2">{summary.totalSold}</p>
-          </div>
-          <div className="bg-purple-100 p-6 rounded-lg shadow-md">
-            <div className="flex items-center gap-3">
-              <Box size={24} className="text-purple-500" />
-              <h3 className="text-xl font-semibold">Categories</h3>
+
+            {/* Zone-wise Sales Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">Zone-wise Sales Comparison</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={zoneData.map(zone => ({
+                        ...zone,
+                        name: formatZoneName(zone._id)
+                      }))}
+                    >
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value, name) => [
+                          value.toLocaleString(), 
+                          name === 'total_tp' ? 'Total TP' : 'Total MRP'
+                        ]}
+                      />
+                      <Legend />
+                      <Bar dataKey="total_tp" fill="#36A2EB" name="Total TP" />
+                      {/* <Bar dataKey="total_mrp" fill="#FF6384" name="Total MRP" /> */}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">Zone Distribution</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={zoneData}
+                        dataKey="total_tp"
+                        nameKey="_id"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }) => 
+                          `${formatZoneName(name)}: ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {zoneData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [value.toLocaleString(), 'Sales']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
-            <p className="text-2xl font-bold mt-2">{totalCategories}</p>
-          </div>
-        </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Monthly Sales Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salesData}>
-                <XAxis dataKey="_id" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="total_mrp" fill="#36A2EB" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Category Wise Sales</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  dataKey="total_tp"
-                  nameKey="_id"
-                  fill="#4BC0C0"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={["#6aa84f", "#36A2EB", "#FFCE56", "#cc0000", "#134f5c","#660000"][index % 6]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Daily Line Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h3 className="text-xl font-semibold mb-4">Daily Sales (Line Chart)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={dailySales}>
-              <XAxis dataKey="date" tickFormatter={(date) => dayjs(date).format("MMM D")} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="total_tp" stroke="#36A2EB" name="Total TP" />
-              {/* <Line type="monotone" dataKey="total_mrp" stroke="#FF6384" name="Total MRP" /> */}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Top Data */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Star size={20} /> Top 10 Products
-            </h3>
-            <ul className="space-y-2">
-              {topProducts.map((item, index) => (
-                <li key={index} className="flex justify-between">
-                  <span>{item._id}</span>
-                  <span className="font-semibold">{item.total_tp.toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Tag size={20} /> Top 10 Categories
-            </h3>
-            <ul className="space-y-2">
-              {topCategories.map((item, index) => (
-                <li key={index} className="flex justify-between">
-                  <span>{item._id}</span>
-                  <span className="font-semibold">{item.total_tp.toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Users size={20} /> Top 10 Dealers
-            </h3>
-            <ul className="space-y-2">
-              {topDealers?.map((item, index) => (
-                <li key={index} className="flex justify-between">
-                  <span>{item._id}</span>
-                  <span className="font-semibold">{item.total_tp.toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+            {/* Detailed Zone Sales Table */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <List size={20} /> Zone-wise Sales Details
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total TP</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total MRP</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {zoneData.map((zone, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {formatZoneName(zone._id)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {zone.total_quantity.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          ৳{zone.total_tp.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          ৳{zone.total_mrp.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

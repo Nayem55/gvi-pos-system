@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { FiSearch, FiPlus, FiTrash2, FiCalendar } from "react-icons/fi";
 
-export default function PrimaryRequest({ user }) {
+export default function PrimaryRequest() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [cart, setCart] = useState([]);
@@ -12,18 +12,23 @@ export default function PrimaryRequest({ user }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  const user = JSON.parse(localStorage.getItem("pos-user"));
+
   const handleSearch = async (query) => {
     setSearch(query);
     if (query.length > 2) {
       setIsSearching(true);
       try {
-        const res = await axios.get("https://gvi-pos-server.vercel.app/search-product", {
-          params: { search: query, type: "name" },
-        });
+        const res = await axios.get(
+          "https://gvi-pos-server.vercel.app/search-product",
+          {
+            params: { search: query, type: "name" },
+          }
+        );
         setResults(res.data);
       } catch (err) {
         console.error(err);
-        toast.error("Search failed");
+        // toast.error("Search failed");
       } finally {
         setIsSearching(false);
       }
@@ -46,7 +51,9 @@ export default function PrimaryRequest({ user }) {
   const updateQuantity = (barcode, quantity) => {
     setCart((prev) =>
       prev.map((item) =>
-        item.barcode === barcode ? { ...item, quantity: parseInt(quantity) || 0 } : item
+        item.barcode === barcode
+          ? { ...item, quantity: parseInt(quantity) || 0 }
+          : item
       )
     );
   };
@@ -57,21 +64,22 @@ export default function PrimaryRequest({ user }) {
 
   const handleSubmit = async () => {
     if (cart.length === 0) return toast.error("No products added");
-    if (cart.some(item => item.quantity <= 0)) return toast.error("All quantities must be greater than 0");
+    if (cart.some((item) => item.quantity <= 0))
+      return toast.error("All quantities must be greater than 0");
 
     const order = {
-      userId: user._id,
+      userId: user?._id,
       name: user.name,
       outlet: user.outlet,
       zone: user.zone,
       group: user.group,
       date,
-      items: cart.map(item => ({
+      items: cart.map((item) => ({
         barcode: item.barcode,
         name: item.name,
         dp: item.dp,
         tp: item.tp,
-        qty: item.quantity
+        qty: item.quantity,
       })),
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -79,7 +87,10 @@ export default function PrimaryRequest({ user }) {
 
     try {
       setIsSubmitting(true);
-      await axios.post("https://gvi-pos-server.vercel.app/primary-request", order);
+      await axios.post(
+        "https://gvi-pos-server.vercel.app/primary-request",
+        order
+      );
       toast.success("Request submitted successfully!");
       setCart([]);
     } catch (err) {
@@ -91,13 +102,16 @@ export default function PrimaryRequest({ user }) {
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalValue = cart.reduce((sum, item) => sum + (item.quantity * item.dp), 0);
+  const totalValue = cart.reduce(
+    (sum, item) => sum + item.quantity * item.dp,
+    0
+  );
 
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
       {/* Header */}
       <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4 items-center">
-        <h1 className="text-lg font-bold">Primary Request Voucher</h1>
+        <h1 className="text-lg font-bold">Request Primary</h1>
         <div className="flex items-center gap-2">
           <FiCalendar className="text-gray-500" />
           <input
@@ -131,7 +145,7 @@ export default function PrimaryRequest({ user }) {
             ) : results.length > 0 ? (
               results.map((p) => (
                 <li
-                  key={p._id}
+                  key={p?._id}
                   onClick={() => addToCart(p)}
                   className="p-2 cursor-pointer hover:bg-gray-100 flex justify-between items-center"
                 >
@@ -140,7 +154,9 @@ export default function PrimaryRequest({ user }) {
                 </li>
               ))
             ) : (
-              <li className="p-2 text-center text-gray-500">No results found</li>
+              <li className="p-2 text-center text-gray-500">
+                No results found
+              </li>
             )}
           </ul>
         )}
@@ -171,20 +187,24 @@ export default function PrimaryRequest({ user }) {
                   <tr key={item.barcode} className="border-b">
                     <td className="p-2">
                       <div className="font-medium">{item.name}</div>
-                      <div className="text-xs text-gray-500">{item.barcode}</div>
+                      <div className="text-xs text-gray-500">
+                        {item.barcode}
+                      </div>
                     </td>
                     <td className="p-2 text-center">
                       <input
                         type="number"
                         min="1"
                         value={item.quantity}
-                        onChange={(e) => updateQuantity(item.barcode, e.target.value)}
+                        onChange={(e) =>
+                          updateQuantity(item.barcode, e.target.value)
+                        }
                         className="w-16 border rounded px-1 py-0.5 text-center"
                       />
                     </td>
                     <td className="p-2 text-center">{item.dp.toFixed(2)}</td>
                     <td className="p-2 text-center">
-                      <button 
+                      <button
                         onClick={() => removeFromCart(item.barcode)}
                         className="text-red-500 hover:text-red-700"
                       >
@@ -202,7 +222,9 @@ export default function PrimaryRequest({ user }) {
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-3">
             <FiPlus className="h-6 w-6 text-blue-600" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900">No products added</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            No products added
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
             Search for products above to add them to your request
           </p>

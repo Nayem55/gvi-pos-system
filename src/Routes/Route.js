@@ -38,6 +38,7 @@ import TDDA from "../Pages/TDDA";
 import TDDAdminPanel from "../Pages/TDDA";
 import SalarySheet from "../Pages/AdminPanel/SalarySheet";
 import OrderRequests from "../Pages/AdminPanel/OrderRequests";
+import PrimaryRequest from "../Pages/PrimaryRequest";
 
 const router = createBrowserRouter([
   {
@@ -64,6 +65,10 @@ const router = createBrowserRouter([
       {
         path: "/profile",
         element: <Profile/>,
+      },
+      {
+        path: "/primary-request",
+        element: <PrimaryRequest/>,
       },
       {
         path: "/dashboard",
