@@ -144,7 +144,7 @@ export default function Home() {
         />
       )}
       {selectedTab === "primary" && (
-        <PrimaryRequest
+        <Primary
           user={user}
           stock={stock}
           setStock={setStock}
