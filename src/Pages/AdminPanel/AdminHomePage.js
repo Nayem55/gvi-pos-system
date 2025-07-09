@@ -98,7 +98,7 @@ const AdminHomePage = () => {
       <div className="p-6 bg-gray-100 min-h-screen w-full">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <BarChart2 size={24} /> Zone Sales Dashboard
+            <BarChart2 size={24} /> Sales Dashboard
           </h1>
           <div className="flex gap-4">
             <div>
