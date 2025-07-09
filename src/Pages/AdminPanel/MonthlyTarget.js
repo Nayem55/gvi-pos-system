@@ -422,6 +422,7 @@ const MonthlyTargetPage = () => {
               <thead>
                 <tr className="bg-gray-200">
                   <th className="border p-3 text-left">User</th>
+                  <th className="border p-3 text-left">Outlet</th>
                   <th className="border p-3 text-left">Number</th>
                   <th className="border p-3 text-left">Zone</th>
                   <th className="border p-3 text-center">Target (TP)</th>
@@ -433,6 +434,7 @@ const MonthlyTargetPage = () => {
                 {users.map((user) => (
                   <tr key={user._id} className="hover:bg-gray-50">
                     <td className="border p-3">{user.name}</td>
+                    <td className="border p-3">{user.outlet}</td>
                     <td className="border p-3">{user.number}</td>
                     <td className="border p-3">{user.zone}</td>
                     <td className="border p-3 text-center">
