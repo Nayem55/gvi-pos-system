@@ -7,6 +7,9 @@ import {
   BarChart2,
   PieChart as PieChartIcon,
   List,
+  Target,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 import {
   BarChart,
@@ -21,75 +24,155 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884D8",
+  "#82CA9D",
+];
 
 const AdminHomePage = () => {
   const [zoneData, setZoneData] = useState([]);
+  const [targetData, setTargetData] = useState([]);
   const [totalSales, setTotalSales] = useState(0);
+  const [totalTarget, setTotalTarget] = useState(0);
   const [zone1Sales, setZone1Sales] = useState(0);
+  const [zone1Target, setZone1Target] = useState(0);
   const [zone2Sales, setZone2Sales] = useState(0);
+  const [zone2Target, setZone2Target] = useState(0);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(dayjs().year());
   const [month, setMonth] = useState(dayjs().month() + 1);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchZoneData();
+    fetchData();
   }, [year, month]);
 
-  const fetchZoneData = async () => {
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      
-      // Fetch zone-wise sales data
-      const salesRes = await axios.get(
-        "http://localhost:5000/sales/zone-wise",
-        {
+      const salesPromise = axios
+        .get("http://localhost:5000/sales/zone-wise", {
           params: {
-            month: `${year}-${month.toString().padStart(2, '0')}`,
-            year 
-          }
-        }
-      );
-      
-      // Process the data
-      processZoneData(salesRes.data);
-      
-    } catch (error) {
-      console.error("Error fetching zone data:", error);
+            month: `${year}-${month.toString().padStart(2, "0")}`,
+            year,
+          },
+        })
+        .catch(() => ({ data: [] }));
+
+      const targetsPromise = axios
+        .get("http://localhost:5000/targets/zone-wise", {
+          params: { year, month },
+        })
+        .catch(() => ({ data: [] }));
+
+      const [salesRes, targetsRes] = await Promise.all([
+        salesPromise,
+        targetsPromise,
+      ]);
+
+      processData(salesRes.data, targetsRes.data);
+    } catch (err) {
+      setError("Failed to load data. Showing available information.");
+      processData([], []);
     } finally {
       setLoading(false);
     }
   };
 
-  const processZoneData = (salesData) => {
-    // Calculate total sales
+  const processData = (salesData, targetData) => {
     const totalSalesValue = salesData.reduce(
-      (sum, zone) => sum + (zone.total_tp || 0), 
+      (sum, zone) => sum + (zone.total_tp || 0),
       0
     );
-    
+    const totalTargetValue = targetData.reduce(
+      (sum, zone) => sum + (zone.total_tp_target || 0),
+      0
+    );
+
     setTotalSales(totalSalesValue);
-    
-    // Calculate zone-specific data
-    let zone1Total = 0;
-    let zone2Total = 0;
-    
-    salesData.forEach(zone => {
-      if (zone._id.includes("ZONE-01")) {
-        zone1Total += zone.total_tp || 0;
-      } else if (zone._id.includes("ZONE-03")) {
-        zone2Total += zone.total_tp || 0;
+    setTotalTarget(totalTargetValue);
+
+    let zone1SalesTotal = 0;
+    let zone1TargetTotal = 0;
+    let zone2SalesTotal = 0;
+    let zone2TargetTotal = 0;
+
+    salesData.forEach((zone) => {
+      if (zone._id && zone._id.includes("ZONE-01")) {
+        zone1SalesTotal += zone.total_tp || 0;
+      } else if (zone._id && zone._id.includes("ZONE-03")) {
+        zone2SalesTotal += zone.total_tp || 0;
       }
     });
-    
-    setZone1Sales(zone1Total);
-    setZone2Sales(zone2Total);
-    
+
+    targetData.forEach((zone) => {
+      if (zone._id && zone._id.includes("ZONE-01")) {
+        zone1TargetTotal += zone.total_tp_target || 0;
+      } else if (zone._id && zone._id.includes("ZONE-03")) {
+        zone2TargetTotal += zone.total_tp_target || 0;
+      }
+    });
+
+    setZone1Sales(zone1SalesTotal);
+    setZone1Target(zone1TargetTotal);
+    setZone2Sales(zone2SalesTotal);
+    setZone2Target(zone2TargetTotal);
+
     setZoneData(salesData);
+    setTargetData(targetData);
   };
 
   const formatZoneName = (name) => {
-    return name.replace(/-/g, ' ');
+    if (!name) return "Unknown Zone";
+    return name.replace(/-/g, " ");
+  };
+
+  const calculateAchievement = (sales, target) => {
+    if (!target || target === 0) return 0;
+    return Math.round((sales / target) * 100);
+  };
+
+  const renderDataCard = (title, target, sales, icon, color) => {
+    const achievement = calculateAchievement(sales, target);
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="flex items-center gap-3 mb-4">
+          {icon}
+          <h3 className="text-xl font-semibold">{title}</h3>
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-500">Target:</span>
+            <span className="font-semibold">
+              ৳{target.toLocaleString() || "N/A"}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-500">Sales:</span>
+            <span className="font-semibold">
+              ৳{sales.toLocaleString() || "0"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <TrendingUp
+              size={18}
+              className={sales >= target ? "text-green-500" : "text-red-500"}
+            />
+            <span
+              className={sales >= target ? "text-green-500" : "text-red-500"}
+            >
+              {achievement}% Achieved
+            </span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -112,7 +195,9 @@ const AdminHomePage = () => {
                 onChange={(e) => setYear(parseInt(e.target.value))}
               >
                 {[2023, 2024, 2025].map((y) => (
-                  <option key={y} value={y}>{y}</option>
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
                 ))}
               </select>
             </div>
@@ -126,13 +211,24 @@ const AdminHomePage = () => {
                 value={month}
                 onChange={(e) => setMonth(parseInt(e.target.value))}
               >
-                {Array.from({length: 12}, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>{dayjs().month(m - 1).format("MMMM")}</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {dayjs()
+                      .month(m - 1)
+                      .format("MMMM")}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded flex items-center gap-2">
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -140,92 +236,107 @@ const AdminHomePage = () => {
           </div>
         ) : (
           <>
-            {/* Summary Cards - Top Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              {/* Total Sales */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center gap-3 mb-4">
-                  <DollarSign size={24} className="text-blue-500" />
-                  <h3 className="text-xl font-semibold">Total Sales</h3>
-                </div>
-                <p className="text-3xl font-bold">৳{totalSales.toLocaleString()}</p>
-              </div>
-
-              {/* Zone 01 Sales */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center gap-3 mb-4">
-                  <DollarSign size={24} className="text-green-500" />
-                  <h3 className="text-xl font-semibold">Zone 01 Sales</h3>
-                </div>
-                <p className="text-3xl font-bold">৳{zone1Sales.toLocaleString()}</p>
-              </div>
-
-              {/* Zone 02 Sales */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center gap-3 mb-4">
-                  <DollarSign size={24} className="text-purple-500" />
-                  <h3 className="text-xl font-semibold">Zone 03 Sales</h3>
-                </div>
-                <p className="text-3xl font-bold">৳{zone2Sales.toLocaleString()}</p>
-              </div>
+              {renderDataCard(
+                "Total Target vs Sales",
+                totalTarget,
+                totalSales,
+                <Target size={24} className="text-blue-500" />,
+                "blue"
+              )}
+              {renderDataCard(
+                "Zone 01 Target vs Sales",
+                zone1Target,
+                zone1Sales,
+                <Target size={24} className="text-green-500" />,
+                "green"
+              )}
+              {renderDataCard(
+                "Zone 03 Target vs Sales",
+                zone2Target,
+                zone2Sales,
+                <Target size={24} className="text-purple-500" />,
+                "purple"
+              )}
             </div>
 
-            {/* Zone-wise Sales Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">Zone-wise Sales Comparison</h3>
+                <h3 className="text-xl font-semibold mb-4">
+                  Zone-wise Sales Comparison
+                </h3>
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={zoneData.map(zone => ({
-                        ...zone,
-                        name: formatZoneName(zone._id)
-                      }))}
-                    >
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value, name) => [
-                          value.toLocaleString(), 
-                          name === 'total_tp' ? 'Total TP' : 'Total MRP'
-                        ]}
-                      />
-                      <Legend />
-                      <Bar dataKey="total_tp" fill="#36A2EB" name="Total TP" />
-                      {/* <Bar dataKey="total_mrp" fill="#FF6384" name="Total MRP" /> */}
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {zoneData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={zoneData.map((zone) => ({
+                          ...zone,
+                          name: formatZoneName(zone._id),
+                        }))}
+                      >
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip
+                          formatter={(value) => value.toLocaleString()}
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="total_tp"
+                          fill="#36A2EB"
+                          name="Total Sales"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-500">
+                      No sales data available
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">Zone Distribution</h3>
+                <h3 className="text-xl font-semibold mb-4">
+                  Zone Distribution
+                </h3>
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={zoneData}
-                        dataKey="total_tp"
-                        nameKey="_id"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={({ name, percent }) => 
-                          `${formatZoneName(name)}: ${(percent * 100).toFixed(0)}%`
-                        }
-                      >
-                        {zoneData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value.toLocaleString(), 'Sales']} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {zoneData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={zoneData}
+                          dataKey="total_tp"
+                          nameKey="_id"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }) =>
+                            `${formatZoneName(name)}: ${(percent * 100).toFixed(
+                              0
+                            )}%`
+                          }
+                        >
+                          {zoneData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value) => value.toLocaleString()}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-500">
+                      No sales data available
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Detailed Zone Sales Table */}
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <List size={20} /> Zone-wise Sales Details
@@ -234,29 +345,42 @@ const AdminHomePage = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total TP</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total MRP</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Zone
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quantity
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Sales
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {zoneData.map((zone, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {formatZoneName(zone._id)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {zone.total_quantity.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ৳{zone.total_tp.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ৳{zone.total_mrp.toLocaleString()}
+                    {zoneData.length > 0 ? (
+                      zoneData.map((zone, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {formatZoneName(zone._id)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {zone.total_quantity?.toLocaleString() || "0"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ৳{(zone.total_tp || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="3"
+                          className="px-6 py-4 text-center text-sm text-gray-500"
+                        >
+                          No sales data available
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
