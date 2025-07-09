@@ -75,7 +75,6 @@ const AdminHomePage = () => {
         salesPromise,
         targetsPromise,
       ]);
-
       processData(salesRes.data, targetsRes.data);
     } catch (err) {
       setError("Failed to load data. Showing available information.");
