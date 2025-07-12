@@ -56,10 +56,21 @@ const DailyReport = () => {
   };
 
   // Calculate totals
-  const totalMRP = reports.reduce((sum, report) => sum + (report.total_mrp || 0), 0);
-  const totalTP = reports.reduce((sum, report) => sum + (report.total_tp || 0), 0);
+  const totalMRP = reports.reduce(
+    (sum, report) => sum + (report.total_mrp || 0),
+    0
+  );
+  const totalTP = reports.reduce(
+    (sum, report) => sum + (report.total_tp || 0),
+    0
+  );
   const totalProductsSold = reports.reduce(
-    (sum, report) => sum + report.products.reduce((prodSum, product) => prodSum + product.quantity, 0),
+    (sum, report) =>
+      sum +
+      report.products.reduce(
+        (prodSum, product) => prodSum + product.quantity,
+        0
+      ),
     0
   );
 
@@ -68,7 +79,9 @@ const DailyReport = () => {
       <AdminSidebar />
       <div className="flex-1 p-6 bg-gray-100">
         <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">Daily Sales Report</h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">
+            Daily Sales Report
+          </h2>
 
           {/* Filters */}
           <div className="mb-6 flex gap-4 items-end">
@@ -137,19 +150,27 @@ const DailyReport = () => {
 
           {/* Report Summary */}
           <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Report Summary</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              Report Summary
+            </h3>
             <div className="grid grid-cols-3 gap-6">
               <div className="flex gap-2">
                 <span className="text-gray-600">Total Products Sold:</span>
-                <span className="font-semibold text-gray-800">{totalProductsSold}</span>
+                <span className="font-semibold text-gray-800">
+                  {totalProductsSold}
+                </span>
               </div>
               <div className="flex gap-2">
                 <span className="text-gray-600">Total MRP:</span>
-                <span className="font-semibold text-gray-800">৳{totalMRP.toFixed(2)}</span>
+                <span className="font-semibold text-gray-800">
+                  ৳{totalMRP.toFixed(2)}
+                </span>
               </div>
               <div className="flex gap-2">
                 <span className="text-gray-600">Total TP:</span>
-                <span className="font-semibold text-gray-800">৳{totalTP.toFixed(2)}</span>
+                <span className="font-semibold text-gray-800">
+                  ৳{totalTP.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
@@ -161,21 +182,35 @@ const DailyReport = () => {
             </div>
           ) : (
             <div className="bg-white shadow-lg rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Daily Sales</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                Daily Sales
+              </h3>
               <table className="min-w-full table-auto border-collapse">
                 <thead className="bg-gray-200">
                   <tr>
-                    <th className="p-4 text-left font-medium text-gray-700">Date</th>
-                    <th className="p-4 text-left font-medium text-gray-700">Products Sold</th>
-                    <th className="p-4 text-left font-medium text-gray-700">Route</th>
-                    <th className="p-4 text-left font-medium text-gray-700">Memo</th>
-                    <th className="p-4 text-left font-medium text-gray-700">Total TP</th>
+                    <th className="p-4 text-left font-medium text-gray-700">
+                      Date
+                    </th>
+                    <th className="p-4 text-left font-medium text-gray-700">
+                      Products Sold
+                    </th>
+                    <th className="p-4 text-left font-medium text-gray-700">
+                      Route
+                    </th>
+                    <th className="p-4 text-left font-medium text-gray-700">
+                      Memo
+                    </th>
+                    <th className="p-4 text-left font-medium text-gray-700">
+                      Total TP
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {reports.map((report, index) => (
                     <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="p-4 text-gray-800">{dayjs(report.sale_date).format("YYYY-MM-DD")}</td>
+                      <td className="p-4 text-gray-800">
+                        {dayjs(report.sale_date).format("YYYY-MM-DD")}
+                      </td>
                       <td className="p-4 text-gray-600">
                         {report.products.map((product, productIndex) => (
                           <div key={productIndex}>
@@ -185,7 +220,9 @@ const DailyReport = () => {
                       </td>
                       <td className="p-4 text-gray-800">{report.route}</td>
                       <td className="p-4 text-gray-800">{report.memo}</td>
-                      <td className="p-4 text-gray-800">৳{report.total_tp.toFixed(2)}</td>
+                      <td className="p-4 text-gray-800">
+                        ৳{report.total_tp.toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

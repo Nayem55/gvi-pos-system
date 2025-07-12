@@ -92,6 +92,84 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
     }
   };
 
+  const processExcelData = async (data) => {
+    setImportLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const row of data) {
+        try {
+          // Skip empty rows or instruction rows
+          if (!row["Barcode"] && !row["Product Name"]) continue;
+
+          const productResponse = await axios.get(
+            "https://gvi-pos-server.vercel.app/search-product",
+            {
+              params: {
+                search: row["Barcode"] || row["Product Name"],
+                type: "barcode",
+              },
+            }
+          );
+
+          const product = productResponse.data[0];
+          if (!product) {
+            errorCount++;
+            continue;
+          }
+
+          const stockRes = await axios.get(
+            "https://gvi-pos-server.vercel.app/outlet-stock",
+            { params: { barcode: product.barcode, outlet: user.outlet } }
+          );
+
+          const currentStock = stockRes.data.stock.currentStock || 0;
+          const currentStockDP = stockRes.data.stock.currentStockValueDP || 0; // Added this line
+          const currentStockTP = stockRes.data.stock.currentStockValueTP || 0; // Added this line
+          const currentDP = row["DP"] || getCurrentDP(product);
+          const currentTP = row["TP"] || getCurrentTP(product);
+          const primaryQty = parseInt(row["Primary Quantity"] || 0);
+
+          setCart((prev) => [
+            ...prev.filter((item) => item.barcode !== product.barcode),
+            {
+              ...product,
+              openingStock: currentStock,
+              primary: primaryQty,
+              currentDP,
+              currentTP,
+              currentStockDP, // Added this
+              currentStockTP, // Added this
+              editableDP: currentDP,
+              editableTP: currentTP,
+              total: primaryQty * currentDP,
+            },
+          ]);
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error processing row:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Imported ${successCount} products successfully`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} products`);
+      }
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast.error("Failed to process the file");
+    } finally {
+      setImportLoading(false);
+      setImportFile(null);
+      document.getElementById("import-file").value = "";
+    }
+  };
+
   const updatePrimaryValue = (barcode, value) => {
     setCart((prev) =>
       prev.map((item) =>
@@ -161,9 +239,9 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
             outlet: user.outlet,
             newStock: item.openingStock + item.primary,
             currentStockValueDP:
-              (item.currentStockDP + (item.primary * item.editableDP)),
+              item.currentStockDP + item.primary * item.editableDP,
             currentStockValueTP:
-              (item.currentStockTP + (item.primary * item.editableTP)),
+              item.currentStockTP + item.primary * item.editableTP,
           }
         );
 
@@ -237,80 +315,6 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
       reader.onerror = (error) => reject(error);
       reader.readAsArrayBuffer(file);
     });
-  };
-
-  const processExcelData = async (data) => {
-    setImportLoading(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    try {
-      for (const row of data) {
-        try {
-          // Skip empty rows or instruction rows
-          if (!row["Barcode"] && !row["Product Name"]) continue;
-
-          const productResponse = await axios.get(
-            "https://gvi-pos-server.vercel.app/search-product",
-            {
-              params: {
-                search: row["Barcode"] || row["Product Name"],
-                type: "barcode",
-              },
-            }
-          );
-
-          const product = productResponse.data[0];
-          if (!product) {
-            errorCount++;
-            continue;
-          }
-
-          const stockRes = await axios.get(
-            "https://gvi-pos-server.vercel.app/outlet-stock",
-            { params: { barcode: product.barcode, outlet: user.outlet } }
-          );
-
-          const currentStock = stockRes.data.stock || 0;
-          const currentDP = row["DP"] || getCurrentDP(product);
-          const currentTP = row["TP"] || getCurrentTP(product);
-          const primaryQty = parseInt(row["Primary Quantity"] || 0);
-
-          setCart((prev) => [
-            ...prev.filter((item) => item.barcode !== product.barcode),
-            {
-              ...product,
-              openingStock: currentStock,
-              primary: primaryQty,
-              currentDP,
-              currentTP,
-              editableDP: currentDP,
-              editableTP: currentTP,
-              total: primaryQty * currentDP,
-            },
-          ]);
-
-          successCount++;
-        } catch (error) {
-          console.error(`Error processing row:`, error);
-          errorCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        toast.success(`Imported ${successCount} products successfully`);
-      }
-      if (errorCount > 0) {
-        toast.error(`Failed to import ${errorCount} products`);
-      }
-    } catch (error) {
-      console.error("Error processing file:", error);
-      toast.error("Failed to process the file");
-    } finally {
-      setImportLoading(false);
-      setImportFile(null);
-      document.getElementById("import-file").value = "";
-    }
   };
 
   const handleBulkImport = async () => {

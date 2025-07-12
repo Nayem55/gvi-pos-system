@@ -24,7 +24,7 @@ const AdminProducts = () => {
     dp: "",
     tp: "",
     mrp: "",
-    category: ""
+    category: "",
   });
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,7 +34,7 @@ const AdminProducts = () => {
   const [bulkUpdateFields, setBulkUpdateFields] = useState({
     dp: "",
     tp: "",
-    mrp: ""
+    mrp: "",
   });
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
@@ -46,7 +46,9 @@ const AdminProducts = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("https://gvi-pos-server.vercel.app/product-categories");
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/product-categories"
+      );
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -98,10 +100,13 @@ const AdminProducts = () => {
     try {
       await axios.put(`${API_URL}/${product._id}`, product);
       if (editingProduct && editingProduct.barcode !== product.barcode) {
-        await axios.put(`https://gvi-pos-server.vercel.app/update-outlet-barcode`, {
-          oldBarcode: editingProduct.barcode,
-          newBarcode: product.barcode,
-        });
+        await axios.put(
+          `https://gvi-pos-server.vercel.app/update-outlet-barcode`,
+          {
+            oldBarcode: editingProduct.barcode,
+            newBarcode: product.barcode,
+          }
+        );
       }
       setEditingProduct(null);
       toast.success("Product updated successfully");
@@ -129,7 +134,14 @@ const AdminProducts = () => {
       const res = await axios.post(API_URL, newProduct);
       setProducts([...products, res.data]);
       setShowModal(false);
-      setNewProduct({ name: "", barcode: "", dp: "", tp: "", mrp: "", category: "" });
+      setNewProduct({
+        name: "",
+        barcode: "",
+        dp: "",
+        tp: "",
+        mrp: "",
+        category: "",
+      });
       toast.success("Product added successfully");
     } catch (error) {
       console.error("Error adding product:", error);
@@ -152,11 +164,11 @@ const AdminProducts = () => {
           updateFields: {
             dp: bulkUpdateFields.dp,
             tp: bulkUpdateFields.tp,
-            mrp: bulkUpdateFields.mrp
-          }
+            mrp: bulkUpdateFields.mrp,
+          },
         }
       );
-      
+
       toast.success(response.data.message);
       fetchProducts(currentPage);
     } catch (error) {
@@ -195,7 +207,12 @@ const AdminProducts = () => {
               className="border border-gray-300 rounded p-2 w-[400px] border-r-0"
               placeholder="Search products..."
             />
-            <button onClick={handleSearch} className="bg-black text-white p-2 border border-black rounded border-l-0">Search</button>
+            <button
+              onClick={handleSearch}
+              className="bg-black text-white p-2 border border-black rounded border-l-0"
+            >
+              Search
+            </button>
           </div>
           <button
             onClick={() => setShowModal(true)}
@@ -207,7 +224,9 @@ const AdminProducts = () => {
 
         {/* Category Bulk Update Section */}
         <div className="bg-gray-100 p-4 rounded-lg mb-6">
-          <h3 className="text-lg font-semibold mb-3">Bulk Update by Category</h3>
+          <h3 className="text-lg font-semibold mb-3">
+            Bulk Update by Category
+          </h3>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1">
               <label className="font-medium">Category:</label>
@@ -224,40 +243,55 @@ const AdminProducts = () => {
                 ))}
               </select>
             </div>
-            
+
             <div>
               <label className="font-medium">DP:</label>
               <input
                 type="number"
                 value={bulkUpdateFields.dp}
-                onChange={(e) => setBulkUpdateFields({...bulkUpdateFields, dp: e.target.value})}
+                onChange={(e) =>
+                  setBulkUpdateFields({
+                    ...bulkUpdateFields,
+                    dp: e.target.value,
+                  })
+                }
                 className="border rounded p-2 w-full"
                 placeholder="DP Price"
               />
             </div>
-            
+
             <div>
               <label className="font-medium">TP:</label>
               <input
                 type="number"
                 value={bulkUpdateFields.tp}
-                onChange={(e) => setBulkUpdateFields({...bulkUpdateFields, tp: e.target.value})}
+                onChange={(e) =>
+                  setBulkUpdateFields({
+                    ...bulkUpdateFields,
+                    tp: e.target.value,
+                  })
+                }
                 className="border rounded p-2 w-full"
                 placeholder="TP Price"
               />
             </div>
-            
+
             <div>
               <label className="font-medium">MRP:</label>
               <input
                 type="number"
                 value={bulkUpdateFields.mrp}
-                onChange={(e) => setBulkUpdateFields({...bulkUpdateFields, mrp: e.target.value})}
+                onChange={(e) =>
+                  setBulkUpdateFields({
+                    ...bulkUpdateFields,
+                    mrp: e.target.value,
+                  })
+                }
                 className="border rounded p-2 w-full"
                 placeholder="MRP Price"
               />
             </div>
-            
+
             <button
               onClick={handleBulkCategoryUpdate}
               disabled={isBulkUpdating || !selectedCategory}

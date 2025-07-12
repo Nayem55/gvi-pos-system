@@ -25,14 +25,16 @@ const AlterUsersPage = () => {
       "Diploma",
       "Bachelor",
       "Master",
-      "PhD"
-    ]
+      "PhD",
+    ],
   });
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("https://gvi-pos-server.vercel.app/getAllUser");
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/getAllUser"
+      );
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -44,21 +46,33 @@ const AlterUsersPage = () => {
 
   const fetchDropdownData = async () => {
     try {
-      const groups = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=group");
-      const zones = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=zone");
-      const outlets = await axios.get("https://gvi-pos-server.vercel.app/get-outlets");
-      const asms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=asm");
-      const rsms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=rsm");
-      const soms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=som");
+      const groups = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-user-field-values?field=group"
+      );
+      const zones = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-user-field-values?field=zone"
+      );
+      const outlets = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-outlets"
+      );
+      const asms = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-user-field-values?field=asm"
+      );
+      const rsms = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-user-field-values?field=rsm"
+      );
+      const soms = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-user-field-values?field=som"
+      );
 
-      setDropdownData(prev => ({
+      setDropdownData((prev) => ({
         ...prev,
         groups: groups.data,
         zones: zones.data,
         outlets: outlets.data,
         asms: asms.data,
         rsms: rsms.data,
-        soms: soms.data
+        soms: soms.data,
       }));
     } catch (error) {
       console.error("Error fetching dropdown data:", error);
@@ -71,7 +85,7 @@ const AlterUsersPage = () => {
   }, []);
 
   const handleInputChange = (e, field) => {
-    setEditingUser({...editingUser, [field]: e.target.value});
+    setEditingUser({ ...editingUser, [field]: e.target.value });
   };
 
   const handleUpdateUser = async () => {
@@ -95,7 +109,9 @@ const AlterUsersPage = () => {
   // Helper component for dropdown fields
   const DropdownField = ({ label, field, options }) => (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
       <div className="relative">
         <select
           value={editingUser[field] || ""}
@@ -117,7 +133,9 @@ const AlterUsersPage = () => {
   // Helper component for date fields
   const DateField = ({ label, field }) => (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
       <div className="relative">
         <input
           type="date"
@@ -209,9 +227,13 @@ const AlterUsersPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Basic Information */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-800 border-b pb-2">Basic Information</h4>
+                <h4 className="font-medium text-gray-800 border-b pb-2">
+                  Basic Information
+                </h4>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name *
+                  </label>
                   <input
                     type="text"
                     value={editingUser.name}
@@ -222,7 +244,9 @@ const AlterUsersPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number *
+                  </label>
                   <input
                     type="tel"
                     value={editingUser.number}
@@ -233,7 +257,9 @@ const AlterUsersPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password *
+                  </label>
                   <input
                     type="text"
                     value={editingUser.password}
@@ -288,8 +314,10 @@ const AlterUsersPage = () => {
 
               {/* Personal & Other Information */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-800 border-b pb-2">Personal Details</h4>
-                
+                <h4 className="font-medium text-gray-800 border-b pb-2">
+                  Personal Details
+                </h4>
+
                 <DropdownField
                   label="NID/BC Type"
                   field="nidType"
@@ -297,7 +325,9 @@ const AlterUsersPage = () => {
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">NID Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    NID Number
+                  </label>
                   <input
                     type="text"
                     value={editingUser.nidNumber || ""}
@@ -306,10 +336,7 @@ const AlterUsersPage = () => {
                   />
                 </div>
 
-                <DateField
-                  label="Date of Birth"
-                  field="dateOfBirth"
-                />
+                <DateField label="Date of Birth" field="dateOfBirth" />
 
                 <DropdownField
                   label="Blood Group"
@@ -326,7 +353,9 @@ const AlterUsersPage = () => {
                 {editingUser.maritalStatus === "Married" && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Spouse Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Spouse Name
+                      </label>
                       <input
                         type="text"
                         value={editingUser.spouseName || ""}
@@ -335,15 +364,14 @@ const AlterUsersPage = () => {
                       />
                     </div>
 
-                    <DateField
-                      label="Marriage Date"
-                      field="marriageDate"
-                    />
+                    <DateField label="Marriage Date" field="marriageDate" />
                   </>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Present Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Present Address
+                  </label>
                   <textarea
                     value={editingUser.presentAddress || ""}
                     onChange={(e) => handleInputChange(e, "presentAddress")}
@@ -358,15 +386,16 @@ const AlterUsersPage = () => {
                   options={dropdownData.educationalQualifications}
                 />
 
-                <h4 className="font-medium text-gray-800 border-b pb-2 mt-4">Employment Details</h4>
-                
-                <DateField
-                  label="Joining Date"
-                  field="joiningDate"
-                />
+                <h4 className="font-medium text-gray-800 border-b pb-2 mt-4">
+                  Employment Details
+                </h4>
+
+                <DateField label="Joining Date" field="joiningDate" />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Present Salary</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Present Salary
+                  </label>
                   <input
                     type="number"
                     value={editingUser.presentSalary || ""}
@@ -375,34 +404,48 @@ const AlterUsersPage = () => {
                   />
                 </div>
 
-                <h4 className="font-medium text-gray-800 border-b pb-2 mt-4">Contact Details</h4>
-                
+                <h4 className="font-medium text-gray-800 border-b pb-2 mt-4">
+                  Contact Details
+                </h4>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Personal Mobile Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Personal Mobile Number
+                  </label>
                   <input
                     type="tel"
                     value={editingUser.personalMobileNumber || ""}
-                    onChange={(e) => handleInputChange(e, "personalMobileNumber")}
+                    onChange={(e) =>
+                      handleInputChange(e, "personalMobileNumber")
+                    }
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Family Contact Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Family Contact Number
+                  </label>
                   <input
                     type="tel"
                     value={editingUser.familyContactNumber || ""}
-                    onChange={(e) => handleInputChange(e, "familyContactNumber")}
+                    onChange={(e) =>
+                      handleInputChange(e, "familyContactNumber")
+                    }
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Relation With Contact Person</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Relation With Contact Person
+                  </label>
                   <input
                     type="text"
                     value={editingUser.relationWithContactPerson || ""}
-                    onChange={(e) => handleInputChange(e, "relationWithContactPerson")}
+                    onChange={(e) =>
+                      handleInputChange(e, "relationWithContactPerson")
+                    }
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>

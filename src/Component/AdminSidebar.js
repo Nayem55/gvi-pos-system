@@ -51,11 +51,11 @@ const AdminSidebar = () => {
       path: "/admin/tada",
       icon: <BiSolidReport size={20} />,
     },
-    {
-      name: "Salary Sheet",
-      path: "/admin/salary",
-      icon: <SheetIcon size={20} />,
-    },
+    // {
+    //   name: "Salary Sheet",
+    //   path: "/admin/salary",
+    //   icon: <SheetIcon size={20} />,
+    // },
     {
       name: "Order Requests",
       path: "/admin/order-requests",

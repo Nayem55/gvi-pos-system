@@ -64,7 +64,9 @@ const UserDashboard = () => {
     try {
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/outlet-stock",
-        { params: { barcode, outlet: user.outlet } }
+        {
+          params: { barcode, outlet: user.outlet },
+        }
       );
       return response.data.stock || 0;
     } catch (error) {
@@ -74,32 +76,32 @@ const UserDashboard = () => {
   };
 
   // Modified handleEditReport function to include stock data
- const handleEditReport = async (report) => {
-  try {
-    // Fetch current stock for all products in the report
-    const productsWithOriginalValues = await Promise.all(
-      report.products.map(async (product) => {
-        const currentStock = await fetchProductStock(product.barcode);
-        return {
-          ...product,
-          originalQuantity: product.quantity, // Store original quantity
-          originalDP: product.dp/product.quantity, // Store original DP
-          originalTP: product.tp/product.quantity, // Store original TP
-          currentStock, // Store current stock level
-        };
-      })
-    );
+  const handleEditReport = async (report) => {
+    try {
+      // Fetch current stock for all products in the report
+      const productsWithOriginalValues = await Promise.all(
+        report.products.map(async (product) => {
+          const currentStock = await fetchProductStock(product.barcode);
+          return {
+            ...product,
+            originalQuantity: product.quantity, // Store original quantity
+            originalDP: product.dp / product.quantity, // Store original DP
+            originalTP: product.tp / product.quantity, // Store original TP
+            currentStock, // Store current stock level
+          };
+        })
+      );
 
-    setEditingReport({
-      ...report,
-      products: productsWithOriginalValues,
-    });
-    setIsEditing(true);
-  } catch (error) {
-    console.error("Error preparing edit:", error);
-    toast.error("Failed to prepare report for editing");
-  }
-};
+      setEditingReport({
+        ...report,
+        products: productsWithOriginalValues,
+      });
+      setIsEditing(true);
+    } catch (error) {
+      console.error("Error preparing edit:", error);
+      toast.error("Failed to prepare report for editing");
+    }
+  };
 
   // Modified handleUpdateReport function to work with existing API
   const handleUpdateReport = async (e) => {
@@ -123,11 +125,9 @@ const UserDashboard = () => {
           // Calculate net changes
           const quantityChange = product.quantity - product.originalQuantity;
           const dpValueChange =
-            (product.dp) -
-            (product.originalQuantity * product.originalDP);
+            product.dp - product.originalQuantity * product.originalDP;
           const tpValueChange =
-            (product.tp) -
-            (product.originalQuantity * product.originalTP);
+            product.tp - product.originalQuantity * product.originalTP;
 
           return {
             barcode: product.barcode,
@@ -341,7 +341,6 @@ const UserDashboard = () => {
             <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col">
               <span className="text-gray-500 text-sm">Total TP</span>
               <span className="text-2xl font-bold text-gray-800 mt-1">
-                
                 {totalTP.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                 })}

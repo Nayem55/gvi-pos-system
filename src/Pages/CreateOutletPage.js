@@ -28,9 +28,9 @@ const CreateOutletPage = () => {
         formData
       );
 
-      setNewOutlet(prev => ({
+      setNewOutlet((prev) => ({
         ...prev,
-        [fieldName]: response.data.secure_url
+        [fieldName]: response.data.secure_url,
       }));
       toast.success("Image uploaded successfully");
     } catch (error) {
@@ -52,7 +52,7 @@ const CreateOutletPage = () => {
         "https://gvi-pos-server.vercel.app/add-new-outlet",
         newOutlet
       );
-      
+
       toast.success(response.data.message || "Outlet created successfully!");
       setNewOutlet({
         name: "",
@@ -88,7 +88,9 @@ const CreateOutletPage = () => {
                 <input
                   type="text"
                   value={newOutlet.name}
-                  onChange={(e) => setNewOutlet({...newOutlet, name: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({ ...newOutlet, name: e.target.value })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter outlet name"
                   required
@@ -102,7 +104,12 @@ const CreateOutletPage = () => {
                 <input
                   type="text"
                   value={newOutlet.proprietorName}
-                  onChange={(e) => setNewOutlet({...newOutlet, proprietorName: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({
+                      ...newOutlet,
+                      proprietorName: e.target.value,
+                    })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter proprietor name"
                   required
@@ -115,7 +122,9 @@ const CreateOutletPage = () => {
                 </label>
                 <textarea
                   value={newOutlet.address}
-                  onChange={(e) => setNewOutlet({...newOutlet, address: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({ ...newOutlet, address: e.target.value })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter full address"
                   rows={3}
@@ -130,7 +139,12 @@ const CreateOutletPage = () => {
                 <input
                   type="tel"
                   value={newOutlet.contactNumber}
-                  onChange={(e) => setNewOutlet({...newOutlet, contactNumber: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({
+                      ...newOutlet,
+                      contactNumber: e.target.value,
+                    })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter contact number"
                   required
@@ -144,7 +158,9 @@ const CreateOutletPage = () => {
                 <input
                   type="text"
                   value={newOutlet.nidNumber}
-                  onChange={(e) => setNewOutlet({...newOutlet, nidNumber: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({ ...newOutlet, nidNumber: e.target.value })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter NID number"
                   required
@@ -158,7 +174,9 @@ const CreateOutletPage = () => {
                 <input
                   type="text"
                   value={newOutlet.binNumber}
-                  onChange={(e) => setNewOutlet({...newOutlet, binNumber: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({ ...newOutlet, binNumber: e.target.value })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter BIN number"
                 />
@@ -171,7 +189,9 @@ const CreateOutletPage = () => {
                 <input
                   type="text"
                   value={newOutlet.tinNumber}
-                  onChange={(e) => setNewOutlet({...newOutlet, tinNumber: e.target.value})}
+                  onChange={(e) =>
+                    setNewOutlet({ ...newOutlet, tinNumber: e.target.value })
+                  }
                   className="w-full p-2 border rounded"
                   placeholder="Enter TIN number"
                 />
@@ -183,7 +203,9 @@ const CreateOutletPage = () => {
                 </label>
                 <input
                   type="file"
-                  onChange={(e) => handleImageUpload(e.target.files[0], "attachment")}
+                  onChange={(e) =>
+                    handleImageUpload(e.target.files[0], "attachment")
+                  }
                   className="w-full p-2 border rounded hidden"
                   id="attachment"
                 />
@@ -196,13 +218,16 @@ const CreateOutletPage = () => {
                 </label>
                 {newOutlet.attachment && (
                   <div className="mt-2">
-                    <img src={newOutlet.attachment} alt="Attachment " className="h-20 border rounded" />
+                    <img
+                      src={newOutlet.attachment}
+                      alt="Attachment "
+                      className="h-20 border rounded"
+                    />
                   </div>
                 )}
               </div>
-
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}

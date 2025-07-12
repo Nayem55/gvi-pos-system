@@ -17,8 +17,8 @@ const CreateCategoryPage = () => {
 
     try {
       setLoading(true);
-      await axios.post("https://gvi-pos-server.vercel.app/categories", { 
-        name: categoryName 
+      await axios.post("https://gvi-pos-server.vercel.app/categories", {
+        name: categoryName,
       });
       toast.success("Category created successfully!");
       setCategoryName("");

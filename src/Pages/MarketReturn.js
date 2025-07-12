@@ -120,7 +120,10 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           return {
             ...item,
             [field]: newValue,
-            total: field === "editableDP" ? newValue * item.marketReturn : item.total,
+            total:
+              field === "editableDP"
+                ? newValue * item.marketReturn
+                : item.total,
           };
         }
         return item;
@@ -164,9 +167,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             outlet: user.outlet,
             newStock: item.openingStock + item.marketReturn,
             currentStockValueDP:
-              item.currentStockDP + (item.marketReturn * item.editableDP), // Changed from currentDP to editableDP
+              item.currentStockDP + item.marketReturn * item.editableDP, // Changed from currentDP to editableDP
             currentStockValueTP:
-              item.currentStockTP + (item.marketReturn * item.editableTP), // Changed from currentTP to editableTP
+              item.currentStockTP + item.marketReturn * item.editableTP, // Changed from currentTP to editableTP
           }
         );
 
@@ -353,7 +356,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)} BDT
+          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)}{" "}
+          BDT
         </span>
         <button
           onClick={handleSubmit}

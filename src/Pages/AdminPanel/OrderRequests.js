@@ -3,7 +3,14 @@ import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
-import { FiSearch, FiDownload, FiCalendar, FiFilter, FiCheckCircle, FiClock } from "react-icons/fi";
+import {
+  FiSearch,
+  FiDownload,
+  FiCalendar,
+  FiFilter,
+  FiCheckCircle,
+  FiClock,
+} from "react-icons/fi";
 
 /* ─────────────────────────── axios helper ─────────────────────────── */
 const api = axios.create({
@@ -118,7 +125,7 @@ export default function OrderRequests() {
               Manage and track all primary order requests
             </p>
           </div>
-          
+
           <button
             onClick={exportToExcel}
             className="mt-4 md:mt-0 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors"
@@ -133,7 +140,9 @@ export default function OrderRequests() {
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Month
+              </label>
               <div className="relative">
                 <FiCalendar className="absolute left-3 top-3 text-gray-400" />
                 <input
@@ -144,9 +153,11 @@ export default function OrderRequests() {
                 />
               </div>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -157,9 +168,11 @@ export default function OrderRequests() {
                 <option value="">All Status</option>
               </select>
             </div>
-            
+
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Search
+              </label>
               <div className="relative">
                 <FiSearch className="absolute left-3 top-3 text-gray-400" />
                 <input
@@ -177,19 +190,23 @@ export default function OrderRequests() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-500">
-            <h3 className="text-sm font-medium text-gray-500">Total Requests</h3>
-            <p className="text-2xl font-semibold text-gray-800">{requests.length}</p>
+            <h3 className="text-sm font-medium text-gray-500">
+              Total Requests
+            </h3>
+            <p className="text-2xl font-semibold text-gray-800">
+              {requests.length}
+            </p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-500">
             <h3 className="text-sm font-medium text-gray-500">Pending</h3>
             <p className="text-2xl font-semibold text-gray-800">
-              {requests.filter(r => r.status === "pending").length}
+              {requests.filter((r) => r.status === "pending").length}
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
             <h3 className="text-sm font-medium text-gray-500">Completed</h3>
             <p className="text-2xl font-semibold text-gray-800">
-              {requests.filter(r => r.status === "completed").length}
+              {requests.filter((r) => r.status === "completed").length}
             </p>
           </div>
         </div>
@@ -203,7 +220,7 @@ export default function OrderRequests() {
           ) : error ? (
             <div className="p-6 text-center">
               <p className="text-red-600">{error}</p>
-              <button 
+              <button
                 onClick={fetchRequests}
                 className="mt-2 text-indigo-600 hover:text-indigo-800 font-medium"
               >
@@ -212,8 +229,10 @@ export default function OrderRequests() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-6 text-center">
-              <p className="text-gray-600">No requests found matching your criteria</p>
-              <button 
+              <p className="text-gray-600">
+                No requests found matching your criteria
+              </p>
+              <button
                 onClick={() => {
                   setSearch("");
                   setStatusFilter("");
@@ -229,28 +248,52 @@ export default function OrderRequests() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Requested By
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Outlet
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Zone
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Total Qty
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Lines
                     </th>
-                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Action
                     </th>
                   </tr>
@@ -258,7 +301,7 @@ export default function OrderRequests() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filtered.map((req) => (
                     <React.Fragment key={req._id}>
-                      <tr 
+                      <tr
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => toggleRow(req._id)}
                       >
@@ -305,7 +348,7 @@ export default function OrderRequests() {
                           )}
                         </td>
                       </tr>
-                      
+
                       {/* Expanded row */}
                       {expandedRow === req._id && (
                         <tr>
@@ -314,21 +357,41 @@ export default function OrderRequests() {
                               <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-100">
                                   <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">DP</th>
-                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">TP</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Barcode
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Product
+                                    </th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Qty
+                                    </th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      DP
+                                    </th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      TP
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                   {req.items.map((it, idx) => (
                                     <tr key={idx}>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{it.barcode}</td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{it.name}</td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">{it.quantity}</td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">{it.dp}</td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">{it.tp}</td>
+                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                                        {it.barcode}
+                                      </td>
+                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                                        {it.name}
+                                      </td>
+                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">
+                                        {it.quantity}
+                                      </td>
+                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">
+                                        {it.dp}
+                                      </td>
+                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">
+                                        {it.tp}
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>

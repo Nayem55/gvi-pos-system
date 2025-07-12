@@ -237,7 +237,7 @@ export default function PaymentVoucher({
           type="submit"
           className="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md transition duration-200 flex justify-center items-center"
           disabled={
-            loading || 
+            loading ||
             imageUploading || // Disable when image is uploading
             (formData.paymentMode === "bank" && !formData.bank)
           }

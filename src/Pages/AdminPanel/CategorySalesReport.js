@@ -49,15 +49,17 @@ const CategoryWiseSalesReport = () => {
   useEffect(() => {
     const fetchTargets = async () => {
       const currentYear = month ? dayjs(month).year() : dayjs().year();
-      const currentMonth = month ? dayjs(month).month() + 1 : dayjs().month() + 1;
+      const currentMonth = month
+        ? dayjs(month).month() + 1
+        : dayjs().month() + 1;
 
       try {
         const res = await axios.get(
           "https://gvi-pos-server.vercel.app/categoryTargets",
           {
-            params: { 
-              year: currentYear, 
-              month: currentMonth 
+            params: {
+              year: currentYear,
+              month: currentMonth,
             },
           }
         );
@@ -116,81 +118,81 @@ const CategoryWiseSalesReport = () => {
     }
   };
 
-const fetchOutletDetails = async (category) => {
-  try {
-    setModalLoading(true);
-    setIsModalOpen(true); // Add this line to open the modal
-    setSelectedCategory(category);
-    const params = {};
+  const fetchOutletDetails = async (category) => {
+    try {
+      setModalLoading(true);
+      setIsModalOpen(true); // Add this line to open the modal
+      setSelectedCategory(category);
+      const params = {};
 
-    if (startDate && endDate) {
-      params.startDate = startDate;
-      params.endDate = endDate;
-    } else if (month) {
-      params.month = month;
+      if (startDate && endDate) {
+        params.startDate = startDate;
+        params.endDate = endDate;
+      } else if (month) {
+        params.month = month;
+      }
+
+      params.category = category;
+
+      const outletSalesRes = await axios.get(
+        "https://gvi-pos-server.vercel.app/sales/category-wise/outlet-details",
+        { params }
+      );
+
+      const outletSales = outletSalesRes.data;
+
+      // Enhance data with targets from targetsData
+      const enhancedOutletData = outletSales.map((outlet) => {
+        const userTargets = targetsData[outlet._id.userID] || {};
+        const target = userTargets[category] || 0;
+        const achievement = target > 0 ? (outlet.total_tp / target) * 100 : 0;
+
+        return {
+          ...outlet,
+          target,
+          achievement,
+        };
+      });
+
+      setModalData(enhancedOutletData);
+
+      // Calculate summary including targets
+      const totalQuantity = outletSales.reduce(
+        (sum, outlet) => sum + outlet.total_quantity,
+        0
+      );
+      const totalTP = outletSales.reduce(
+        (sum, outlet) => sum + outlet.total_tp,
+        0
+      );
+      const totalMRP = outletSales.reduce(
+        (sum, outlet) => sum + outlet.total_mrp,
+        0
+      );
+      const totalOutlets = outletSales.length;
+      const totalTarget = enhancedOutletData.reduce(
+        (sum, outlet) => sum + outlet.target,
+        0
+      );
+      const totalAchievement =
+        totalTarget > 0 ? (totalTP / totalTarget) * 100 : 0;
+
+      setModalSummary({
+        totalQuantity,
+        totalTP,
+        totalMRP,
+        totalOutlets,
+        totalTarget,
+        totalAchievement,
+      });
+    } catch (err) {
+      console.error("Error fetching outlet details:", err);
+      toast.error("Failed to load outlet details");
+      setIsModalOpen(false); // Close modal on error
+    } finally {
+      setModalLoading(false);
     }
-
-    params.category = category;
-
-    const outletSalesRes = await axios.get(
-      "https://gvi-pos-server.vercel.app/sales/category-wise/outlet-details",
-      { params }
-    );
-
-    const outletSales = outletSalesRes.data;
-
-    // Enhance data with targets from targetsData
-    const enhancedOutletData = outletSales.map((outlet) => {
-      const userTargets = targetsData[outlet._id.userID] || {};
-      const target = userTargets[category] || 0;
-      const achievement = target > 0 ? (outlet.total_tp / target) * 100 : 0;
-
-      return {
-        ...outlet,
-        target,
-        achievement,
-      };
-    });
-
-    setModalData(enhancedOutletData);
-
-    // Calculate summary including targets
-    const totalQuantity = outletSales.reduce(
-      (sum, outlet) => sum + outlet.total_quantity,
-      0
-    );
-    const totalTP = outletSales.reduce(
-      (sum, outlet) => sum + outlet.total_tp,
-      0
-    );
-    const totalMRP = outletSales.reduce(
-      (sum, outlet) => sum + outlet.total_mrp,
-      0
-    );
-    const totalOutlets = outletSales.length;
-    const totalTarget = enhancedOutletData.reduce(
-      (sum, outlet) => sum + outlet.target,
-      0
-    );
-    const totalAchievement =
-      totalTarget > 0 ? (totalTP / totalTarget) * 100 : 0;
-
-    setModalSummary({
-      totalQuantity,
-      totalTP,
-      totalMRP,
-      totalOutlets,
-      totalTarget,
-      totalAchievement,
-    });
-  } catch (err) {
-    console.error("Error fetching outlet details:", err);
-    toast.error("Failed to load outlet details");
-    setIsModalOpen(false); // Close modal on error
-  } finally {
-    setModalLoading(false);
-  }
-};
+  };
   const handleFilter = () => {
     const params = {};
     if (startDate && endDate) {

@@ -12,19 +12,19 @@ const CreateProductPage = () => {
     tp: "",
     mrp: "",
     category: "",
-    brand: "" // Added brand field
+    brand: "", // Added brand field
   });
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]); // State for brands
   const [fetchingData, setFetchingData] = useState({
     categories: false,
-    brands: false
+    brands: false,
   });
 
   const fetchCategories = async () => {
     try {
-      setFetchingData(prev => ({...prev, categories: true}));
+      setFetchingData((prev) => ({ ...prev, categories: true }));
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/categories"
       );
@@ -33,13 +33,13 @@ const CreateProductPage = () => {
       console.error("Error fetching categories:", error);
       toast.error("Failed to load categories");
     } finally {
-      setFetchingData(prev => ({...prev, categories: false}));
+      setFetchingData((prev) => ({ ...prev, categories: false }));
     }
   };
 
   const fetchBrands = async () => {
     try {
-      setFetchingData(prev => ({...prev, brands: true}));
+      setFetchingData((prev) => ({ ...prev, brands: true }));
       const response = await axios.get(
         "https://gvi-pos-server.vercel.app/brands" // You'll need to create this endpoint
       );
@@ -48,7 +48,7 @@ const CreateProductPage = () => {
       console.error("Error fetching brands:", error);
       toast.error("Failed to load brands");
     } finally {
-      setFetchingData(prev => ({...prev, brands: false}));
+      setFetchingData((prev) => ({ ...prev, brands: false }));
     }
   };
 
@@ -73,9 +73,8 @@ const CreateProductPage = () => {
         tp: "",
         mrp: "",
         category: "",
-        brand: ""
+        brand: "",
       });
-
     } catch (error) {
       console.error("Error creating product:", error);
       toast.error(error.response?.data?.message || "Failed to create product");
@@ -129,7 +128,10 @@ const CreateProductPage = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Category</label>
               {fetchingData.categories ? (
-                <select className="w-full p-2 border rounded bg-gray-100" disabled>
+                <select
+                  className="w-full p-2 border rounded bg-gray-100"
+                  disabled
+                >
                   <option>Loading categories...</option>
                 </select>
               ) : (
@@ -155,7 +157,10 @@ const CreateProductPage = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Brand</label>
               {fetchingData.brands ? (
-                <select className="w-full p-2 border rounded bg-gray-100" disabled>
+                <select
+                  className="w-full p-2 border rounded bg-gray-100"
+                  disabled
+                >
                   <option>Loading brands...</option>
                 </select>
               ) : (

@@ -7,7 +7,7 @@ import { FaSave, FaTrash, FaFileDownload, FaFileImport } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
 // Configure dayjs to handle date formats consistently
-dayjs.locale('en');
+dayjs.locale("en");
 
 export default function PromotionalPage() {
   const [products, setProducts] = useState([]);
@@ -118,7 +118,8 @@ export default function PromotionalPage() {
         if (updated.type === "quantity") {
           const paid = field === "paid" ? numValue : updated.paid;
           const free = field === "free" ? numValue : updated.free;
-          updated.promo = paid > 0 || free > 0 ? { paid, free, total: paid + free } : null;
+          updated.promo =
+            paid > 0 || free > 0 ? { paid, free, total: paid + free } : null;
         }
       } else if (field === "percentage") {
         updated = {
@@ -138,18 +139,21 @@ export default function PromotionalPage() {
 
   const calculatePromotionalPrice = (original, promotion) => {
     if (!promotion) return original;
-    
+
     if (promotion.type === "percentage") {
       return (original * (1 - (promotion.percentage || 0) / 100)).toFixed(2);
     }
-    
+
     if (promotion.type === "quantity" && promotion.promo) {
       if (promotion.promo.paid === 0 || promotion.promo.total === 0) {
         return original;
       }
-      return ((original * promotion.promo.paid) / promotion.promo.total).toFixed(2);
+      return (
+        (original * promotion.promo.paid) /
+        promotion.promo.total
+      ).toFixed(2);
     }
-    
+
     return original;
   };
 
@@ -231,7 +235,7 @@ export default function PromotionalPage() {
   const readExcelFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
@@ -243,7 +247,7 @@ export default function PromotionalPage() {
           reject(error);
         }
       };
-      
+
       reader.onerror = (error) => reject(error);
       reader.readAsArrayBuffer(file);
     });
@@ -260,7 +264,9 @@ export default function PromotionalPage() {
         // Skip instruction rows or empty rows
         if (!row["Product ID"] && !row["Product Name"]) continue;
 
-        const product = products.find(p => p._id === row["Product ID"] || p.name === row["Product Name"]);
+        const product = products.find(
+          (p) => p._id === row["Product ID"] || p.name === row["Product Name"]
+        );
         if (!product) {
           errorCount++;
           continue;
@@ -269,23 +275,33 @@ export default function PromotionalPage() {
         // Validate and format dates
         let startDate = "";
         if (row["Start Date"]) {
-          if (typeof row["Start Date"] === 'string' && dateFormatRegex.test(row["Start Date"])) {
+          if (
+            typeof row["Start Date"] === "string" &&
+            dateFormatRegex.test(row["Start Date"])
+          ) {
             startDate = row["Start Date"];
           } else if (row["Start Date"] instanceof Date) {
-            startDate = dayjs(row["Start Date"]).format('YYYY-MM-DD');
+            startDate = dayjs(row["Start Date"]).format("YYYY-MM-DD");
           } else {
-            throw new Error(`Invalid date format for Start Date: ${row["Start Date"]}`);
+            throw new Error(
+              `Invalid date format for Start Date: ${row["Start Date"]}`
+            );
           }
         }
 
         let endDate = "";
         if (row["End Date"]) {
-          if (typeof row["End Date"] === 'string' && dateFormatRegex.test(row["End Date"])) {
+          if (
+            typeof row["End Date"] === "string" &&
+            dateFormatRegex.test(row["End Date"])
+          ) {
             endDate = row["End Date"];
           } else if (row["End Date"] instanceof Date) {
-            endDate = dayjs(row["End Date"]).format('YYYY-MM-DD');
+            endDate = dayjs(row["End Date"]).format("YYYY-MM-DD");
           } else {
-            throw new Error(`Invalid date format for End Date: ${row["End Date"]}`);
+            throw new Error(
+              `Invalid date format for End Date: ${row["End Date"]}`
+            );
           }
         }
 
@@ -307,17 +323,19 @@ export default function PromotionalPage() {
           promotion.promo = {
             paid: promotion.paid,
             free: promotion.free,
-            total: promotion.paid + promotion.free
+            total: promotion.paid + promotion.free,
           };
         }
 
         const updatedProduct = {
           ...product,
           promoType: promotion.type,
-          promoPlan: promotion.type === "quantity" && promotion.promo
-            ? `${promotion.paid}+${promotion.free}`
-            : "None",
-          promoPercentage: promotion.type === "percentage" ? promotion.percentage : 0,
+          promoPlan:
+            promotion.type === "quantity" && promotion.promo
+              ? `${promotion.paid}+${promotion.free}`
+              : "None",
+          promoPercentage:
+            promotion.type === "percentage" ? promotion.percentage : 0,
           promoDP: calculatePromotionalPrice(product.dp, promotion),
           promoTP: calculatePromotionalPrice(product.tp, promotion),
           promoStartDate: promotion.startDate || null,
@@ -358,7 +376,7 @@ export default function PromotionalPage() {
     try {
       const data = await readExcelFile(importFile);
       const { successCount, errorCount } = await processExcelData(data);
-      
+
       if (successCount > 0) {
         toast.success(`Successfully imported ${successCount} promotions`);
       }
@@ -369,7 +387,9 @@ export default function PromotionalPage() {
       fetchProducts();
     } catch (error) {
       console.error("Error processing file:", error);
-      toast.error("Failed to process the file. Please check the format and try again.");
+      toast.error(
+        "Failed to process the file. Please check the format and try again."
+      );
     } finally {
       setImportLoading(false);
       setImportFile(null);
@@ -378,49 +398,59 @@ export default function PromotionalPage() {
   };
 
   const downloadDemoFile = () => {
-    const demoData = products.map(product => ({
+    const demoData = products.map((product) => ({
       "Product ID": product._id,
       "Product Name": product.name,
       "Promo Type": "quantity",
       "Paid Quantity": "",
       "Free Quantity": "",
-      "Percentage": "",
+      Percentage: "",
       "Start Date": "",
-      "End Date": ""
+      "End Date": "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(demoData);
-    
+
     // Add date format instructions to the worksheet
     if (!worksheet["!cols"]) worksheet["!cols"] = [];
-    worksheet["!cols"][6] = { // Start Date column (G)
+    worksheet["!cols"][6] = {
+      // Start Date column (G)
       wch: 12,
-      t: 'd',
-      z: 'yyyy-mm-dd' // Excel format code for dates
+      t: "d",
+      z: "yyyy-mm-dd", // Excel format code for dates
     };
-    worksheet["!cols"][7] = { // End Date column (H)
+    worksheet["!cols"][7] = {
+      // End Date column (H)
       wch: 12,
-      t: 'd',
-      z: 'yyyy-mm-dd'
+      t: "d",
+      z: "yyyy-mm-dd",
     };
 
     // Add instructions as the first row
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      ["IMPORTANT: Date columns must use YYYY-MM-DD format (e.g., 2023-12-31)"]
-    ], { origin: -1 });
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        [
+          "IMPORTANT: Date columns must use YYYY-MM-DD format (e.g., 2023-12-31)",
+        ],
+      ],
+      { origin: -1 }
+    );
 
     // Add example data
     if (products.length > 0) {
-      XLSX.utils.sheet_add_aoa(worksheet, [
-        ["", "", "", "", "", "", "2023-12-01", "2023-12-31"]
-      ], { origin: 1 });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [["", "", "", "", "", "", "2023-12-01", "2023-12-31"]],
+        { origin: 1 }
+      );
     }
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Promotions");
-    
+
     // Create a custom date for the filename
-    const today = dayjs().format('YYYY-MM-DD');
+    const today = dayjs().format("YYYY-MM-DD");
     XLSX.writeFile(workbook, `Promotions_Template_${today}.xlsx`);
   };
 
@@ -428,7 +458,9 @@ export default function PromotionalPage() {
     <div className="flex bg-gray-50 min-h-screen">
       <AdminSidebar />
       <div className="flex-1 p-6">
-        <h2 className="text-3xl font-semibold text-gray-800 mb-6">Promotional Management</h2>
+        <h2 className="text-3xl font-semibold text-gray-800 mb-6">
+          Promotional Management
+        </h2>
 
         <div className="mb-4 flex flex-col md:flex-row gap-4">
           <input
@@ -438,7 +470,7 @@ export default function PromotionalPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="border border-gray-300 p-3 rounded-lg w-full max-w-md shadow-sm"
           />
-          
+
           <div className="flex gap-2">
             <button
               onClick={downloadDemoFile}
@@ -446,7 +478,7 @@ export default function PromotionalPage() {
             >
               <FaFileDownload /> Download Template
             </button>
-            
+
             <div className="relative">
               <input
                 id="import-file"
@@ -465,7 +497,7 @@ export default function PromotionalPage() {
                 <span className="ml-2 text-sm text-gray-600">{importFile.name}</span>
               )} */}
             </div>
-            
+
             {importFile && (
               <button
                 onClick={handleBulkImport}
@@ -482,12 +514,21 @@ export default function PromotionalPage() {
           <h3 className="font-medium text-yellow-800">Import Instructions:</h3>
           <ol className="list-decimal pl-5 text-sm text-yellow-700 space-y-1">
             <li>Download the template file to get the correct format</li>
-            <li>Fill in the promotion details (either Paid+Free quantities or Percentage)</li>
+            <li>
+              Fill in the promotion details (either Paid+Free quantities or
+              Percentage)
+            </li>
             <li>
               <strong>Date format must be YYYY-MM-DD (e.g., 2023-12-31)</strong>
               <ul className="list-disc pl-5 mt-1">
-                <li>In Excel, right-click the date cell → Format Cells → Custom → Type: yyyy-mm-dd</li>
-                <li>Or enter dates directly in this format (text format also works)</li>
+                <li>
+                  In Excel, right-click the date cell → Format Cells → Custom →
+                  Type: yyyy-mm-dd
+                </li>
+                <li>
+                  Or enter dates directly in this format (text format also
+                  works)
+                </li>
                 <li>Example dates are provided in the template</li>
               </ul>
             </li>
@@ -533,14 +574,20 @@ export default function PromotionalPage() {
                       key={product._id}
                       className="border-b hover:bg-gray-50 transition duration-200"
                     >
-                      <td className="p-3 font-medium text-gray-800">{product.name}</td>
+                      <td className="p-3 font-medium text-gray-800">
+                        {product.name}
+                      </td>
                       <td className="p-3 text-center">{product.dp}</td>
                       <td className="p-3 text-center">{product.tp}</td>
                       <td className="p-3 text-center">
                         <select
                           value={promotion.type}
                           onChange={(e) =>
-                            handlePromotionChange(product._id, "type", e.target.value)
+                            handlePromotionChange(
+                              product._id,
+                              "type",
+                              e.target.value
+                            )
                           }
                           className="border rounded px-2 py-1 text-sm"
                         >
@@ -556,7 +603,11 @@ export default function PromotionalPage() {
                               min="0"
                               value={promotion.paid || ""}
                               onChange={(e) =>
-                                handlePromotionChange(product._id, "paid", e.target.value)
+                                handlePromotionChange(
+                                  product._id,
+                                  "paid",
+                                  e.target.value
+                                )
                               }
                               className="w-12 text-center border rounded"
                             />
@@ -566,7 +617,11 @@ export default function PromotionalPage() {
                               min="0"
                               value={promotion.free || ""}
                               onChange={(e) =>
-                                handlePromotionChange(product._id, "free", e.target.value)
+                                handlePromotionChange(
+                                  product._id,
+                                  "free",
+                                  e.target.value
+                                )
                               }
                               className="w-12 text-center border rounded"
                             />
@@ -662,7 +717,9 @@ export default function PromotionalPage() {
               Page {currentPage} of {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
               className="px-4 py-2 bg-gray-700 text-white rounded disabled:opacity-50"
             >

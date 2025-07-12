@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Edit, Trash2, ArrowRight, X, Check, Loader, Upload } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  ArrowRight,
+  X,
+  Check,
+  Loader,
+  Upload,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import AdminSidebar from "../Component/AdminSidebar";
 

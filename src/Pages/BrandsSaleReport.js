@@ -47,15 +47,17 @@ const BrandWiseSalesReport = () => {
   useEffect(() => {
     const fetchTargets = async () => {
       const currentYear = month ? dayjs(month).year() : dayjs().year();
-      const currentMonth = month ? dayjs(month).month() + 1 : dayjs().month() + 1;
+      const currentMonth = month
+        ? dayjs(month).month() + 1
+        : dayjs().month() + 1;
 
       try {
         const res = await axios.get(
           "https://gvi-pos-server.vercel.app/brandTargets",
           {
-            params: { 
-              year: currentYear, 
-              month: currentMonth 
+            params: {
+              year: currentYear,
+              month: currentMonth,
             },
           }
         );
@@ -100,7 +102,10 @@ const BrandWiseSalesReport = () => {
         (acc, brand) => acc + brand.total_quantity,
         0
       );
-      const totalTP = response.data.reduce((acc, brand) => acc + brand.total_tp, 0);
+      const totalTP = response.data.reduce(
+        (acc, brand) => acc + brand.total_tp,
+        0
+      );
       const totalMRP = response.data.reduce(
         (acc, brand) => acc + brand.total_mrp,
         0
@@ -327,9 +332,7 @@ const BrandWiseSalesReport = () => {
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex items-center gap-2 mb-4">
             <BarChart2 size={24} />
-            <h2 className="text-2xl font-semibold">
-              Brand-wise Sales Report
-            </h2>
+            <h2 className="text-2xl font-semibold">Brand-wise Sales Report</h2>
           </div>
 
           {/* Summary Cards */}

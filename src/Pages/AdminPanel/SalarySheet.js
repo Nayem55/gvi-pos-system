@@ -1039,7 +1039,7 @@ const SalarySheet = () => {
                               {workingDaysData}
                             </td>
                             <td className="border p-2 text-center">
-                              {dayCount-workingDaysData}
+                              {dayCount - workingDaysData}
                             </td>
                             <td className="border p-2 text-center">
                               {userAttendance.approvedLeave}

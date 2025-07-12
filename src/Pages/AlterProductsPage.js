@@ -15,34 +15,38 @@ const AlterProductsPage = () => {
   const [brands, setBrands] = useState([]);
   const [fetchingData, setFetchingData] = useState({
     categories: false,
-    brands: false
+    brands: false,
   });
 
   const API_URL = "https://gvi-pos-server.vercel.app/products";
 
   const fetchCategories = async () => {
     try {
-      setFetchingData(prev => ({...prev, categories: true}));
-      const response = await axios.get("https://gvi-pos-server.vercel.app/categories");
+      setFetchingData((prev) => ({ ...prev, categories: true }));
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/categories"
+      );
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
       toast.error("Failed to load categories");
     } finally {
-      setFetchingData(prev => ({...prev, categories: false}));
+      setFetchingData((prev) => ({ ...prev, categories: false }));
     }
   };
 
   const fetchBrands = async () => {
     try {
-      setFetchingData(prev => ({...prev, brands: true}));
-      const response = await axios.get("https://gvi-pos-server.vercel.app/brands");
+      setFetchingData((prev) => ({ ...prev, brands: true }));
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/brands"
+      );
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
       toast.error("Failed to load brands");
     } finally {
-      setFetchingData(prev => ({...prev, brands: false}));
+      setFetchingData((prev) => ({ ...prev, brands: false }));
     }
   };
 
@@ -126,7 +130,9 @@ const AlterProductsPage = () => {
                       <input
                         type="text"
                         value={product.name}
-                        onChange={(e) => handleInputChange(e, product._id, "name")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "name")
+                        }
                         className="border p-1 w-full"
                       />
                     ) : (
@@ -138,7 +144,9 @@ const AlterProductsPage = () => {
                       <input
                         type="text"
                         value={product.barcode}
-                        onChange={(e) => handleInputChange(e, product._id, "barcode")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "barcode")
+                        }
                         className="border p-1 w-full"
                       />
                     ) : (
@@ -149,7 +157,9 @@ const AlterProductsPage = () => {
                     {editingProduct?._id === product._id ? (
                       <select
                         value={product.brand || ""}
-                        onChange={(e) => handleInputChange(e, product._id, "brand")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "brand")
+                        }
                         className="border p-1 w-full"
                       >
                         <option value="">Select Brand</option>
@@ -167,7 +177,9 @@ const AlterProductsPage = () => {
                     {editingProduct?._id === product._id ? (
                       <select
                         value={product.category}
-                        onChange={(e) => handleInputChange(e, product._id, "category")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "category")
+                        }
                         className="border p-1 w-full"
                       >
                         <option value="">Select Category</option>
@@ -186,7 +198,9 @@ const AlterProductsPage = () => {
                       <input
                         type="number"
                         value={product.dp}
-                        onChange={(e) => handleInputChange(e, product._id, "dp")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "dp")
+                        }
                         className="border p-1 w-full"
                       />
                     ) : (
@@ -198,7 +212,9 @@ const AlterProductsPage = () => {
                       <input
                         type="number"
                         value={product.tp}
-                        onChange={(e) => handleInputChange(e, product._id, "tp")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "tp")
+                        }
                         className="border p-1 w-full"
                       />
                     ) : (
@@ -210,7 +226,9 @@ const AlterProductsPage = () => {
                       <input
                         type="number"
                         value={product.mrp}
-                        onChange={(e) => handleInputChange(e, product._id, "mrp")}
+                        onChange={(e) =>
+                          handleInputChange(e, product._id, "mrp")
+                        }
                         className="border p-1 w-full"
                       />
                     ) : (
@@ -246,7 +264,9 @@ const AlterProductsPage = () => {
             onClick={prevPage}
             disabled={currentPage === 1}
             className={`px-4 py-2 rounded-md ${
-              currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"
+              currentPage === 1
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-500 text-white"
             }`}
           >
             <ChevronLeft size={20} />
@@ -258,7 +278,9 @@ const AlterProductsPage = () => {
             onClick={nextPage}
             disabled={currentPage === totalPages}
             className={`px-4 py-2 rounded-md ${
-              currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"
+              currentPage === totalPages
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-500 text-white"
             }`}
           >
             <ChevronRight size={20} />

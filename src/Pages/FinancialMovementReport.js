@@ -555,9 +555,7 @@ const FinancialMovementReport = () => {
                       <td className="border p-2 capitalize">
                         {txn.type.replace("_", " ")}
                       </td>
-                      <td className="border p-2 ">
-                        {txn.amount.toFixed(2)}
-                      </td>
+                      <td className="border p-2 ">{txn.amount.toFixed(2)}</td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
                     </tr>

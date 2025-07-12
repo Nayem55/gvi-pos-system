@@ -366,11 +366,11 @@ const TDDAdminPanel = () => {
           [
             { content: "Date" },
             { content: "Visited Place", colSpan: 2 },
-            { content: "HQ"},
-            { content: "Ex. HQ"},
+            { content: "HQ" },
+            { content: "Ex. HQ" },
             { content: "Transport Bill", colSpan: 3 },
-            { content: "Hotel Bill"},
-            { content: "Total"},
+            { content: "Hotel Bill" },
+            { content: "Total" },
           ],
           [
             "", // Date

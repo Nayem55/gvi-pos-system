@@ -65,7 +65,8 @@ export default function Home() {
           let errorMessage = "An unknown error occurred.";
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage = "Location access denied. Please allow location permissions.";
+              errorMessage =
+                "Location access denied. Please allow location permissions.";
               break;
             case error.POSITION_UNAVAILABLE:
               errorMessage = "Location information is unavailable.";
@@ -100,8 +101,12 @@ export default function Home() {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
-        axios.get(`https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`),
-        axios.get(`https://gvi-pos-server.vercel.app/current-due/${encodedOutletName}`)
+        axios.get(
+          `https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`
+        ),
+        axios.get(
+          `https://gvi-pos-server.vercel.app/current-due/${encodedOutletName}`
+        ),
       ]);
 
       setCurrentDue(dueResponse.data.current_due);
@@ -206,9 +211,7 @@ export default function Home() {
           getStockValue={getStockValue}
         />
       )}
-      {selectedTab === "attendance" && (
-        <AttendanceVoucher/>
-      )}
+      {selectedTab === "attendance" && <AttendanceVoucher />}
     </div>
   );
 }

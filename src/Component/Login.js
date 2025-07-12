@@ -32,7 +32,10 @@ const LoginForm = () => {
       // Save user information in localStorage
       const user = response.data.user;
       localStorage.setItem("pos-user", JSON.stringify(user));
-      localStorage.setItem("attendance-user", JSON.stringify({_id:user.attendance_id}));
+      localStorage.setItem(
+        "attendance-user",
+        JSON.stringify({ _id: user.attendance_id })
+      );
 
       // Show success toast
       toast.success(response.data.message, {

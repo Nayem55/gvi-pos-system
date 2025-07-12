@@ -110,8 +110,7 @@ export default function OfficeReturn({
       )
     );
   };
-  console.log(cart)
-
+  console.log(cart);
 
   const handlePriceChange = (barcode, field, value) => {
     setCart((prev) =>
@@ -169,9 +168,9 @@ export default function OfficeReturn({
             outlet: user.outlet,
             newStock: item.openingStock - item.officeReturn,
             currentStockValueDP:
-              (item.currentStockDP - (item.officeReturn * item.editableDP)),
+              item.currentStockDP - item.officeReturn * item.editableDP,
             currentStockValueTP:
-              (item.currentStockTP - (item.officeReturn * item.editableTP)),
+              item.currentStockTP - item.officeReturn * item.editableTP,
           }
         );
 
@@ -207,7 +206,6 @@ export default function OfficeReturn({
         date: formattedDateTime,
         createdBy: user.name,
       });
-
 
       toast.success("All office returns processed successfully!");
       getStockValue(user.outlet);
@@ -256,6 +254,7 @@ export default function OfficeReturn({
     try {
       for (const row of data) {
         try {
+          // Skip empty rows or instruction rows
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
@@ -279,7 +278,9 @@ export default function OfficeReturn({
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 
-          const currentStock = stockRes.data.stock || 0;
+          const currentStock = stockRes.data.stock.currentStock || 0;
+          const currentStockDP = stockRes.data.stock.currentStockValueDP || 0; // Added this line
+          const currentStockTP = stockRes.data.stock.currentStockValueTP || 0; // Added this line
           const currentDP = row["DP"] || getCurrentDP(product);
           const currentTP = row["TP"] || getCurrentTP(product);
           const returnQty = parseInt(row["Return Quantity"] || 0);
@@ -295,6 +296,8 @@ export default function OfficeReturn({
               officeReturn: validReturnQty,
               currentDP,
               currentTP,
+              currentStockDP, // Added this
+              currentStockTP, // Added this
               editableDP: currentDP,
               editableTP: currentTP,
               total: validReturnQty * currentDP,

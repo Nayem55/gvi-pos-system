@@ -57,7 +57,7 @@ const AdminHomePage = () => {
 
     try {
       const salesPromise = axios
-        .get("http://localhost:5000/sales/zone-wise", {
+        .get("https://gvi-pos-server.vercel.app/sales/zone-wise", {
           params: {
             month: `${year}-${month.toString().padStart(2, "0")}`,
             year,
@@ -66,7 +66,7 @@ const AdminHomePage = () => {
         .catch(() => ({ data: [] }));
 
       const targetsPromise = axios
-        .get("http://localhost:5000/targets/zone-wise", {
+        .get("https://gvi-pos-server.vercel.app/targets/zone-wise", {
           params: { year, month },
         })
         .catch(() => ({ data: [] }));

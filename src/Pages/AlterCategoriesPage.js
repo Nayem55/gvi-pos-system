@@ -14,7 +14,9 @@ const AlterCategoriesPage = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("https://gvi-pos-server.vercel.app/all-category");
+      const response = await axios.get(
+        "https://gvi-pos-server.vercel.app/all-category"
+      );
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -38,19 +40,18 @@ const AlterCategoriesPage = () => {
     try {
       setLoading(true);
       setUpdatingProducts(true);
-      
+
       // 1. First update the category name
-      await axios.put(
-        `https://gvi-pos-server.vercel.app/categories/${id}`,
-        { name: editedName }
-      );
+      await axios.put(`https://gvi-pos-server.vercel.app/categories/${id}`, {
+        name: editedName,
+      });
 
       // 2. Then update all products with this category
       await axios.put(
         "https://gvi-pos-server.vercel.app/update-products-category",
         {
           oldCategory: oldName,
-          newCategory: editedName
+          newCategory: editedName,
         }
       );
 
@@ -109,7 +110,9 @@ const AlterCategoriesPage = () => {
                       {editingId === category._id ? (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleUpdate(category._id, category.name)}
+                            onClick={() =>
+                              handleUpdate(category._id, category.name)
+                            }
                             disabled={updatingProducts}
                             className={`px-3 py-1 rounded ${
                               updatingProducts

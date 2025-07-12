@@ -17,7 +17,7 @@ const CreateUserPage = () => {
     asm: "",
     rsm: "",
     som: "",
-    
+
     // Personal Info
     nidType: "NID",
     nidNumber: "",
@@ -26,19 +26,19 @@ const CreateUserPage = () => {
     maritalStatus: "",
     spouseName: "",
     marriageDate: "",
-    
+
     // Address & Education
     presentAddress: "",
     educationalQualification: "",
-    
+
     // Employment Details
     joiningDate: "",
     presentSalary: "",
-    
+
     // Contact Info
     personalMobileNumber: "",
     familyContactNumber: "",
-    relationWithContactPerson: ""
+    relationWithContactPerson: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -59,8 +59,8 @@ const CreateUserPage = () => {
       "Diploma",
       "Bachelor",
       "Master",
-      "PhD"
-    ]
+      "PhD",
+    ],
   });
 
   const [fetchingData, setFetchingData] = useState({
@@ -69,7 +69,7 @@ const CreateUserPage = () => {
     outlets: false,
     asms: false,
     rsms: false,
-    soms: false
+    soms: false,
   });
 
   const [showOutletModal, setShowOutletModal] = useState(false);
@@ -92,44 +92,53 @@ const CreateUserPage = () => {
     const fetchDropdownData = async () => {
       try {
         // Fetch groups
-        setFetchingData(prev => ({...prev, groups: true}));
-        const groups = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=group");
-        setDropdownData(prev => ({...prev, groups: groups.data}));
+        setFetchingData((prev) => ({ ...prev, groups: true }));
+        const groups = await axios.get(
+          "https://gvi-pos-server.vercel.app/get-user-field-values?field=group"
+        );
+        setDropdownData((prev) => ({ ...prev, groups: groups.data }));
 
         // Fetch zones
-        setFetchingData(prev => ({...prev, zones: true}));
-        const zones = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=zone");
-        setDropdownData(prev => ({...prev, zones: zones.data}));
+        setFetchingData((prev) => ({ ...prev, zones: true }));
+        const zones = await axios.get(
+          "https://gvi-pos-server.vercel.app/get-user-field-values?field=zone"
+        );
+        setDropdownData((prev) => ({ ...prev, zones: zones.data }));
 
         // Fetch outlets
         await fetchOutlets();
 
         // Fetch ASMs
-        setFetchingData(prev => ({...prev, asms: true}));
-        const asms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=asm");
-        setDropdownData(prev => ({...prev, asms: asms.data}));
+        setFetchingData((prev) => ({ ...prev, asms: true }));
+        const asms = await axios.get(
+          "https://gvi-pos-server.vercel.app/get-user-field-values?field=asm"
+        );
+        setDropdownData((prev) => ({ ...prev, asms: asms.data }));
 
         // Fetch RSMs
-        setFetchingData(prev => ({...prev, rsms: true}));
-        const rsms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=rsm");
-        setDropdownData(prev => ({...prev, rsms: rsms.data}));
+        setFetchingData((prev) => ({ ...prev, rsms: true }));
+        const rsms = await axios.get(
+          "https://gvi-pos-server.vercel.app/get-user-field-values?field=rsm"
+        );
+        setDropdownData((prev) => ({ ...prev, rsms: rsms.data }));
 
         // Fetch SOMs
-        setFetchingData(prev => ({...prev, soms: true}));
-        const soms = await axios.get("https://gvi-pos-server.vercel.app/get-user-field-values?field=som");
-        setDropdownData(prev => ({...prev, soms: soms.data}));
-
+        setFetchingData((prev) => ({ ...prev, soms: true }));
+        const soms = await axios.get(
+          "https://gvi-pos-server.vercel.app/get-user-field-values?field=som"
+        );
+        setDropdownData((prev) => ({ ...prev, soms: soms.data }));
       } catch (error) {
         console.error("Error fetching dropdown data:", error);
         toast.error("Failed to load dropdown options");
       } finally {
-        setFetchingData(prev => ({
+        setFetchingData((prev) => ({
           ...prev,
           groups: false,
           zones: false,
           asms: false,
           rsms: false,
-          soms: false
+          soms: false,
         }));
       }
     };
@@ -139,14 +148,16 @@ const CreateUserPage = () => {
 
   const fetchOutlets = async () => {
     try {
-      setFetchingData(prev => ({...prev, outlets: true}));
-      const outlets = await axios.get("https://gvi-pos-server.vercel.app/get-outlets");
-      setDropdownData(prev => ({...prev, outlets: outlets.data}));
+      setFetchingData((prev) => ({ ...prev, outlets: true }));
+      const outlets = await axios.get(
+        "https://gvi-pos-server.vercel.app/get-outlets"
+      );
+      setDropdownData((prev) => ({ ...prev, outlets: outlets.data }));
     } catch (error) {
       console.error("Error fetching outlets:", error);
       toast.error("Failed to load outlets");
     } finally {
-      setFetchingData(prev => ({...prev, outlets: false}));
+      setFetchingData((prev) => ({ ...prev, outlets: false }));
     }
   };
 
@@ -161,9 +172,9 @@ const CreateUserPage = () => {
         formData
       );
 
-      setNewOutlet(prev => ({
+      setNewOutlet((prev) => ({
         ...prev,
-        [fieldName]: response.data.secure_url
+        [fieldName]: response.data.secure_url,
       }));
       toast.success("Image uploaded successfully");
     } catch (error) {
@@ -203,7 +214,7 @@ const CreateUserPage = () => {
         presentSalary: "",
         personalMobileNumber: "",
         familyContactNumber: "",
-        relationWithContactPerson: ""
+        relationWithContactPerson: "",
       });
     } catch (error) {
       console.error("Error creating user:", error);
@@ -226,7 +237,7 @@ const CreateUserPage = () => {
         "https://gvi-pos-server.vercel.app/add-new-outlet",
         newOutlet
       );
-      
+
       toast.success(response.data.message || "Outlet created successfully!");
       setNewOutlet({
         name: "",
@@ -240,7 +251,7 @@ const CreateUserPage = () => {
       });
       setShowOutletModal(false);
       await fetchOutlets();
-      setNewUser(prev => ({...prev, outlet: newOutlet.name}));
+      setNewUser((prev) => ({ ...prev, outlet: newOutlet.name }));
     } catch (error) {
       console.error("Error creating outlet:", error);
       toast.error(error.response?.data?.message || "Failed to create outlet");
@@ -250,10 +261,18 @@ const CreateUserPage = () => {
   };
 
   // Helper component for dropdown fields
-  const DropdownField = ({ label, field, options, isLoading, showAddButton = false }) => (
+  const DropdownField = ({
+    label,
+    field,
+    options,
+    isLoading,
+    showAddButton = false,
+  }) => (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-1">
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
         {showAddButton && (
           <button
             type="button"
@@ -266,15 +285,20 @@ const CreateUserPage = () => {
       </div>
       <div className="relative">
         {isLoading ? (
-          <select className="w-full p-2 border rounded-md bg-gray-100 text-gray-500" disabled>
+          <select
+            className="w-full p-2 border rounded-md bg-gray-100 text-gray-500"
+            disabled
+          >
             <option>Loading {label}...</option>
           </select>
         ) : (
           <select
             value={newUser[field]}
-            onChange={(e) => setNewUser({...newUser, [field]: e.target.value})}
+            onChange={(e) =>
+              setNewUser({ ...newUser, [field]: e.target.value })
+            }
             className="w-full p-2 border rounded-md bg-white text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            required={field === 'role'}
+            required={field === "role"}
           >
             <option value="">Select {label}</option>
             {options.map((option) => (
@@ -292,12 +316,14 @@ const CreateUserPage = () => {
   // Helper component for date fields
   const DateField = ({ label, field }) => (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
       <div className="relative">
         <input
           type="date"
           value={newUser[field]}
-          onChange={(e) => setNewUser({...newUser, [field]: e.target.value})}
+          onChange={(e) => setNewUser({ ...newUser, [field]: e.target.value })}
           className="w-full p-2 border rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
         <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
@@ -326,7 +352,9 @@ const CreateUserPage = () => {
       <div className="flex-1 p-6 overflow-auto">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Create New User</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Create New User
+            </h2>
           </div>
 
           {/* Outlet Creation Modal */}
@@ -334,8 +362,10 @@ const CreateUserPage = () => {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
               <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Create New Outlet</h3>
-                  <button 
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Create New Outlet
+                  </h3>
+                  <button
                     onClick={() => setShowOutletModal(false)}
                     className="text-gray-500 hover:text-gray-700"
                   >
@@ -351,7 +381,9 @@ const CreateUserPage = () => {
                       <input
                         type="text"
                         value={newOutlet.name}
-                        onChange={(e) => setNewOutlet({...newOutlet, name: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({ ...newOutlet, name: e.target.value })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter outlet name"
                         required
@@ -365,7 +397,12 @@ const CreateUserPage = () => {
                       <input
                         type="text"
                         value={newOutlet.proprietorName}
-                        onChange={(e) => setNewOutlet({...newOutlet, proprietorName: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({
+                            ...newOutlet,
+                            proprietorName: e.target.value,
+                          })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter proprietor name"
                         required
@@ -378,7 +415,12 @@ const CreateUserPage = () => {
                       </label>
                       <textarea
                         value={newOutlet.address}
-                        onChange={(e) => setNewOutlet({...newOutlet, address: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({
+                            ...newOutlet,
+                            address: e.target.value,
+                          })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter full address"
                         rows={3}
@@ -393,7 +435,12 @@ const CreateUserPage = () => {
                       <input
                         type="tel"
                         value={newOutlet.contactNumber}
-                        onChange={(e) => setNewOutlet({...newOutlet, contactNumber: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({
+                            ...newOutlet,
+                            contactNumber: e.target.value,
+                          })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter contact number"
                         required
@@ -407,7 +454,12 @@ const CreateUserPage = () => {
                       <input
                         type="text"
                         value={newOutlet.nidNumber}
-                        onChange={(e) => setNewOutlet({...newOutlet, nidNumber: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({
+                            ...newOutlet,
+                            nidNumber: e.target.value,
+                          })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter NID number"
                         required
@@ -421,7 +473,12 @@ const CreateUserPage = () => {
                       <input
                         type="text"
                         value={newOutlet.binNumber}
-                        onChange={(e) => setNewOutlet({...newOutlet, binNumber: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({
+                            ...newOutlet,
+                            binNumber: e.target.value,
+                          })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter BIN number"
                       />
@@ -434,7 +491,12 @@ const CreateUserPage = () => {
                       <input
                         type="text"
                         value={newOutlet.tinNumber}
-                        onChange={(e) => setNewOutlet({...newOutlet, tinNumber: e.target.value})}
+                        onChange={(e) =>
+                          setNewOutlet({
+                            ...newOutlet,
+                            tinNumber: e.target.value,
+                          })
+                        }
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter TIN number"
                       />
@@ -446,7 +508,9 @@ const CreateUserPage = () => {
                       </label>
                       <input
                         type="file"
-                        onChange={(e) => handleImageUpload(e.target.files[0], "attachment")}
+                        onChange={(e) =>
+                          handleImageUpload(e.target.files[0], "attachment")
+                        }
                         className="w-full p-2 border rounded-md hidden"
                         id="attachment"
                       />
@@ -455,16 +519,22 @@ const CreateUserPage = () => {
                         className="w-full p-2 border rounded-md flex items-center justify-center cursor-pointer bg-gray-50 hover:bg-gray-100 text-gray-700"
                       >
                         <Upload size={16} className="mr-2" />
-                        {newOutlet.attachment ? "Change Image" : "Upload Attachment"}
+                        {newOutlet.attachment
+                          ? "Change Image"
+                          : "Upload Attachment"}
                       </label>
                       {newOutlet.attachment && (
                         <div className="mt-2">
-                          <img src={newOutlet.attachment} alt="Attachment" className="h-20 border rounded-md" />
+                          <img
+                            src={newOutlet.attachment}
+                            alt="Attachment"
+                            className="h-20 border rounded-md"
+                          />
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-end gap-2 mt-6">
                     <button
                       type="button"
@@ -503,11 +573,15 @@ const CreateUserPage = () => {
               {activeTab === "basic" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name *
+                    </label>
                     <input
                       type="text"
                       value={newUser.name}
-                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, name: e.target.value })
+                      }
                       required
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter full name"
@@ -515,11 +589,15 @@ const CreateUserPage = () => {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number *
+                    </label>
                     <input
                       type="tel"
                       value={newUser.number}
-                      onChange={(e) => setNewUser({...newUser, number: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, number: e.target.value })
+                      }
                       required
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter phone number"
@@ -527,11 +605,15 @@ const CreateUserPage = () => {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password *
+                    </label>
                     <input
                       type="password"
                       value={newUser.password}
-                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, password: e.target.value })
+                      }
                       required
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter password"
@@ -601,20 +683,21 @@ const CreateUserPage = () => {
                   />
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NID Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      NID Number
+                    </label>
                     <input
                       type="text"
                       value={newUser.nidNumber}
-                      onChange={(e) => setNewUser({...newUser, nidNumber: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, nidNumber: e.target.value })
+                      }
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter NID number"
                     />
                   </div>
 
-                  <DateField
-                    label="Date of Birth"
-                    field="dateOfBirth"
-                  />
+                  <DateField label="Date of Birth" field="dateOfBirth" />
 
                   <DropdownField
                     label="Blood Group"
@@ -633,28 +716,39 @@ const CreateUserPage = () => {
                   {newUser.maritalStatus === "Married" && (
                     <>
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Spouse Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Spouse Name
+                        </label>
                         <input
                           type="text"
                           value={newUser.spouseName}
-                          onChange={(e) => setNewUser({...newUser, spouseName: e.target.value})}
+                          onChange={(e) =>
+                            setNewUser({
+                              ...newUser,
+                              spouseName: e.target.value,
+                            })
+                          }
                           className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Enter spouse name"
                         />
                       </div>
 
-                      <DateField
-                        label="Marriage Date"
-                        field="marriageDate"
-                      />
+                      <DateField label="Marriage Date" field="marriageDate" />
                     </>
                   )}
 
                   <div className="mb-4 col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Present Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Present Address
+                    </label>
                     <textarea
                       value={newUser.presentAddress}
-                      onChange={(e) => setNewUser({...newUser, presentAddress: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          presentAddress: e.target.value,
+                        })
+                      }
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter present address"
                       rows={3}
@@ -673,17 +767,21 @@ const CreateUserPage = () => {
               {/* Employment Info Tab */}
               {activeTab === "employment" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <DateField
-                    label="Joining Date"
-                    field="joiningDate"
-                  />
+                  <DateField label="Joining Date" field="joiningDate" />
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Present Salary</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Present Salary
+                    </label>
                     <input
                       type="number"
                       value={newUser.presentSalary}
-                      onChange={(e) => setNewUser({...newUser, presentSalary: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          presentSalary: e.target.value,
+                        })
+                      }
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter salary amount"
                     />
@@ -695,33 +793,54 @@ const CreateUserPage = () => {
               {activeTab === "contact" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Personal Mobile Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Personal Mobile Number
+                    </label>
                     <input
                       type="tel"
                       value={newUser.personalMobileNumber}
-                      onChange={(e) => setNewUser({...newUser, personalMobileNumber: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          personalMobileNumber: e.target.value,
+                        })
+                      }
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter mobile number"
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Family Contact Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Family Contact Number
+                    </label>
                     <input
                       type="tel"
                       value={newUser.familyContactNumber}
-                      onChange={(e) => setNewUser({...newUser, familyContactNumber: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          familyContactNumber: e.target.value,
+                        })
+                      }
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter contact number"
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Relation With Contact Person</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Relation With Contact Person
+                    </label>
                     <input
                       type="text"
                       value={newUser.relationWithContactPerson}
-                      onChange={(e) => setNewUser({...newUser, relationWithContactPerson: e.target.value})}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          relationWithContactPerson: e.target.value,
+                        })
+                      }
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter relationship"
                     />
@@ -735,7 +854,15 @@ const CreateUserPage = () => {
                   {activeTab !== "basic" && (
                     <button
                       type="button"
-                      onClick={() => setActiveTab(activeTab === "personal" ? "basic" : activeTab === "employment" ? "personal" : "employment")}
+                      onClick={() =>
+                        setActiveTab(
+                          activeTab === "personal"
+                            ? "basic"
+                            : activeTab === "employment"
+                            ? "personal"
+                            : "employment"
+                        )
+                      }
                       className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       Previous
@@ -744,7 +871,15 @@ const CreateUserPage = () => {
                   {activeTab !== "contact" && (
                     <button
                       type="button"
-                      onClick={() => setActiveTab(activeTab === "basic" ? "personal" : activeTab === "personal" ? "employment" : "contact")}
+                      onClick={() =>
+                        setActiveTab(
+                          activeTab === "basic"
+                            ? "personal"
+                            : activeTab === "personal"
+                            ? "employment"
+                            : "contact"
+                        )
+                      }
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     >
                       Next
@@ -765,7 +900,6 @@ const CreateUserPage = () => {
               </div>
             </form>
           </div>
-          
         </div>
       </div>
     </div>
