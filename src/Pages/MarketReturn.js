@@ -2,6 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
+import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
 export default function MarketReturn({ user, stock, getStockValue }) {
   const [search, setSearch] = useState("");
@@ -13,6 +15,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format("YYYY-MM-DD")
   );
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
@@ -83,8 +87,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           currentTP,
           currentStockDP,
           currentStockTP,
-          editableDP: currentDP, // Added editableDP
-          editableTP: currentTP, // Added editableTP
+          editableDP: currentDP,
+          editableTP: currentTP,
           total: 0,
         },
       ]);
@@ -93,6 +97,166 @@ export default function MarketReturn({ user, stock, getStockValue }) {
       console.error("Stock fetch error:", err);
       toast.error("Failed to fetch stock.");
     }
+  };
+
+  // Excel Import Functions
+  const handleFileUpload = (e) => {
+    const uploadedFile = e.target.files[0];
+    if (!uploadedFile) return;
+    setImportFile(uploadedFile);
+  };
+
+  const readExcelFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const processExcelData = async (data) => {
+    setImportLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const row of data) {
+        try {
+          // Skip empty rows or instruction rows
+          if (!row["Barcode"] && !row["Product Name"]) continue;
+
+          const productResponse = await axios.get(
+            "https://gvi-pos-server.vercel.app/search-product",
+            {
+              params: {
+                search: row["Barcode"] || row["Product Name"],
+                type: "barcode",
+              },
+            }
+          );
+
+          const product = productResponse.data[0];
+          if (!product) {
+            errorCount++;
+            continue;
+          }
+
+          const stockRes = await axios.get(
+            "https://gvi-pos-server.vercel.app/outlet-stock",
+            { params: { barcode: product.barcode, outlet: user.outlet } }
+          );
+
+          const currentStock = stockRes.data.stock.currentStock || 0;
+          const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
+          const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
+          const currentDP = row["DP"] || getCurrentDP(product);
+          const currentTP = row["TP"] || getCurrentTP(product);
+          const returnQty = parseInt(row["Return Quantity"] || 0);
+
+          // Validate return quantity doesn't exceed stock
+          const validReturnQty = Math.min(returnQty, currentStock);
+
+          setCart((prev) => [
+            ...prev.filter((item) => item.barcode !== product.barcode),
+            {
+              ...product,
+              openingStock: currentStock,
+              marketReturn: validReturnQty,
+              currentDP,
+              currentTP,
+              currentStockDP,
+              currentStockTP,
+              editableDP: currentDP,
+              editableTP: currentTP,
+              total: validReturnQty * currentDP,
+            },
+          ]);
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error processing row:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Imported ${successCount} products successfully`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} products`);
+      }
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast.error("Failed to process the file");
+    } finally {
+      setImportLoading(false);
+      setImportFile(null);
+      document.getElementById("import-file").value = "";
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!importFile) {
+      toast.error("Please select a file first");
+      return;
+    }
+    try {
+      const data = await readExcelFile(importFile);
+      await processExcelData(data);
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Failed to import file");
+    }
+  };
+
+  const downloadDemoFile = () => {
+    const demoData = [
+      {
+        Barcode: "123456789",
+        "Product Name": "Sample Product",
+        "Return Quantity": "5",
+        DP: "100.00",
+        TP: "120.00",
+      },
+      {
+        Barcode: "987654321",
+        "Product Name": "Another Product",
+        "Return Quantity": "3",
+        DP: "150.00",
+        TP: "180.00",
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(demoData);
+
+    // Add instructions as the first row
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        [
+          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+        ],
+        ["Barcode and Product Name must match existing products"],
+        ["Return Quantity cannot exceed current stock"],
+        ["DP/TP are optional - will use current prices if omitted"],
+      ],
+      { origin: -1 }
+    );
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Market Returns");
+    XLSX.writeFile(workbook, "Market_Returns_Template.xlsx");
   };
 
   // Update market return value in cart
@@ -104,7 +268,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           ? {
               ...item,
               marketReturn: returnValue,
-              total: returnValue * item.editableDP, // Changed from currentDP to editableDP
+              total: returnValue * item.editableDP,
             }
           : item
       )
@@ -167,9 +331,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             outlet: user.outlet,
             newStock: item.openingStock + item.marketReturn,
             currentStockValueDP:
-              item.currentStockDP + item.marketReturn * item.editableDP, // Changed from currentDP to editableDP
+              item.currentStockDP + item.marketReturn * item.editableDP,
             currentStockValueTP:
-              item.currentStockTP + item.marketReturn * item.editableTP, // Changed from currentTP to editableTP
+              item.currentStockTP + item.marketReturn * item.editableTP,
           }
         );
 
@@ -187,8 +351,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             date: formattedDateTime,
             user: user.name,
             userID: user._id,
-            dp: item.editableDP, // Changed from currentDP to editableDP
-            tp: item.editableTP, // Changed from currentTP to editableTP
+            dp: item.editableDP,
+            tp: item.editableTP,
           }
         );
       });
@@ -224,6 +388,36 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
           </span>
         )}
+      </div>
+
+      {/* Import/Export Controls */}
+      <div className="flex gap-4 my-4">
+        <button
+          onClick={downloadDemoFile}
+          className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
+        >
+          <FaFileDownload /> Template
+        </button>
+        <input
+          id="import-file"
+          type="file"
+          accept=".xlsx, .xls, .csv"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        <label
+          htmlFor="import-file"
+          className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
+        >
+          <FaFileImport /> Import
+        </label>
+        <button
+          onClick={handleBulkImport}
+          disabled={importLoading || !importFile}
+          className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
+        >
+          {importLoading ? "Processing..." : "Add To Cart"}
+        </button>
       </div>
 
       {/* Search Box */}

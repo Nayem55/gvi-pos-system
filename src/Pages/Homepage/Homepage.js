@@ -46,54 +46,54 @@ export default function Home() {
     }
   }, [attendanceUser]);
 
-  const fetchUserLocation = async () => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        const error = "Geolocation is not supported by your browser.";
-        setLocationError(error);
-        reject(error);
-        return;
-      }
+  // const fetchUserLocation = async () => {
+  //   return new Promise((resolve, reject) => {
+  //     if (!navigator.geolocation) {
+  //       const error = "Geolocation is not supported by your browser.";
+  //       setLocationError(error);
+  //       reject(error);
+  //       return;
+  //     }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setIsLocationEnabled(true);
-          resolve({ latitude, longitude });
-        },
-        (error) => {
-          let errorMessage = "An unknown error occurred.";
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage =
-                "Location access denied. Please allow location permissions.";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = "Location information is unavailable.";
-              break;
-            case error.TIMEOUT:
-              errorMessage = "Request timed out. Please try again.";
-              break;
-          }
-          setLocationError(errorMessage);
-          setIsLocationEnabled(false);
-          reject(errorMessage);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
-    });
-  };
+  //     navigator.geolocation.getCurrentPosition(
+  //       (position) => {
+  //         const { latitude, longitude } = position.coords;
+  //         setIsLocationEnabled(true);
+  //         resolve({ latitude, longitude });
+  //       },
+  //       (error) => {
+  //         let errorMessage = "An unknown error occurred.";
+  //         switch (error.code) {
+  //           case error.PERMISSION_DENIED:
+  //             errorMessage =
+  //               "Location access denied. Please allow location permissions.";
+  //             break;
+  //           case error.POSITION_UNAVAILABLE:
+  //             errorMessage = "Location information is unavailable.";
+  //             break;
+  //           case error.TIMEOUT:
+  //             errorMessage = "Request timed out. Please try again.";
+  //             break;
+  //         }
+  //         setLocationError(errorMessage);
+  //         setIsLocationEnabled(false);
+  //         reject(errorMessage);
+  //       },
+  //       {
+  //         enableHighAccuracy: true,
+  //         timeout: 10000,
+  //         maximumAge: 0,
+  //       }
+  //     );
+  //   });
+  // };
 
   useEffect(() => {
     if (!attendanceUser) {
       navigate("/login");
     } else {
       fetchUserData();
-      fetchUserLocation().catch(() => {}); // Silently handle location errors
+      // fetchUserLocation().catch(() => {});
     }
   }, [attendanceUser, navigate, fetchUserData]);
 

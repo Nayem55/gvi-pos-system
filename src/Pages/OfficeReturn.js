@@ -110,7 +110,6 @@ export default function OfficeReturn({
       )
     );
   };
-  console.log(cart);
 
   const handlePriceChange = (barcode, field, value) => {
     setCart((prev) =>
