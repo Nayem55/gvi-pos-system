@@ -4,7 +4,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-export default function Secondary({ stock, setStock, getStockValue }) {
+export default function Secondary({ user, stock, setStock, getStockValue }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [cart, setCart] = useState(
@@ -20,7 +20,7 @@ export default function Secondary({ stock, setStock, getStockValue }) {
   );
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("pos-user"));
+  // const user = JSON.parse(localStorage.getItem("pos-user"));
 
   useEffect(() => {
     if (!user) {
