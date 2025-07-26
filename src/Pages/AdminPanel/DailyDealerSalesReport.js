@@ -23,7 +23,7 @@ const DailyDealerSalesReport = () => {
       const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD");
 
       const response = await axios.get(
-        `https://gvi-pos-server.vercel.app/sales-reports/${userId}`,
+        `http://localhost:5000/sales-reports/${userId}`,
         {
           params: {
             startDate: formattedDate,

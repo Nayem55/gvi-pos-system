@@ -18,9 +18,7 @@ const MonthlyTargetPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/getAllUser"
-        );
+        const res = await axios.get("http://localhost:5000/getAllUser");
         setUsers(res.data);
       } catch (error) {
         console.error("Failed to fetch users");
@@ -36,12 +34,9 @@ const MonthlyTargetPage = () => {
 
       try {
         setLoading(true);
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/targets",
-          {
-            params: { year, month },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/targets", {
+          params: { year, month },
+        });
 
         const targetsMap = {};
         res.data.forEach((targetEntry) => {
@@ -112,13 +107,10 @@ const MonthlyTargetPage = () => {
 
       const targetExists = targets[user._id] !== undefined;
       if (targetExists) {
-        await axios.put(
-          "https://gvi-pos-server.vercel.app/targets",
-          targetData
-        );
+        await axios.put("http://localhost:5000/targets", targetData);
         toast.success("Target updated successfully");
       } else {
-        await axios.post("https://gvi-pos-server.vercel.app/targets", {
+        await axios.post("http://localhost:5000/targets", {
           year: parseInt(year),
           month: parseInt(month),
           targets: [targetData],
@@ -127,7 +119,7 @@ const MonthlyTargetPage = () => {
       }
 
       // Refresh targets after update
-      const res = await axios.get("https://gvi-pos-server.vercel.app/targets", {
+      const res = await axios.get("http://localhost:5000/targets", {
         params: { year, month },
       });
 
@@ -183,7 +175,7 @@ const MonthlyTargetPage = () => {
           dp: tempTargets[user._id].dp,
         }));
 
-      await axios.post("https://gvi-pos-server.vercel.app/targets/bulk", {
+      await axios.post("http://localhost:5000/targets/bulk", {
         year: parseInt(year),
         month: parseInt(month),
         targets: targetsToSave,
@@ -192,7 +184,7 @@ const MonthlyTargetPage = () => {
       toast.success(`Successfully saved ${targetsToSave.length} targets`);
 
       // Refresh targets
-      const res = await axios.get("https://gvi-pos-server.vercel.app/targets", {
+      const res = await axios.get("http://localhost:5000/targets", {
         params: { year, month },
       });
 

@@ -49,7 +49,7 @@ const CreateOutletPage = () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "https://gvi-pos-server.vercel.app/add-new-outlet",
+        "http://localhost:5000/add-new-outlet",
         newOutlet
       );
 

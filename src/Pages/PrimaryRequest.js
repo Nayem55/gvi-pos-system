@@ -19,12 +19,9 @@ export default function PrimaryRequest() {
     if (query.length > 2) {
       setIsSearching(true);
       try {
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/search-product",
-          {
-            params: { search: query, type: "name" },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/search-product", {
+          params: { search: query, type: "name" },
+        });
         setResults(res.data);
       } catch (err) {
         console.error(err);
@@ -87,10 +84,7 @@ export default function PrimaryRequest() {
 
     try {
       setIsSubmitting(true);
-      await axios.post(
-        "https://gvi-pos-server.vercel.app/primary-request",
-        order
-      );
+      await axios.post("http://localhost:5000/primary-request", order);
       toast.success("Request submitted successfully!");
       setCart([]);
     } catch (err) {

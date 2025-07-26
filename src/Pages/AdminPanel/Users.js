@@ -26,9 +26,7 @@ const UserManagementPage = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/getAllUser"
-      );
+      const response = await axios.get("http://localhost:5000/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -43,7 +41,7 @@ const UserManagementPage = () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        "https://gvi-pos-server.vercel.app/api/users",
+        "http://localhost:5000/api/users",
         newUser
       );
       toast.success("User created successfully!");
@@ -61,7 +59,7 @@ const UserManagementPage = () => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
       const response = await axios.delete(
-        `https://gvi-pos-server.vercel.app/api/users/${userId}`
+        `http://localhost:5000/api/users/${userId}`
       );
       if (response.status === 200) {
         toast.success("User deleted successfully!");
@@ -78,7 +76,7 @@ const UserManagementPage = () => {
     setLoading(true);
     try {
       const response = await axios.put(
-        `https://gvi-pos-server.vercel.app/updateUser/${updateUser._id}`,
+        `http://localhost:5000/updateUser/${updateUser._id}`,
         updateUser
       );
       if (response.status === 200) {

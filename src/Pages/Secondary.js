@@ -3,13 +3,16 @@ import dayjs from "dayjs";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
+import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
 export default function Secondary({ user, stock, setStock, getStockValue }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
-  const [cart, setCart] = useState(
-    () => JSON.parse(localStorage.getItem("cart")) || []
-  );
+  // const [cart, setCart] = useState(
+  //   () => JSON.parse(localStorage.getItem("cart")) || []
+  // );
+  const [cart, setCart] = useState([]);
   const [route, setRoute] = useState("");
   const [menu, setMenu] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -18,9 +21,9 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format("YYYY-MM-DD")
   );
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
   const navigate = useNavigate();
-
-  // const user = JSON.parse(localStorage.getItem("pos-user"));
 
   useEffect(() => {
     if (!user) {
@@ -28,11 +31,10 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
     }
   }, [user]);
 
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+  // useEffect(() => {
+  //   localStorage.setItem("cart", JSON.stringify(cart));
+  // }, [cart]);
 
-  // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
 
@@ -43,23 +45,20 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  // Get the appropriate TP price based on promo validity
   const getCurrentTP = (product) => {
     return isPromoValid(product) ? product.promoTP : product.tp;
   };
 
-  // Get the appropriate DP price based on promo validity
   const getCurrentDP = (product) => {
     return isPromoValid(product) ? product.promoDP : product.dp;
   };
 
-  // Search products from the backend based on search type
   const handleSearch = async (query) => {
     if (query.length > 2) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "https://gvi-pos-server.vercel.app/search-product",
+          "http://localhost:5000/search-product",
           {
             params: { search: query, type: searchType },
           }
@@ -78,7 +77,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
   const addToCart = async (product) => {
     try {
       const stockResponse = await axios.get(
-        "https://gvi-pos-server.vercel.app/outlet-stock",
+        "http://localhost:5000/outlet-stock",
         {
           params: { barcode: product.barcode, outlet: user.outlet },
         }
@@ -90,7 +89,6 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
         return;
       }
 
-      // Get current prices based on promo validity
       const currentTP = getCurrentTP(product);
       const currentDP = getCurrentDP(product);
 
@@ -218,32 +216,24 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
         })),
       };
 
-      await axios.post(
-        "https://gvi-pos-server.vercel.app/add-sale-report",
-        saleEntry
-      );
+      await axios.post("http://localhost:5000/add-sale-report", saleEntry);
 
-      // Update stock transactions
       const updatePromises = cart.map(async (item) => {
-        // Log stock transaction
-        await axios.post(
-          "https://gvi-pos-server.vercel.app/stock-transactions",
-          {
-            barcode: item.barcode,
-            outlet: user.outlet,
-            type: "secondary",
-            asm: user.asm,
-            rsm: user.rsm,
-            som: user.som,
-            zone: user.zone,
-            quantity: item.pcs,
-            date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
-            user: user.name,
-            userID: user._id,
-            dp: item.editableDP,
-            tp: item.editableTP,
-          }
-        );
+        await axios.post("http://localhost:5000/stock-transactions", {
+          barcode: item.barcode,
+          outlet: user.outlet,
+          type: "secondary",
+          asm: user.asm,
+          rsm: user.rsm,
+          som: user.som,
+          zone: user.zone,
+          quantity: item.pcs,
+          date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+          user: user.name,
+          userID: user._id,
+          dp: item.editableDP,
+          tp: item.editableTP,
+        });
       });
 
       await Promise.all(updatePromises);
@@ -252,7 +242,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
 
       setCart([]);
-      localStorage.removeItem("cart");
+      // localStorage.removeItem("cart");
       toast.success("Sales report submitted");
       getStockValue(user.outlet);
     } catch (error) {
@@ -261,6 +251,187 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFileUpload = (e) => {
+    const uploadedFile = e.target.files[0];
+    if (!uploadedFile) return;
+    setImportFile(uploadedFile);
+  };
+
+  const readExcelFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const processExcelData = async (data) => {
+    setImportLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const row of data) {
+        try {
+          if (!row["Barcode"] && !row["Product Name"]) continue;
+
+          const productResponse = await axios.get(
+            "http://localhost:5000/search-product",
+            {
+              params: {
+                search: row["Barcode"] || row["Product Name"],
+                type: "barcode",
+              },
+            }
+          );
+
+          const product = productResponse.data[0];
+          if (!product) {
+            errorCount++;
+            continue;
+          }
+
+          const stockRes = await axios.get(
+            "http://localhost:5000/outlet-stock",
+            { params: { barcode: product.barcode, outlet: user.outlet } }
+          );
+
+          const outletStock = stockRes.data.stock.currentStock || 0;
+          const currentTP = row["TP"] || getCurrentTP(product);
+          const currentDP = row["DP"] || getCurrentDP(product);
+          const quantity = parseInt(row["Quantity"] || 0);
+
+          const validQuantity = Math.min(quantity, outletStock);
+
+          if (validQuantity <= 0) {
+            errorCount++;
+            continue;
+          }
+
+          const existingItemIndex = cart.findIndex(
+            (item) => item._id === product._id
+          );
+
+          if (existingItemIndex >= 0) {
+            const existingItem = cart[existingItemIndex];
+            const newQuantity = Math.min(
+              existingItem.pcs + validQuantity,
+              outletStock
+            );
+
+            setCart((prev) =>
+              prev.map((item, index) =>
+                index === existingItemIndex
+                  ? {
+                      ...item,
+                      pcs: newQuantity,
+                      total: newQuantity * item.editableTP,
+                    }
+                  : item
+              )
+            );
+          } else {
+            setCart((prev) => [
+              ...prev,
+              {
+                ...product,
+                stock: outletStock,
+                currentTP: currentTP,
+                currentDP: currentDP,
+                editableTP: currentTP,
+                editableDP: currentDP,
+                pcs: validQuantity,
+                total: validQuantity * currentTP,
+              },
+            ]);
+          }
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error processing row:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Imported ${successCount} products successfully`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} products`);
+      }
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast.error("Failed to process the file");
+    } finally {
+      setImportLoading(false);
+      setImportFile(null);
+      document.getElementById("import-file").value = "";
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!importFile) {
+      toast.error("Please select a file first");
+      return;
+    }
+    try {
+      const data = await readExcelFile(importFile);
+      await processExcelData(data);
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Failed to import file");
+    }
+  };
+
+  const downloadDemoFile = () => {
+    const demoData = [
+      {
+        Barcode: "123456789",
+        "Product Name": "Sample Product",
+        Quantity: "5",
+        DP: "100.00",
+        TP: "120.00",
+      },
+      {
+        Barcode: "987654321",
+        "Product Name": "Another Product",
+        Quantity: "3",
+        DP: "150.00",
+        TP: "180.00",
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(demoData);
+
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        [
+          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+        ],
+        ["Barcode and Product Name must match existing products"],
+        ["Quantity cannot exceed current stock"],
+        ["DP/TP are optional - will use current prices if omitted"],
+      ],
+      { origin: -1 }
+    );
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Secondary Sales");
+    XLSX.writeFile(workbook, "Secondary_Sales_Template.xlsx");
   };
 
   return (
@@ -279,6 +450,36 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
             <p>Stock (TP): {stock.tp?.toFixed(2)}</p>
           </span>
         )}
+      </div>
+
+      {/* Import/Export Controls */}
+      <div className="flex gap-4 my-4">
+        <button
+          onClick={downloadDemoFile}
+          className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
+        >
+          <FaFileDownload /> Template
+        </button>
+        <input
+          id="import-file"
+          type="file"
+          accept=".xlsx, .xls, .csv"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        <label
+          htmlFor="import-file"
+          className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
+        >
+          <FaFileImport /> Import
+        </label>
+        <button
+          onClick={handleBulkImport}
+          disabled={importLoading || !importFile}
+          className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
+        >
+          {importLoading ? "Processing..." : "Add To Cart"}
+        </button>
       </div>
 
       {/* Route & Menu Inputs */}
@@ -358,12 +559,10 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
             <tbody>
               {cart.map((item) => (
                 <tr key={item._id} className="border-b text-xs">
-                  {/* Product Name */}
                   <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
                     {item.name} {item.stock ? `(${item.stock})` : ""}
                   </td>
 
-                  {/* Quantity +/- */}
                   <td className="p-2 text-center">
                     <div className="flex flex-col-reverse justify-center items-center gap-1">
                       <button
@@ -382,7 +581,6 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
                     </div>
                   </td>
 
-                  {/* Editable TP and DP Inputs */}
                   <td className="p-1 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <input
@@ -412,12 +610,10 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
                     </div>
                   </td>
 
-                  {/* Total TP */}
                   <td className="p-2 text-center text-xs">
                     {(item.editableTP * item.pcs).toFixed(2)}
                   </td>
 
-                  {/* Delete Button */}
                   <td className="text-center">
                     <button onClick={() => removeFromCart(item._id)}>
                       <svg

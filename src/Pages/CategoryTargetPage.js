@@ -47,8 +47,8 @@ const CategoryTargetPage = () => {
     const fetchData = async () => {
       try {
         const [usersRes, categoriesRes] = await Promise.all([
-          axios.get("https://gvi-pos-server.vercel.app/getAllUser"),
-          axios.get("https://gvi-pos-server.vercel.app/categories"),
+          axios.get("http://localhost:5000/getAllUser"),
+          axios.get("http://localhost:5000/categories"),
         ]);
         setUsers(usersRes.data);
         setCategories(categoriesRes.data);
@@ -65,12 +65,9 @@ const CategoryTargetPage = () => {
       if (!year || !month) return;
 
       try {
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/categoryTargets",
-          {
-            params: { year, month },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/categoryTargets", {
+          params: { year, month },
+        });
 
         // Transform targets into a more usable structure
         const targetsMap = {};
@@ -123,7 +120,7 @@ const CategoryTargetPage = () => {
           target: parseFloat(target),
         }));
 
-      await axios.post("https://gvi-pos-server.vercel.app/categoryTargets", {
+      await axios.post("http://localhost:5000/categoryTargets", {
         userID,
         year: parseInt(year),
         month: parseInt(month),
@@ -133,12 +130,9 @@ const CategoryTargetPage = () => {
       toast.success("Targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get(
-        "https://gvi-pos-server.vercel.app/categoryTargets",
-        {
-          params: { year, month },
-        }
-      );
+      const res = await axios.get("http://localhost:5000/categoryTargets", {
+        params: { year, month },
+      });
 
       const updatedTargets = {};
       res.data.forEach((userDoc) => {
@@ -183,15 +177,12 @@ const CategoryTargetPage = () => {
               target: parseFloat(target),
             }));
 
-          return axios.post(
-            "https://gvi-pos-server.vercel.app/categoryTargets",
-            {
-              userID,
-              year: parseInt(year),
-              month: parseInt(month),
-              targets: targetsArray,
-            }
-          );
+          return axios.post("http://localhost:5000/categoryTargets", {
+            userID,
+            year: parseInt(year),
+            month: parseInt(month),
+            targets: targetsArray,
+          });
         });
 
       // Execute all updates
@@ -199,12 +190,9 @@ const CategoryTargetPage = () => {
       toast.success("All targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get(
-        "https://gvi-pos-server.vercel.app/categoryTargets",
-        {
-          params: { year, month },
-        }
-      );
+      const res = await axios.get("http://localhost:5000/categoryTargets", {
+        params: { year, month },
+      });
 
       const updatedTargets = {};
       res.data.forEach((userDoc) => {

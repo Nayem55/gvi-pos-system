@@ -21,9 +21,7 @@ const ManageStock = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/getAllUser"
-      );
+      const response = await axios.get("http://localhost:5000/getAllUser");
       setUsers(response.data);
       setLoading(false);
     } catch (error) {
@@ -41,7 +39,7 @@ const ManageStock = () => {
   const getStockValue = async (outletName) => {
     try {
       const response = await axios.get(
-        `https://gvi-pos-server.vercel.app/api/stock-value/${outletName}`
+        `http://localhost:5000/api/stock-value/${outletName}`
       );
       setStock({
         dp: response.data.totalCurrentDP,

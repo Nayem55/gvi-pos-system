@@ -30,21 +30,21 @@ export default function Home() {
     }
   }, [user]);
 
-  const fetchUserData = useCallback(async () => {
-    if (!attendanceUser) return;
+  // const fetchUserData = useCallback(async () => {
+  //   if (!attendanceUser) return;
 
-    try {
-      setDataLoading(true);
-      const response = await axios.get(
-        `https://attendance-app-server-blue.vercel.app/getUser/${attendanceUser?._id}`
-      );
-      localStorage.setItem("attendance-user", JSON.stringify(response.data));
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    } finally {
-      setDataLoading(false);
-    }
-  }, [attendanceUser]);
+  //   try {
+  //     setDataLoading(true);
+  //     const response = await axios.get(
+  //       `https://attendance-app-server-blue.vercel.app/getUser/${attendanceUser?._id}`
+  //     );
+  //     localStorage.setItem("attendance-user", JSON.stringify(response.data));
+  //   } catch (error) {
+  //     console.error("Error fetching user data:", error);
+  //   } finally {
+  //     setDataLoading(false);
+  //   }
+  // }, [attendanceUser]);
 
   // const fetchUserLocation = async () => {
   //   return new Promise((resolve, reject) => {
@@ -92,21 +92,17 @@ export default function Home() {
     if (!attendanceUser) {
       navigate("/login");
     } else {
-      fetchUserData();
+      // fetchUserData();
       // fetchUserLocation().catch(() => {});
     }
-  }, [attendanceUser, navigate, fetchUserData]);
+  }, [attendanceUser, navigate]);
 
   const getStockValue = async (outletName) => {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
-        axios.get(
-          `https://gvi-pos-server.vercel.app/api/stock-value/${encodedOutletName}`
-        ),
-        axios.get(
-          `https://gvi-pos-server.vercel.app/current-due/${encodedOutletName}`
-        ),
+        axios.get(`http://localhost:5000/api/stock-value/${encodedOutletName}`),
+        axios.get(`http://localhost:5000/current-due/${encodedOutletName}`),
       ]);
 
       setCurrentDue(dueResponse.data.current_due);

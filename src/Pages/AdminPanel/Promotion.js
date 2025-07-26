@@ -39,13 +39,13 @@ export default function PromotionalPage() {
 
       if (debouncedSearch.trim()) {
         const response = await axios.get(
-          `https://gvi-pos-server.vercel.app/search-product?search=${debouncedSearch}`
+          `http://localhost:5000/search-product?search=${debouncedSearch}`
         );
         productsData = response.data;
         setTotalPages(1);
       } else {
         const res = await axios.get(
-          `https://gvi-pos-server.vercel.app/products?page=${currentPage}`
+          `http://localhost:5000/products?page=${currentPage}`
         );
         productsData = res.data.products;
         setTotalPages(res.data.totalPages);
@@ -178,7 +178,7 @@ export default function PromotionalPage() {
 
     try {
       await axios.put(
-        `https://gvi-pos-server.vercel.app/products/${product._id}`,
+        `http://localhost:5000/products/${product._id}`,
         updatedProduct
       );
       toast.success("Promotion saved successfully!");
@@ -203,7 +203,7 @@ export default function PromotionalPage() {
 
     try {
       await axios.put(
-        `https://gvi-pos-server.vercel.app/products/${product._id}`,
+        `http://localhost:5000/products/${product._id}`,
         updatedProduct
       );
       toast.success("Promotion removed successfully!");
@@ -343,7 +343,7 @@ export default function PromotionalPage() {
         };
 
         await axios.put(
-          `https://gvi-pos-server.vercel.app/products/${product._id}`,
+          `http://localhost:5000/products/${product._id}`,
           updatedProduct
         );
 

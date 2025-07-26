@@ -44,7 +44,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "https://gvi-pos-server.vercel.app/search-product",
+          "http://localhost:5000/search-product",
           { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
@@ -69,7 +69,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
 
     try {
       const stockRes = await axios.get(
-        `https://gvi-pos-server.vercel.app/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+        `http://localhost:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
       const currentStock = stockRes.data.stock.currentStock || 0;
       const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
@@ -137,7 +137,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
-            "https://gvi-pos-server.vercel.app/search-product",
+            "http://localhost:5000/search-product",
             {
               params: {
                 search: row["Barcode"] || row["Product Name"],
@@ -153,7 +153,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           }
 
           const stockRes = await axios.get(
-            "https://gvi-pos-server.vercel.app/outlet-stock",
+            "http://localhost:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 
@@ -324,37 +324,31 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     try {
       const requests = cart.map(async (item) => {
         // Update stock for market returns
-        await axios.put(
-          "https://gvi-pos-server.vercel.app/update-outlet-stock",
-          {
-            barcode: item.barcode,
-            outlet: user.outlet,
-            newStock: item.openingStock + item.marketReturn,
-            currentStockValueDP:
-              item.currentStockDP + item.marketReturn * item.editableDP,
-            currentStockValueTP:
-              item.currentStockTP + item.marketReturn * item.editableTP,
-          }
-        );
+        await axios.put("http://localhost:5000/update-outlet-stock", {
+          barcode: item.barcode,
+          outlet: user.outlet,
+          newStock: item.openingStock + item.marketReturn,
+          currentStockValueDP:
+            item.currentStockDP + item.marketReturn * item.editableDP,
+          currentStockValueTP:
+            item.currentStockTP + item.marketReturn * item.editableTP,
+        });
 
         // Log transaction with selected date
-        await axios.post(
-          "https://gvi-pos-server.vercel.app/stock-transactions",
-          {
-            barcode: item.barcode,
-            outlet: user.outlet,
-            type: "market return",
-            asm: user.asm,
-            rsm: user.rsm,
-            zone: user.zone,
-            quantity: item.marketReturn,
-            date: formattedDateTime,
-            user: user.name,
-            userID: user._id,
-            dp: item.editableDP,
-            tp: item.editableTP,
-          }
-        );
+        await axios.post("http://localhost:5000/stock-transactions", {
+          barcode: item.barcode,
+          outlet: user.outlet,
+          type: "market return",
+          asm: user.asm,
+          rsm: user.rsm,
+          zone: user.zone,
+          quantity: item.marketReturn,
+          date: formattedDateTime,
+          user: user.name,
+          userID: user._id,
+          dp: item.editableDP,
+          tp: item.editableTP,
+        });
       });
 
       await Promise.all(requests);

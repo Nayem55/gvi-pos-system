@@ -26,7 +26,7 @@ const GroupStockMovementReport = () => {
     const fetchAreaOptions = async () => {
       try {
         const response = await axios.get(
-          "https://gvi-pos-server.vercel.app/api/area-options",
+          "http://localhost:5000/api/area-options",
           { params: { type: selectedType } }
         );
         if (response.data?.success) {
@@ -68,7 +68,7 @@ const GroupStockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/api/area-stock-movement",
+        "http://localhost:5000/api/area-stock-movement",
         { params }
       );
 

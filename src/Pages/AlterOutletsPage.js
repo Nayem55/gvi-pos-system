@@ -27,7 +27,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/get-outlets-full"
+        "http://localhost:5000/get-outlets-full"
       );
       setOutlets(response.data);
     } catch (error) {
@@ -56,7 +56,7 @@ const AlterOutletsPage = () => {
     try {
       setIsTransferring(true);
       const response = await axios.post(
-        "https://gvi-pos-server.vercel.app/transfer-outlet-stock",
+        "http://localhost:5000/transfer-outlet-stock",
         {
           sourceOutlet: selectedSource,
           targetOutlet: selectedTarget,
@@ -88,7 +88,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       await axios.put(
-        `https://gvi-pos-server.vercel.app/update-outlet/${currentOutlet.originalOutletName}`,
+        `http://localhost:5000/update-outlet/${currentOutlet.originalOutletName}`,
         {
           name: currentOutlet.outlet_name,
           proprietorName: currentOutlet.proprietor_name,
@@ -116,7 +116,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       const response = await axios.delete(
-        `https://gvi-pos-server.vercel.app/delete-outlet/${outletName}`
+        `http://localhost:5000/delete-outlet/${outletName}`
       );
       toast.success(response.data.message);
       setDeleteConfirm(null);

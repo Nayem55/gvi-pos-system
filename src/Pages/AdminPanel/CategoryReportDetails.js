@@ -13,7 +13,7 @@ const CategoryReportDetails = () => {
     const fetchCategoryDetails = async () => {
       try {
         const response = await axios.get(
-          `https://gvi-pos-server.vercel.app/api/sales/category/${category}`
+          `http://localhost:5000/api/sales/category/${category}`
         );
         setProducts(response.data);
       } catch (err) {

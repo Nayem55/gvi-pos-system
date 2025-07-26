@@ -22,9 +22,7 @@ const TDDAdminPanel = () => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(
-          "https://gvi-pos-server.vercel.app/tdda/users"
-        );
+        const response = await axios.get("http://localhost:5000/tdda/users");
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -47,7 +45,7 @@ const TDDAdminPanel = () => {
     try {
       setIsGenerating(true);
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/tdda/admin-report",
+        "http://localhost:5000/tdda/admin-report",
         {
           params: {
             userId: selectedUser,

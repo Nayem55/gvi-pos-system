@@ -52,15 +52,12 @@ const BrandWiseSalesReport = () => {
         : dayjs().month() + 1;
 
       try {
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/brandTargets",
-          {
-            params: {
-              year: currentYear,
-              month: currentMonth,
-            },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/brandTargets", {
+          params: {
+            year: currentYear,
+            month: currentMonth,
+          },
+        });
 
         // Transform targets into the same structure as CategoryTargetPage
         const targetsMap = {};
@@ -92,7 +89,7 @@ const BrandWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/sales/brand-wise",
+        "http://localhost:5000/sales/brand-wise",
         { params }
       );
       setSalesData(response.data);
@@ -136,7 +133,7 @@ const BrandWiseSalesReport = () => {
       params.brand = brand;
 
       const outletSalesRes = await axios.get(
-        "https://gvi-pos-server.vercel.app/sales/brand-wise/outlet-details",
+        "http://localhost:5000/sales/brand-wise/outlet-details",
         { params }
       );
 

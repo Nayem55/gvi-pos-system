@@ -147,7 +147,7 @@ const FinancialMovementReport = () => {
     const fetchAreaOptions = async () => {
       try {
         const response = await axios.get(
-          "https://gvi-pos-server.vercel.app/api/area-options",
+          "http://localhost:5000/api/area-options",
           { params: { type: selectedType } }
         );
         if (response.data?.success) {
@@ -189,14 +189,14 @@ const FinancialMovementReport = () => {
       if (selectedType === "outlet") {
         params.outlet = selectedArea;
         response = await axios.get(
-          "https://gvi-pos-server.vercel.app/api/financial-movement",
+          "http://localhost:5000/api/financial-movement",
           { params }
         );
       } else {
         params.areaType = selectedType;
         params.areaValue = selectedArea;
         response = await axios.get(
-          "https://gvi-pos-server.vercel.app/api/area-financial-movement",
+          "http://localhost:5000/api/area-financial-movement",
           { params }
         );
       }

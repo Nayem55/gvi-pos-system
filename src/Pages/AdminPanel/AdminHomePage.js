@@ -42,6 +42,8 @@ const AdminHomePage = () => {
   const [zone1Target, setZone1Target] = useState(0);
   const [zone2Sales, setZone2Sales] = useState(0);
   const [zone2Target, setZone2Target] = useState(0);
+  const [zone1Data, setZone1Data] = useState([]);
+  const [zone3Data, setZone3Data] = useState([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(dayjs().year());
   const [month, setMonth] = useState(dayjs().month() + 1);
@@ -57,7 +59,7 @@ const AdminHomePage = () => {
 
     try {
       const salesPromise = axios
-        .get("https://gvi-pos-server.vercel.app/sales/zone-wise", {
+        .get("http://localhost:5000/sales/zone-wise", {
           params: {
             month: `${year}-${month.toString().padStart(2, "0")}`,
             year,
@@ -66,7 +68,7 @@ const AdminHomePage = () => {
         .catch(() => ({ data: [] }));
 
       const targetsPromise = axios
-        .get("https://gvi-pos-server.vercel.app/targets/zone-wise", {
+        .get("http://localhost:5000/targets/zone-wise", {
           params: { year, month },
         })
         .catch(() => ({ data: [] }));
@@ -101,6 +103,13 @@ const AdminHomePage = () => {
     let zone1TargetTotal = 0;
     let zone2SalesTotal = 0;
     let zone2TargetTotal = 0;
+
+    // Filter data for Zone-01 and Zone-03
+    const zone1SalesData = salesData.filter(zone => zone._id && zone._id.includes("ZONE-01"));
+    const zone3SalesData = salesData.filter(zone => zone._id && zone._id.includes("ZONE-03"));
+
+    setZone1Data(zone1SalesData);
+    setZone3Data(zone3SalesData);
 
     salesData.forEach((zone) => {
       if (zone._id && zone._id.includes("ZONE-01")) {
@@ -169,6 +178,44 @@ const AdminHomePage = () => {
               {achievement}% Achieved
             </span>
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderZoneBarChart = (zoneData, zoneName) => {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">
+          {zoneName} Sales Breakdown
+        </h3>
+        <div className="h-64">
+          {zoneData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={zoneData.map((zone) => ({
+                  ...zone,
+                  name: formatZoneName(zone._id),
+                }))}
+              >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value) => value.toLocaleString()}
+                />
+                <Legend />
+                <Bar
+                  dataKey="total_tp"
+                  fill={zoneName.includes("01") ? "#36A2EB" : "#FF6384"}
+                  name="Total Sales"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              No sales data available for {zoneName}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -260,80 +307,8 @@ const AdminHomePage = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">
-                  Zone-wise Sales Comparison
-                </h3>
-                <div className="h-64">
-                  {zoneData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={zoneData.map((zone) => ({
-                          ...zone,
-                          name: formatZoneName(zone._id),
-                        }))}
-                      >
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip
-                          formatter={(value) => value.toLocaleString()}
-                        />
-                        <Legend />
-                        <Bar
-                          dataKey="total_tp"
-                          fill="#36A2EB"
-                          name="Total Sales"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-gray-500">
-                      No sales data available
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">
-                  Zone Distribution
-                </h3>
-                <div className="h-64">
-                  {zoneData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={zoneData}
-                          dataKey="total_tp"
-                          nameKey="_id"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, percent }) =>
-                            `${formatZoneName(name)}: ${(percent * 100).toFixed(
-                              0
-                            )}%`
-                          }
-                        >
-                          {zoneData.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value) => value.toLocaleString()}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-gray-500">
-                      No sales data available
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderZoneBarChart(zone1Data, "Zone 01")}
+              {renderZoneBarChart(zone3Data, "Zone 03")}
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md">

@@ -94,14 +94,14 @@ const CreateUserPage = () => {
         // Fetch groups
         setFetchingData((prev) => ({ ...prev, groups: true }));
         const groups = await axios.get(
-          "https://gvi-pos-server.vercel.app/get-user-field-values?field=group"
+          "http://localhost:5000/get-user-field-values?field=group"
         );
         setDropdownData((prev) => ({ ...prev, groups: groups.data }));
 
         // Fetch zones
         setFetchingData((prev) => ({ ...prev, zones: true }));
         const zones = await axios.get(
-          "https://gvi-pos-server.vercel.app/get-user-field-values?field=zone"
+          "http://localhost:5000/get-user-field-values?field=zone"
         );
         setDropdownData((prev) => ({ ...prev, zones: zones.data }));
 
@@ -111,21 +111,21 @@ const CreateUserPage = () => {
         // Fetch ASMs
         setFetchingData((prev) => ({ ...prev, asms: true }));
         const asms = await axios.get(
-          "https://gvi-pos-server.vercel.app/get-user-field-values?field=asm"
+          "http://localhost:5000/get-user-field-values?field=asm"
         );
         setDropdownData((prev) => ({ ...prev, asms: asms.data }));
 
         // Fetch RSMs
         setFetchingData((prev) => ({ ...prev, rsms: true }));
         const rsms = await axios.get(
-          "https://gvi-pos-server.vercel.app/get-user-field-values?field=rsm"
+          "http://localhost:5000/get-user-field-values?field=rsm"
         );
         setDropdownData((prev) => ({ ...prev, rsms: rsms.data }));
 
         // Fetch SOMs
         setFetchingData((prev) => ({ ...prev, soms: true }));
         const soms = await axios.get(
-          "https://gvi-pos-server.vercel.app/get-user-field-values?field=som"
+          "http://localhost:5000/get-user-field-values?field=som"
         );
         setDropdownData((prev) => ({ ...prev, soms: soms.data }));
       } catch (error) {
@@ -149,9 +149,7 @@ const CreateUserPage = () => {
   const fetchOutlets = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, outlets: true }));
-      const outlets = await axios.get(
-        "https://gvi-pos-server.vercel.app/get-outlets"
-      );
+      const outlets = await axios.get("http://localhost:5000/get-outlets");
       setDropdownData((prev) => ({ ...prev, outlets: outlets.data }));
     } catch (error) {
       console.error("Error fetching outlets:", error);
@@ -187,7 +185,7 @@ const CreateUserPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("https://gvi-pos-server.vercel.app/api/users", newUser);
+      await axios.post("http://localhost:5000/api/users", newUser);
       toast.success("User created successfully!");
       // Reset form
       setNewUser({
@@ -234,7 +232,7 @@ const CreateUserPage = () => {
     try {
       setCreatingOutlet(true);
       const response = await axios.post(
-        "https://gvi-pos-server.vercel.app/add-new-outlet",
+        "http://localhost:5000/add-new-outlet",
         newOutlet
       );
 

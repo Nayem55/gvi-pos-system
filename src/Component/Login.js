@@ -25,7 +25,7 @@ const LoginForm = () => {
 
     try {
       const response = await axios.post(
-        "https://gvi-pos-server.vercel.app/login",
+        "http://localhost:5000/login",
         formData
       );
 

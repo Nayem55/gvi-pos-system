@@ -44,7 +44,7 @@ const DailyReport = () => {
       }
 
       const response = await axios.get(
-        `https://gvi-pos-server.vercel.app/sales-reports/${userId}`,
+        `http://localhost:5000/sales-reports/${userId}`,
         { params }
       );
       setReports(response.data);

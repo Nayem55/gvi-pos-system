@@ -14,9 +14,7 @@ const AlterCategoriesPage = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/all-category"
-      );
+      const response = await axios.get("http://localhost:5000/all-category");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -42,18 +40,15 @@ const AlterCategoriesPage = () => {
       setUpdatingProducts(true);
 
       // 1. First update the category name
-      await axios.put(`https://gvi-pos-server.vercel.app/categories/${id}`, {
+      await axios.put(`http://localhost:5000/categories/${id}`, {
         name: editedName,
       });
 
       // 2. Then update all products with this category
-      await axios.put(
-        "https://gvi-pos-server.vercel.app/update-products-category",
-        {
-          oldCategory: oldName,
-          newCategory: editedName,
-        }
-      );
+      await axios.put("http://localhost:5000/update-products-category", {
+        oldCategory: oldName,
+        newCategory: editedName,
+      });
 
       toast.success("Category and related products updated successfully!");
       setEditingId(null);

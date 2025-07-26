@@ -164,7 +164,7 @@ const StockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/api/stock-movement",
+        "http://localhost:5000/api/stock-movement",
         { params }
       );
 

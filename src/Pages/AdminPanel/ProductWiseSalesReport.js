@@ -37,7 +37,7 @@ const ProductWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/api/sales/product-wise",
+        "http://localhost:5000/api/sales/product-wise",
         { params }
       );
       setSalesData(response.data);
@@ -65,7 +65,7 @@ const ProductWiseSalesReport = () => {
       params.productName = productName;
 
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/api/sales/product-wise/outlet-details",
+        "http://localhost:5000/api/sales/product-wise/outlet-details",
         { params }
       );
 

@@ -47,8 +47,8 @@ const BrandTargetPage = () => {
     const fetchData = async () => {
       try {
         const [usersRes, brandsRes] = await Promise.all([
-          axios.get("https://gvi-pos-server.vercel.app/getAllUser"),
-          axios.get("https://gvi-pos-server.vercel.app/brands"),
+          axios.get("http://localhost:5000/getAllUser"),
+          axios.get("http://localhost:5000/brands"),
         ]);
         setUsers(usersRes.data);
         setBrands(brandsRes.data);
@@ -65,12 +65,9 @@ const BrandTargetPage = () => {
       if (!year || !month) return;
 
       try {
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/brandTargets",
-          {
-            params: { year, month },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/brandTargets", {
+          params: { year, month },
+        });
 
         // Transform targets into a more usable structure
         const targetsMap = {};
@@ -123,7 +120,7 @@ const BrandTargetPage = () => {
           target: parseFloat(target),
         }));
 
-      await axios.post("https://gvi-pos-server.vercel.app/brandTargets", {
+      await axios.post("http://localhost:5000/brandTargets", {
         userID,
         year: parseInt(year),
         month: parseInt(month),
@@ -133,12 +130,9 @@ const BrandTargetPage = () => {
       toast.success("Targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get(
-        "https://gvi-pos-server.vercel.app/brandTargets",
-        {
-          params: { year, month },
-        }
-      );
+      const res = await axios.get("http://localhost:5000/brandTargets", {
+        params: { year, month },
+      });
 
       const updatedTargets = {};
       res.data.forEach((userDoc) => {
@@ -182,7 +176,7 @@ const BrandTargetPage = () => {
               target: parseFloat(target),
             }));
 
-          return axios.post("https://gvi-pos-server.vercel.app/brandTargets", {
+          return axios.post("http://localhost:5000/brandTargets", {
             userID,
             year: parseInt(year),
             month: parseInt(month),
@@ -195,12 +189,9 @@ const BrandTargetPage = () => {
       toast.success("All targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get(
-        "https://gvi-pos-server.vercel.app/brandTargets",
-        {
-          params: { year, month },
-        }
-      );
+      const res = await axios.get("http://localhost:5000/brandTargets", {
+        params: { year, month },
+      });
 
       const updatedTargets = {};
       res.data.forEach((userDoc) => {

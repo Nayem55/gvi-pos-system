@@ -54,15 +54,12 @@ const CategoryWiseSalesReport = () => {
         : dayjs().month() + 1;
 
       try {
-        const res = await axios.get(
-          "https://gvi-pos-server.vercel.app/categoryTargets",
-          {
-            params: {
-              year: currentYear,
-              month: currentMonth,
-            },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/categoryTargets", {
+          params: {
+            year: currentYear,
+            month: currentMonth,
+          },
+        });
 
         // Transform targets into the same structure as CategoryTargetPage
         const targetsMap = {};
@@ -94,7 +91,7 @@ const CategoryWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/sales/category-wise",
+        "http://localhost:5000/sales/category-wise",
         { params }
       );
       setSalesData(response.data);
@@ -135,7 +132,7 @@ const CategoryWiseSalesReport = () => {
       params.category = category;
 
       const outletSalesRes = await axios.get(
-        "https://gvi-pos-server.vercel.app/sales/category-wise/outlet-details",
+        "http://localhost:5000/sales/category-wise/outlet-details",
         { params }
       );
 

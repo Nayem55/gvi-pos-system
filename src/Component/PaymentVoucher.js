@@ -62,19 +62,16 @@ export default function PaymentVoucher({
     );
 
     try {
-      const dueResponse = await axios.put(
-        "https://gvi-pos-server.vercel.app/update-due",
-        {
-          outlet: user.outlet,
-          currentDue: currentDue - parseFloat(formData.amount),
-        }
-      );
+      const dueResponse = await axios.put("http://localhost:5000/update-due", {
+        outlet: user.outlet,
+        currentDue: currentDue - parseFloat(formData.amount),
+      });
 
       if (!dueResponse.data.success) {
         throw new Error("Failed to update due amount");
       }
 
-      await axios.post("https://gvi-pos-server.vercel.app/money-transfer", {
+      await axios.post("http://localhost:5000/money-transfer", {
         outlet: user.outlet,
         userId: user._id,
         SO: user.name,

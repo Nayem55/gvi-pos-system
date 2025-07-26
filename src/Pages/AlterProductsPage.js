@@ -18,14 +18,12 @@ const AlterProductsPage = () => {
     brands: false,
   });
 
-  const API_URL = "https://gvi-pos-server.vercel.app/products";
+  const API_URL = "http://localhost:5000/products";
 
   const fetchCategories = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, categories: true }));
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/categories"
-      );
+      const response = await axios.get("http://localhost:5000/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -38,9 +36,7 @@ const AlterProductsPage = () => {
   const fetchBrands = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, brands: true }));
-      const response = await axios.get(
-        "https://gvi-pos-server.vercel.app/brands"
-      );
+      const response = await axios.get("http://localhost:5000/brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
