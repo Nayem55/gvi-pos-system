@@ -148,6 +148,7 @@ const Accounts = () => {
   // Updated exportToPDF function with proper debit/credit categorization
   const exportToPDF = () => {
     if (!reportData) return;
+    console.log(reportData)
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm" });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -157,49 +158,61 @@ const Accounts = () => {
     doc.setFont("times", "normal");
     doc.setFontSize(12);
 
-    // === HEADER ===
+    // === HEADER: Dealer and Date ===
     doc.text(
       `Dealer  : ${reportData.transactions[0].outlet.replace("_", " ")}`,
       marginX + 2,
       y
     );
-    // doc.text("From : RL", pageWidth / 2 + 10, y);
     doc.text(
-      `Date : ${dayjs().format("D-MMM-YY")}`,
+      `Proprietor  : ${reportData.transactions[0].SO.replace("_", " ")}`,
+      marginX + 2,
+      y + 10
+    );
+    doc.text(
+      `Printed Date : ${dayjs().format("D-MMM-YY")}`,
       pageWidth - marginX - 2,
       y,
       { align: "right" }
     );
-    y += 8;
-
-    doc.setFont("times", "bold");
-    doc.text("Sub: Confirmation of Accounts", marginX + 2, y);
-    doc.setFont("times", "normal");
-    y += 6;
     doc.text(
+      `Printed By : ${user.name}`,
+      pageWidth - marginX - 2,
+      y+10,
+      { align: "right" }
+    );
+    y += 25;
+
+    // === CENTERED SUBJECT AND PARAGRAPH ===
+    const paragraphs = [
+      "Sub: Confirmation of Accounts",
       `${dayjs(dateRange.start).format("D-MMM-YY")} to ${dayjs(
         dateRange.end
       ).format("D-MMM-YY")}`,
-      marginX + 2,
-      y
-    );
-    y += 10;
-
-    // === PARAGRAPH ===
-    const paragraphs = [
       "Given below is the details of your Accounts as standing in my/our Books of Accounts for the above mentioned period.",
       "Kindly return 3 copies stating your I.T. Permanent A/c No., duly signed and sealed, in confirmation of the same.",
       "Please note that if no reply is received from you within a fortnight, it will be assumed that you have accepted the balance shown below.",
     ];
-    paragraphs.forEach((p) => {
-      const lines = doc.splitTextToSize(p, pageWidth - marginX * 2);
-      doc.text(lines, marginX, y);
-      y += lines.length * 6;
-    });
+
+    doc.setFont("times", "bold");
+    doc.text(paragraphs[0], pageWidth / 2, y, { align: "center" });
+    y += 6;
+
+    doc.setFont("times", "normal");
+    doc.text(paragraphs[1], pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    for (let i = 2; i < paragraphs.length; i++) {
+      const lines = doc.splitTextToSize(paragraphs[i], pageWidth - marginX * 2);
+      lines.forEach((line) => {
+        doc.text(line, pageWidth / 2, y, { align: "center" });
+        y += 6;
+      });
+    }
 
     y += 4;
 
-    // === TRANSACTIONS ===
+    // === PREPARE TRANSACTIONS ===
     const debit = [];
     const credit = [];
 
@@ -243,7 +256,7 @@ const Accounts = () => {
     const headerBoxY = y;
     const rowHeight = 8;
     doc.setDrawColor(0);
-    doc.rect(colLeftX, y - 6, pageWidth - marginX * 2, rowHeight); // Header box
+    doc.rect(colLeftX, y - 6, pageWidth - marginX * 2, rowHeight);
 
     doc.setFont("times", "bold");
     doc.text("Date", colLeftX + 1, y);
@@ -301,16 +314,16 @@ const Accounts = () => {
       y += 6;
     }
 
-    // === VERTICAL DIVIDER (snaps to table) ===
+    // === VERTICAL DIVIDER (aligned) ===
     doc.setDrawColor(180);
-    doc.line(verticalDividerX, headerBoxY - 6, verticalDividerX, y + 10);
+    doc.line(verticalDividerX, headerBoxY - 6, verticalDividerX, y);
 
     // === BOTTOM BORDER ===
     doc.line(marginX, y, pageWidth - marginX, y);
 
     y += 6;
 
-    // === TOTALS (with margin-top) ===
+    // === TOTALS ===
     doc.setFont("times", "bold");
     doc.text("TOTAL", colLeftX + colWidths.date + colGap, y);
     doc.text(

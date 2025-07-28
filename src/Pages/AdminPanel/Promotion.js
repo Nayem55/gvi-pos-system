@@ -11,6 +11,7 @@ dayjs.locale("en");
 
 export default function PromotionalPage() {
   const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [selectedPromotions, setSelectedPromotions] = useState({});
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -36,6 +37,7 @@ export default function PromotionalPage() {
     setLoading(true);
     try {
       let productsData = [];
+      let allProductsData = [];
 
       if (debouncedSearch.trim()) {
         const response = await axios.get(
@@ -47,11 +49,14 @@ export default function PromotionalPage() {
         const res = await axios.get(
           `http://localhost:5000/products?page=${currentPage}`
         );
+        const res2 = await axios.get(`http://localhost:5000/all-products`);
         productsData = res.data.products;
+        allProductsData = res2.data;
         setTotalPages(res.data.totalPages);
       }
 
       setProducts(productsData);
+      setAllProducts(allProductsData);
 
       const initialPromotions = {};
       productsData.forEach((product) => {
@@ -398,9 +403,11 @@ export default function PromotionalPage() {
   };
 
   const downloadDemoFile = () => {
-    const demoData = products.map((product) => ({
+    const demoData = allProducts.map((product) => ({
       "Product ID": product._id,
       "Product Name": product.name,
+      "Price DP": product.dp,
+      "Price TP": product.tp,
       "Promo Type": "quantity",
       "Paid Quantity": "",
       "Free Quantity": "",
@@ -438,7 +445,7 @@ export default function PromotionalPage() {
     );
 
     // Add example data
-    if (products.length > 0) {
+    if (allProducts.length > 0) {
       XLSX.utils.sheet_add_aoa(
         worksheet,
         [["", "", "", "", "", "", "2023-12-01", "2023-12-31"]],
