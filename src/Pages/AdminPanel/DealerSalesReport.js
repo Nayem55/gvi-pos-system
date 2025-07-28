@@ -6,7 +6,7 @@ import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
 
 const API_CONFIG = {
-  baseURL: "https://gvi-pos-server.vercel.app",
+  baseURL: "http://localhost:5000",
   timeout: 50000,
 };
 

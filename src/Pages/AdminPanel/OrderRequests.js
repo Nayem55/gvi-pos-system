@@ -14,7 +14,7 @@ import {
 
 /* ─────────────────────────── axios helper ─────────────────────────── */
 const api = axios.create({
-  baseURL: "https://gvi-pos-server.vercel.app",
+  baseURL: "http://localhost:5000",
   timeout: 50000,
 });
 

@@ -6,7 +6,7 @@ import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
 
 const API_CONFIG = {
-  baseURL: "https://gvi-pos-server.vercel.app",
+  baseURL: "http://localhost:5000",
   timeout: 5000000,
 };
 
@@ -18,10 +18,10 @@ const api = axios.create({
 const SalarySheet = () => {
   const [stockData, setStockData] = useState([]);
   const [targetsData, setTargetsData] = useState({});
-  const [attendanceData, setAttendanceData] = useState({});
-  const [workingDaysData, setWorkingDaysData] = useState(0); // Initialize as 0 instead of {}
-  const [holidaysData, setHolidaysData] = useState([]);
-  const [leaveData, setLeaveData] = useState({});
+  // const [attendanceData, setAttendanceData] = useState({});
+  // const [workingDaysData, setWorkingDaysData] = useState(0);
+  // const [holidaysData, setHolidaysData] = useState([]);
+  // const [leaveData, setLeaveData] = useState({});
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -49,172 +49,172 @@ const SalarySheet = () => {
     return "";
   }, []);
 
-  const fetchWorkingDays = useCallback(async (month) => {
-    try {
-      setLoading((prev) => ({ ...prev, workingDays: true }));
-      const response = await axios.get(
-        `https://attendance-app-server-blue.vercel.app/api/workingdays`,
-        { params: { month } }
-      );
-      setWorkingDaysData(response.data.workingDays);
-    } catch (error) {
-      console.error("Error fetching working days:", error);
-      setWorkingDaysData(0);
-    } finally {
-      setLoading((prev) => ({ ...prev, workingDays: false }));
-    }
-  }, []);
+  // const fetchWorkingDays = useCallback(async (month) => {
+  //   try {
+  //     setLoading((prev) => ({ ...prev, workingDays: true }));
+  //     const response = await axios.get(
+  //       `https://attendance-app-server-blue.vercel.app/api/workingdays`,
+  //       { params: { month } }
+  //     );
+  //     setWorkingDaysData(response.data.workingDays);
+  //   } catch (error) {
+  //     console.error("Error fetching working days:", error);
+  //     setWorkingDaysData(0);
+  //   } finally {
+  //     setLoading((prev) => ({ ...prev, workingDays: false }));
+  //   }
+  // }, []);
 
-  const fetchHolidays = useCallback(async (month) => {
-    try {
-      setLoading((prev) => ({ ...prev, holidays: true }));
-      const [year, monthNumber] = month.split("-");
-      const response = await axios.get(
-        `https://attendance-app-server-blue.vercel.app/api/holidays`,
-        { params: { year, month: monthNumber } }
-      );
-      setHolidaysData(response.data.holidays || []);
-    } catch (error) {
-      console.error("Error fetching holidays:", error);
-      setHolidaysData([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, holidays: false }));
-    }
-  }, []);
+  // const fetchHolidays = useCallback(async (month) => {
+  //   try {
+  //     setLoading((prev) => ({ ...prev, holidays: true }));
+  //     const [year, monthNumber] = month.split("-");
+  //     const response = await axios.get(
+  //       `https://attendance-app-server-blue.vercel.app/api/holidays`,
+  //       { params: { year, month: monthNumber } }
+  //     );
+  //     setHolidaysData(response.data.holidays || []);
+  //   } catch (error) {
+  //     console.error("Error fetching holidays:", error);
+  //     setHolidaysData([]);
+  //   } finally {
+  //     setLoading((prev) => ({ ...prev, holidays: false }));
+  //   }
+  // }, []);
 
-  const fetchLeaveData = useCallback(async (month) => {
-    try {
-      setLoading((prev) => ({ ...prev, leaves: true }));
-      const [year, monthNumber] = month.split("-");
-      const usersResponse = await axios.get("http://localhost:5000/getAllUser");
-      const users = usersResponse.data.filter((user) => user.attendance_id);
-      const leaveRecords = {};
+  // const fetchLeaveData = useCallback(async (month) => {
+  //   try {
+  //     setLoading((prev) => ({ ...prev, leaves: true }));
+  //     const [year, monthNumber] = month.split("-");
+  //     const usersResponse = await axios.get("http://localhost:5000/getAllUser");
+  //     const users = usersResponse.data.filter((user) => user.attendance_id);
+  //     const leaveRecords = {};
 
-      await Promise.all(
-        users.map(async (user) => {
-          try {
-            const response = await axios.get(
-              `https://attendance-app-server-blue.vercel.app/api/leave-requests/user/${user.attendance_id}/monthly`,
-              { params: { month: monthNumber, year } }
-            );
-            leaveRecords[user._id] = response.data.leaveDays || 0;
-          } catch (error) {
-            console.error(
-              `Error fetching leave data for user ${user._id}:`,
-              error
-            );
-            leaveRecords[user._id] = 0;
-          }
-        })
-      );
+  //     await Promise.all(
+  //       users.map(async (user) => {
+  //         try {
+  //           const response = await axios.get(
+  //             `https://attendance-app-server-blue.vercel.app/api/leave-requests/user/${user.attendance_id}/monthly`,
+  //             { params: { month: monthNumber, year } }
+  //           );
+  //           leaveRecords[user._id] = response.data.leaveDays || 0;
+  //         } catch (error) {
+  //           console.error(
+  //             `Error fetching leave data for user ${user._id}:`,
+  //             error
+  //           );
+  //           leaveRecords[user._id] = 0;
+  //         }
+  //       })
+  //     );
 
-      setLeaveData(leaveRecords);
-    } catch (error) {
-      console.error("Error fetching leave data:", error);
-      setLeaveData({});
-    } finally {
-      setLoading((prev) => ({ ...prev, leaves: false }));
-    }
-  }, []);
+  //     setLeaveData(leaveRecords);
+  //   } catch (error) {
+  //     console.error("Error fetching leave data:", error);
+  //     setLeaveData({});
+  //   } finally {
+  //     setLoading((prev) => ({ ...prev, leaves: false }));
+  //   }
+  // }, []);
 
-  const fetchAttendanceData = useCallback(async (month) => {
-    try {
-      setLoading((prev) => ({ ...prev, attendance: true }));
-      const [year, monthNumber] = month.split("-");
-      const usersResponse = await axios.get("http://localhost:5000/getAllUser");
-      const users = usersResponse.data.filter((user) => user.attendance_id);
-      const attendanceRecords = {};
+  // const fetchAttendanceData = useCallback(async (month) => {
+  //   try {
+  //     setLoading((prev) => ({ ...prev, attendance: true }));
+  //     const [year, monthNumber] = month.split("-");
+  //     const usersResponse = await axios.get("http://localhost:5000/getAllUser");
+  //     const users = usersResponse.data.filter((user) => user.attendance_id);
+  //     const attendanceRecords = {};
 
-      await Promise.all(
-        users.map(async (user) => {
-          try {
-            const checkInsResponse = await axios.get(
-              `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
-              { params: { month: monthNumber, year } }
-            );
-            const checkOutsResponse = await axios.get(
-              `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
-              { params: { month: monthNumber, year } }
-            );
+  //     await Promise.all(
+  //       users.map(async (user) => {
+  //         try {
+  //           const checkInsResponse = await axios.get(
+  //             `https://attendance-app-server-blue.vercel.app/api/checkins/${user.attendance_id}`,
+  //             { params: { month: monthNumber, year } }
+  //           );
+  //           const checkOutsResponse = await axios.get(
+  //             `https://attendance-app-server-blue.vercel.app/api/checkouts/${user.attendance_id}`,
+  //             { params: { month: monthNumber, year } }
+  //           );
 
-            const checkIns = checkInsResponse.data;
-            const checkOuts = checkOutsResponse.data;
-            let presentDays = 0;
-            let checkInCount = 0;
-            const dailyAttendance = {};
+  //           const checkIns = checkInsResponse.data;
+  //           const checkOuts = checkOutsResponse.data;
+  //           let presentDays = 0;
+  //           let checkInCount = 0;
+  //           const dailyAttendance = {};
 
-            for (let day = 1; day <= dayCount; day++) {
-              const date = `${year}-${monthNumber}-${String(day).padStart(
-                2,
-                "0"
-              )}`;
-              const checkIn = checkIns.find(
-                (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
-              );
-              const checkOut = checkOuts.find(
-                (checkout) => dayjs(checkout.time).format("YYYY-MM-DD") === date
-              );
+  //           for (let day = 1; day <= dayCount; day++) {
+  //             const date = `${year}-${monthNumber}-${String(day).padStart(
+  //               2,
+  //               "0"
+  //             )}`;
+  //             const checkIn = checkIns.find(
+  //               (checkin) => dayjs(checkin.time).format("YYYY-MM-DD") === date
+  //             );
+  //             const checkOut = checkOuts.find(
+  //               (checkout) => dayjs(checkout.time).format("YYYY-MM-DD") === date
+  //             );
 
-              const isPresent = checkIn;
-              if (isPresent) {
-                presentDays++;
-                checkInCount++;
-              }
+  //             const isPresent = checkIn;
+  //             if (isPresent) {
+  //               presentDays++;
+  //               checkInCount++;
+  //             }
 
-              dailyAttendance[day] = {
-                in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
-                out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
-                present: isPresent,
-              };
-            }
+  //             dailyAttendance[day] = {
+  //               in: checkIn ? dayjs(checkIn.time).format("hh:mm A") : "",
+  //               out: checkOut ? dayjs(checkOut.time).format("hh:mm A") : "",
+  //               present: isPresent,
+  //             };
+  //           }
 
-            const holidaysCount = holidaysData.filter(
-              (holiday) => dayjs(holiday.date).format("YYYY-MM") === month
-            ).length;
+  //           const holidaysCount = holidaysData.filter(
+  //             (holiday) => dayjs(holiday.date).format("YYYY-MM") === month
+  //           ).length;
 
-            const approvedLeave = leaveData[user._id] || 0;
-            const totalWorkingDays = workingDaysData;
-            const absentDays =
-              totalWorkingDays - presentDays - approvedLeave - holidaysCount;
-            const extraDays = Math.max(0, checkInCount - totalWorkingDays);
+  //           const approvedLeave = leaveData[user._id] || 0;
+  //           const totalWorkingDays = workingDaysData;
+  //           const absentDays =
+  //             totalWorkingDays - presentDays - approvedLeave - holidaysCount;
+  //           const extraDays = Math.max(0, checkInCount - totalWorkingDays);
 
-            attendanceRecords[user._id] = {
-              dailyAttendance,
-              totalWorkingDays,
-              holidays: dayCount - workingDaysData,
-              approvedLeave,
-              absentDays,
-              extraDays,
-              presentDays,
-              checkInCount,
-            };
-          } catch (error) {
-            console.error(
-              `Error fetching attendance for user ${user._id}:`,
-              error
-            );
-            attendanceRecords[user._id] = {
-              dailyAttendance: {},
-              totalWorkingDays: workingDaysData,
-              holidays: 0,
-              approvedLeave: 0,
-              absentDays: 0,
-              extraDays: 0,
-              presentDays: 0,
-              checkInCount: 0,
-            };
-          }
-        })
-      );
+  //           attendanceRecords[user._id] = {
+  //             dailyAttendance,
+  //             totalWorkingDays,
+  //             holidays: dayCount - workingDaysData,
+  //             approvedLeave,
+  //             absentDays,
+  //             extraDays,
+  //             presentDays,
+  //             checkInCount,
+  //           };
+  //         } catch (error) {
+  //           console.error(
+  //             `Error fetching attendance for user ${user._id}:`,
+  //             error
+  //           );
+  //           attendanceRecords[user._id] = {
+  //             dailyAttendance: {},
+  //             totalWorkingDays: workingDaysData,
+  //             holidays: 0,
+  //             approvedLeave: 0,
+  //             absentDays: 0,
+  //             extraDays: 0,
+  //             presentDays: 0,
+  //             checkInCount: 0,
+  //           };
+  //         }
+  //       })
+  //     );
 
-      setAttendanceData(attendanceRecords);
-    } catch (error) {
-      console.error("Error fetching attendance data:", error);
-      setAttendanceData({});
-    } finally {
-      setLoading((prev) => ({ ...prev, attendance: false }));
-    }
-  }, []);
+  //     setAttendanceData(attendanceRecords);
+  //   } catch (error) {
+  //     console.error("Error fetching attendance data:", error);
+  //     setAttendanceData({});
+  //   } finally {
+  //     setLoading((prev) => ({ ...prev, attendance: false }));
+  //   }
+  // }, []);
 
   const fetchTddaData = useCallback(async (month) => {
     try {
@@ -684,43 +684,43 @@ const SalarySheet = () => {
   useEffect(() => {
     if (selectedMonth) {
       fetchTargets();
-      fetchWorkingDays(selectedMonth);
-      fetchHolidays(selectedMonth);
-      fetchLeaveData(selectedMonth);
-      fetchAttendanceData(selectedMonth);
+      // fetchWorkingDays(selectedMonth);
+      // fetchHolidays(selectedMonth);
+      // fetchLeaveData(selectedMonth);
+      // fetchAttendanceData(selectedMonth);
       fetchTddaData(selectedMonth); // Add this line
     }
   }, [
     selectedMonth,
     fetchTargets,
-    fetchWorkingDays,
-    fetchHolidays,
-    fetchLeaveData,
-    fetchAttendanceData,
+    // fetchWorkingDays,
+    // fetchHolidays,
+    // fetchLeaveData,
+    // fetchAttendanceData,
     fetchTddaData, // Add this to dependencies
   ]);
 
   const isLoading =
     loading.stock ||
     loading.targets ||
-    loading.attendance ||
-    loading.workingDays ||
-    loading.holidays ||
-    loading.leaves ||
+    // loading.attendance ||
+    // loading.workingDays ||
+    // loading.holidays ||
+    // loading.leaves ||
     loading.tdda; // Add tdda loading check
 
   const exportToExcel = () => {
     const exportData = organizedReports.flatMap((zoneGroup) =>
       zoneGroup.reports.map((report) => {
-        const userAttendance = attendanceData[report.userId] || {
-          totalWorkingDays: workingDaysData,
-          holidays: 0,
-          approvedLeave: 0,
-          absentDays: 0,
-          extraDays: 0,
-          presentDays: 0,
-          checkInCount: 0,
-        };
+        // const userAttendance = attendanceData[report.userId] || {
+        //   totalWorkingDays: workingDaysData,
+        //   holidays: 0,
+        //   approvedLeave: 0,
+        //   absentDays: 0,
+        //   extraDays: 0,
+        //   presentDays: 0,
+        //   checkInCount: 0,
+        // };
 
         return {
           "User Name": report.name,
@@ -736,14 +736,14 @@ const SalarySheet = () => {
           "Office Return (DP)":
             report.officeReturn?.valueDP.toFixed(2) || "0.00",
           Collection: report.collection?.amount.toFixed(2) || "0.00",
-          "TD/DA Expense": tddaData[report.userId].toFixed(2), // Add this line
-          "Total Working Days": workingDaysData,
-          Holidays: dayCount - workingDaysData,
-          "Approved Leave": userAttendance.approvedLeave,
-          Absent: userAttendance.absentDays,
-          "Extra Days": userAttendance.extraDays,
-          "Present Days": userAttendance.presentDays,
-          "Total Check-Ins": userAttendance.checkInCount,
+          "TD/DA Expense": tddaData[report.userId].toFixed(2), 
+          // "Total Working Days": workingDaysData,
+          // Holidays: dayCount - workingDaysData,
+          // "Approved Leave": userAttendance.approvedLeave,
+          // Absent: userAttendance.absentDays,
+          // "Extra Days": userAttendance.extraDays,
+          // "Present Days": userAttendance.presentDays,
+          // "Total Check-Ins": userAttendance.checkInCount,
           "Achievement (%)": report.achievement.toFixed(1),
           "Transaction Count": report.transactionCount,
         };
@@ -964,12 +964,12 @@ const SalarySheet = () => {
                         <th className="p-2">Office Return (DP)</th>
                         <th className="p-2">Closing (DP)</th>
                         <th className="p-2">Collection</th>
-                        <th className="p-2">Working Days</th>
+                        {/* <th className="p-2">Working Days</th>
                         <th className="p-2">Holidays</th>
                         <th className="p-2">Approved Leave</th>
                         <th className="p-2">Absent</th>
                         <th className="p-2">Extra Days</th>
-                        <th className="p-2">Check-Ins</th>
+                        <th className="p-2">Check-Ins</th> */}
                         <th className="p-2">TD/DA</th>
                         <th className="p-2">Achievement</th>
                         <th className="p-2">Action</th>
@@ -977,7 +977,7 @@ const SalarySheet = () => {
                     </thead>
                     <tbody>
                       {beltGroup.reports.map((report, index) => {
-                        const userAttendance = attendanceData[
+                        {/* const userAttendance = attendanceData[
                           report.userId
                         ] || {
                           totalWorkingDays: workingDaysData,
@@ -987,7 +987,7 @@ const SalarySheet = () => {
                           extraDays: 0,
                           presentDays: 0,
                           checkInCount: 0,
-                        };
+                        }; */}
 
                         return (
                           <tr
@@ -1031,7 +1031,7 @@ const SalarySheet = () => {
                             <td className="border p-2 text-right">
                               {report.collection?.amount?.toFixed(2) || "0.00"}
                             </td>
-                            <td className="border p-2 text-center">
+                            {/* <td className="border p-2 text-center">
                               {workingDaysData}
                             </td>
                             <td className="border p-2 text-center">
@@ -1050,7 +1050,7 @@ const SalarySheet = () => {
                             </td>
                             <td className="border p-2 text-center">
                               {userAttendance.checkInCount}
-                            </td>
+                            </td> */}
                             <td className="border p-2 text-right">
                               {(tddaData[report.userId] || 0).toFixed(2)}
                             </td>

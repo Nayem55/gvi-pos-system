@@ -149,174 +149,206 @@ const Accounts = () => {
   const exportToPDF = () => {
     if (!reportData) return;
 
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-    });
-
-    const leftMargin = 20;
-    const rightMargin = 20;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const lineHeight = 7;
-    let currentY = 20;
+    const marginX = 15;
+    let y = 20;
 
-    // === Header Section ===
-    doc.setFont("helvetica", "normal");
+    doc.setFont("times", "normal");
     doc.setFontSize(12);
-    doc.text(`${selectedArea || "Outlet"}`, leftMargin, currentY);
-    currentY += lineHeight;
 
+    // === HEADER ===
     doc.text(
-      `Date : ${dayjs().format("DD-MMM-YY")}`,
-      pageWidth - rightMargin,
-      currentY,
+      `Dealer  : ${reportData.transactions[0].outlet.replace("_", " ")}`,
+      marginX + 2,
+      y
+    );
+    // doc.text("From : RL", pageWidth / 2 + 10, y);
+    doc.text(
+      `Date : ${dayjs().format("D-MMM-YY")}`,
+      pageWidth - marginX - 2,
+      y,
       { align: "right" }
     );
-    currentY += lineHeight * 2;
+    y += 8;
 
-    doc.setFontSize(14);
-    doc.setFont(undefined, "bold");
-    currentY += lineHeight;
-
-    doc.setFontSize(12);
-    doc.setFont(undefined, "normal");
+    doc.setFont("times", "bold");
+    doc.text("Sub: Confirmation of Accounts", marginX + 2, y);
+    doc.setFont("times", "normal");
+    y += 6;
     doc.text(
-      `${dayjs(dateRange.start).format("DD-MMM-YY")} to ${dayjs(
+      `${dayjs(dateRange.start).format("D-MMM-YY")} to ${dayjs(
         dateRange.end
-      ).format("DD-MMM-YY")}`,
-      leftMargin,
-      currentY
+      ).format("D-MMM-YY")}`,
+      marginX + 2,
+      y
     );
+    y += 10;
 
-    currentY += lineHeight;
+    // === PARAGRAPH ===
+    const paragraphs = [
+      "Given below is the details of your Accounts as standing in my/our Books of Accounts for the above mentioned period.",
+      "Kindly return 3 copies stating your I.T. Permanent A/c No., duly signed and sealed, in confirmation of the same.",
+      "Please note that if no reply is received from you within a fortnight, it will be assumed that you have accepted the balance shown below.",
+    ];
+    paragraphs.forEach((p) => {
+      const lines = doc.splitTextToSize(p, pageWidth - marginX * 2);
+      doc.text(lines, marginX, y);
+      y += lines.length * 6;
+    });
 
-    // === Prepare Table Data ===
-    const debitTransactions = reportData.transactions.filter((t) =>
-      ["primary"].includes(t.type.toLowerCase())
-    );
-    const creditTransactions = reportData.transactions.filter((t) =>
-      ["payment", "office return", "return"].includes(t.type.toLowerCase())
-    );
+    y += 4;
+
+    // === TRANSACTIONS ===
+    const debit = [];
+    const credit = [];
 
     if (reportData.openingDue > 0) {
-      debitTransactions.unshift({
+      debit.push({
         date: dateRange.start,
-        type: "OPENING",
+        type: "Opening Balance",
         amount: reportData.openingDue,
       });
     }
 
-    let totalDebit = 0;
-    let totalCredit = 0;
-
-    const maxRows = Math.max(
-      debitTransactions.length,
-      creditTransactions.length
-    );
-    const tableBody = [];
-
-    for (let i = 0; i < maxRows; i++) {
-      const debit = debitTransactions[i] || {};
-      const credit = creditTransactions[i] || {};
-
-      const debitAmount = debit.amount || 0;
-      const creditAmount = credit.amount || 0;
-
-      totalDebit += debitAmount;
-      totalCredit += creditAmount;
-
-      tableBody.push([
-        debit.date ? dayjs(debit.date).format("DD-MMM-YY") : "",
-        debit.type ? debit.type.toUpperCase().replace(/_/g, " ") : "",
-        debitAmount ? debitAmount.toFixed(2) : "",
-        credit.date ? dayjs(credit.date).format("DD-MMM-YY") : "",
-        credit.type
-          ? `${credit.type.toUpperCase().replace(/_/g, " ")}${
-              credit.paymentMode ? ` (${credit.paymentMode.toUpperCase()})` : ""
-            }`
-          : "",
-        creditAmount ? creditAmount.toFixed(2) : "",
-      ]);
-    }
-
-    // Add total row at the end
-    tableBody.push([
-      "", // empty cell
-      "TOTAL", // label for debit
-      totalDebit.toFixed(2), // total debit
-      "", // empty cell
-      "TOTAL", // label for credit
-      totalCredit.toFixed(2), // total credit
-    ]);
-
-    // === Draw Table (Header + Body) ===
-    const colWidths = [20, 40, 25, 20, 40, 25];
-
-    autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Date", "Particulars", "Debit", "Date", "Particulars", "Credit"]],
-      body: tableBody,
-      margin: { left: leftMargin, right: rightMargin },
-      columnStyles: {
-        0: { cellWidth: colWidths[0] },
-        1: { cellWidth: colWidths[1] },
-        2: { cellWidth: colWidths[2], halign: "right" },
-        3: { cellWidth: colWidths[3] },
-        4: { cellWidth: colWidths[4] },
-        5: { cellWidth: colWidths[5], halign: "right" },
-      },
-      styles: {
-        fontSize: 10,
-        cellPadding: 2,
-        overflow: "linebreak",
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: [220, 220, 220],
-        textColor: [0, 0, 0],
-        fontStyle: "bold",
-        halign: "center",
-      },
-      bodyStyles: {
-        lineWidth: 0.1,
-      },
-      didDrawCell: (data) => {
-        if (
-          data.row.index === tableBody.length - 1 &&
-          data.column.index === 1
-        ) {
-          doc.setFont("bold");
-        }
-      },
+    reportData.transactions.forEach((txn) => {
+      const type = txn.type.toLowerCase();
+      if (["primary"].includes(type)) {
+        debit.push({ date: txn.date, type: txn.type, amount: txn.amount });
+      } else if (
+        [
+          "payment",
+          "office return",
+          "return",
+          "sales return",
+          "discount paid",
+        ].includes(type)
+      ) {
+        credit.push({ date: txn.date, type: txn.type, amount: txn.amount });
+      }
     });
 
-    const tableEndY = doc.lastAutoTable.finalY + 10;
+    const maxRows = Math.max(debit.length, credit.length);
+    const colGap = 5;
+    const colLeftX = marginX;
+    const colRightX = pageWidth / 2 + 2;
+    const verticalDividerX = pageWidth / 2;
+    const colWidths = {
+      date: 24,
+      particulars: 42,
+      amount: 25,
+    };
 
-    // === Summary Section ===
+    // === TABLE HEADER BOX ===
+    const headerBoxY = y;
+    const rowHeight = 8;
     doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.line(leftMargin, tableEndY, pageWidth - rightMargin, tableEndY);
+    doc.rect(colLeftX, y - 6, pageWidth - marginX * 2, rowHeight); // Header box
 
-    doc.setFontSize(12);
-    doc.setFont(undefined, "bold");
-    doc.text("Closing Balance", leftMargin, tableEndY + 10);
+    doc.setFont("times", "bold");
+    doc.text("Date", colLeftX + 1, y);
+    doc.text("Particulars", colLeftX + colWidths.date + colGap, y);
     doc.text(
-      reportData.closingDue.toFixed(2),
-      pageWidth - rightMargin,
-      tableEndY + 10,
+      "Debit Amount",
+      colLeftX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+      y,
       { align: "right" }
     );
 
-    // === Footer Section ===
-    const footerY = tableEndY + 25;
-    doc.setFont(undefined, "normal");
-    doc.text("Yours faithfully,", leftMargin, footerY + 10);
-    doc.text("Authorized Signatory", leftMargin, footerY + 26);
-
-    // === Save File ===
-    doc.save(
-      `Account_Statement_${selectedArea}_${dayjs().format("YYYYMMDD")}.pdf`
+    doc.text("Date", colRightX + 1, y);
+    doc.text("Particulars", colRightX + colWidths.date + colGap, y);
+    doc.text(
+      "Credit Amount",
+      colRightX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+      y,
+      { align: "right" }
     );
+
+    y += 8;
+    doc.setFont("times", "normal");
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    for (let i = 0; i < maxRows; i++) {
+      const d = debit[i];
+      const c = credit[i];
+
+      if (d) {
+        doc.text(dayjs(d.date).format("D-MMM-YY"), colLeftX, y);
+        doc.text(d.type, colLeftX + colWidths.date + colGap, y);
+        doc.text(
+          d.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+          colLeftX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+          y,
+          { align: "right" }
+        );
+        totalDebit += d.amount;
+      }
+
+      if (c) {
+        doc.text(dayjs(c.date).format("D-MMM-YY"), colRightX, y);
+        doc.text(c.type, colRightX + colWidths.date + colGap, y);
+        doc.text(
+          c.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+          colRightX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+          y,
+          { align: "right" }
+        );
+        totalCredit += c.amount;
+      }
+
+      y += 6;
+    }
+
+    // === VERTICAL DIVIDER (snaps to table) ===
+    doc.setDrawColor(180);
+    doc.line(verticalDividerX, headerBoxY - 6, verticalDividerX, y + 10);
+
+    // === BOTTOM BORDER ===
+    doc.line(marginX, y, pageWidth - marginX, y);
+
+    y += 6;
+
+    // === TOTALS (with margin-top) ===
+    doc.setFont("times", "bold");
+    doc.text("TOTAL", colLeftX + colWidths.date + colGap, y);
+    doc.text(
+      totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+      colLeftX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+      y,
+      { align: "right" }
+    );
+
+    doc.text("TOTAL", colRightX + colWidths.date + colGap, y);
+    doc.text(
+      totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+      colRightX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+      y,
+      { align: "right" }
+    );
+
+    y += 8;
+
+    // === CLOSING BALANCE ===
+    const closing = totalDebit - totalCredit;
+    doc.text("Closing Balance", colRightX + colWidths.date + colGap, y);
+    doc.text(
+      closing.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+      colRightX + colWidths.date + colWidths.particulars + colGap * 2 + 6,
+      y,
+      { align: "right" }
+    );
+
+    // === FOOTER ===
+    y += 25;
+    doc.setFont("times", "normal");
+    doc.text("I/We hereby confirm the above", marginX, y);
+    y += 20;
+    doc.text("Yours faithfully,", marginX, y);
+    doc.text("Authorized Signatory", marginX, y + 10);
+
+    doc.save(`Ledger_${selectedArea}_${dayjs().format("YYYYMMDD")}.pdf`);
   };
 
   // const exportToPDF = () => {
