@@ -148,7 +148,7 @@ const Accounts = () => {
   // Updated exportToPDF function with proper debit/credit categorization
   const exportToPDF = () => {
     if (!reportData) return;
-    console.log(reportData)
+    console.log(reportData);
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm" });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -175,44 +175,47 @@ const Accounts = () => {
       y,
       { align: "right" }
     );
-    doc.text(
-      `Printed By : ${user.name}`,
-      pageWidth - marginX - 2,
-      y+10,
-      { align: "right" }
-    );
+    doc.text(`Printed By : ${user.name}`, pageWidth - marginX - 2, y + 10, {
+      align: "right",
+    });
     y += 25;
 
-    // === CENTERED SUBJECT AND PARAGRAPH ===
-    const paragraphs = [
-      "Sub: Confirmation of Accounts",
-      `${dayjs(dateRange.start).format("D-MMM-YY")} to ${dayjs(
-        dateRange.end
-      ).format("D-MMM-YY")}`,
-      "Given below is the details of your Accounts as standing in my/our Books of Accounts for the above mentioned period.",
-      "Kindly return 3 copies stating your I.T. Permanent A/c No., duly signed and sealed, in confirmation of the same.",
-      "Please note that if no reply is received from you within a fortnight, it will be assumed that you have accepted the balance shown below.",
-    ];
-
+    // === CENTERED SUBJECT & DATE RANGE ===
     doc.setFont("times", "bold");
-    doc.text(paragraphs[0], pageWidth / 2, y, { align: "center" });
+    doc.text("Sub: Confirmation of Accounts", pageWidth / 2, y, {
+      align: "center",
+    });
     y += 6;
 
     doc.setFont("times", "normal");
-    doc.text(paragraphs[1], pageWidth / 2, y, { align: "center" });
+    doc.text(
+      `${dayjs(dateRange.start).format("D-MMM-YY")} to ${dayjs(
+        dateRange.end
+      ).format("D-MMM-YY")}`,
+      pageWidth / 2,
+      y,
+      { align: "center" }
+    );
     y += 10;
 
-    for (let i = 2; i < paragraphs.length; i++) {
-      const lines = doc.splitTextToSize(paragraphs[i], pageWidth - marginX * 2);
-      lines.forEach((line) => {
-        doc.text(line, pageWidth / 2, y, { align: "center" });
-        y += 6;
+    // === LEFT-ALIGNED PARAGRAPHS ===
+    const paragraphs = [
+      "Given below is the details of your Accounts as standing in my/our Books of Accounts for the above mentioned period.",
+      "Kindly return 3 copies stating your I.T. Permanent A/c No., duly signed and sealed, in confirmation of the same. Please note that if no reply is received from you within a fortnight, it will be assumed that you have accepted the balance shown below.",
+    ];
+
+    paragraphs.forEach((line, index) => {
+      const split = doc.splitTextToSize(line, pageWidth - marginX * 2);
+      split.forEach((l) => {
+        doc.text(l, marginX, y);
+        y += 6; // line spacing within the same paragraph
       });
-    }
+      y += 4; // extra space *between* paragraphs only
+    });
 
-    y += 4;
+    y += 10;
 
-    // === PREPARE TRANSACTIONS ===
+    // === TRANSACTION DATA SPLIT ===
     const debit = [];
     const credit = [];
 
@@ -246,11 +249,7 @@ const Accounts = () => {
     const colLeftX = marginX;
     const colRightX = pageWidth / 2 + 2;
     const verticalDividerX = pageWidth / 2;
-    const colWidths = {
-      date: 24,
-      particulars: 42,
-      amount: 25,
-    };
+    const colWidths = { date: 24, particulars: 42, amount: 25 };
 
     // === TABLE HEADER BOX ===
     const headerBoxY = y;
@@ -314,16 +313,15 @@ const Accounts = () => {
       y += 6;
     }
 
-    // === VERTICAL DIVIDER (aligned) ===
+    // === VERTICAL DIVIDER (SNAPPED) ===
     doc.setDrawColor(180);
     doc.line(verticalDividerX, headerBoxY - 6, verticalDividerX, y);
 
-    // === BOTTOM BORDER ===
+    // === TABLE BOTTOM BORDER ===
     doc.line(marginX, y, pageWidth - marginX, y);
-
     y += 6;
 
-    // === TOTALS ===
+    // === TOTALS SECTION ===
     doc.setFont("times", "bold");
     doc.text("TOTAL", colLeftX + colWidths.date + colGap, y);
     doc.text(
