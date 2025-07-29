@@ -60,7 +60,7 @@ export default function PosVoucher({ stock, setStock }) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://localhost:5000/search-product",
+          "http://192.168.0.30:5000/search-product",
           {
             params: { search: query, type: searchType },
           }
@@ -79,7 +79,7 @@ export default function PosVoucher({ stock, setStock }) {
   const addToCart = async (product) => {
     try {
       const stockResponse = await axios.get(
-        "http://localhost:5000/outlet-stock",
+        "http://192.168.0.30:5000/outlet-stock",
         {
           params: { barcode: product.barcode, outlet: user.outlet },
         }
@@ -221,10 +221,10 @@ export default function PosVoucher({ stock, setStock }) {
         })),
       };
 
-      await axios.post("http://localhost:5000/add-sale-report", saleEntry);
+      await axios.post("http://192.168.0.30:5000/add-sale-report", saleEntry);
 
       const updatePromises = cart.map(async (item) => {
-        await axios.post("http://localhost:5000/stock-transactions", {
+        await axios.post("http://192.168.0.30:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "secondary",

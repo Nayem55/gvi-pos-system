@@ -164,7 +164,7 @@ const StockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "http://localhost:5000/api/stock-movement",
+        "http://192.168.0.30:5000/api/stock-movement",
         { params }
       );
 

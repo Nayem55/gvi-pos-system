@@ -1,75 +1,98 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  SaveAll,
+  X,
+  Check,
+  Loader2,
+  Search,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import AdminSidebar from "../Component/AdminSidebar";
 
 const AlterProductsPage = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [fetchingData, setFetchingData] = useState({
-    categories: false,
-    brands: false,
+  const [bulkUpdateMode, setBulkUpdateMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [bulkUpdateFields, setBulkUpdateFields] = useState({
+    dp: "",
+    tp: "",
+    mrp: "",
   });
+  const [searchTerm, setSearchTerm] = useState("");
 
   const API_URL = "http://localhost:5000/products";
 
   const fetchCategories = async () => {
     try {
-      setFetchingData((prev) => ({ ...prev, categories: true }));
       const response = await axios.get("http://localhost:5000/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
       toast.error("Failed to load categories");
-    } finally {
-      setFetchingData((prev) => ({ ...prev, categories: false }));
     }
   };
 
   const fetchBrands = async () => {
     try {
-      setFetchingData((prev) => ({ ...prev, brands: true }));
       const response = await axios.get("http://localhost:5000/brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
       toast.error("Failed to load brands");
-    } finally {
-      setFetchingData((prev) => ({ ...prev, brands: false }));
     }
   };
 
-  const fetchProducts = async (page) => {
+  const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}?page=${page}`);
-      setProducts(res.data.products);
-      setTotalPages(res.data.totalPages);
+      const res = await axios.get(`http://localhost:5000/all-products`);
+      setProducts(res.data);
+      setFilteredProducts(res.data);
     } catch (error) {
       console.error("Error fetching products:", error);
+      toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts(currentPage);
+    fetchProducts();
     fetchCategories();
     fetchBrands();
-  }, [currentPage]);
+  }, []);
 
   const handleInputChange = (e, id, field) => {
     const updatedProducts = products.map((product) =>
       product._id === id ? { ...product, [field]: e.target.value } : product
     );
     setProducts(updatedProducts);
+
+    // Also update filtered products if in bulk mode
+    if (bulkUpdateMode && selectedCategory) {
+      const updatedFiltered = filteredProducts.map((product) =>
+        product._id === id ? { ...product, [field]: e.target.value } : product
+      );
+      setFilteredProducts(updatedFiltered);
+    }
+  };
+
+  const handleBulkFieldChange = (e, field) => {
+    setBulkUpdateFields({
+      ...bulkUpdateFields,
+      [field]: e.target.value,
+    });
   };
 
   const saveUpdate = async (product) => {
@@ -78,6 +101,7 @@ const AlterProductsPage = () => {
       await axios.put(`${API_URL}/${product._id}`, product);
       setEditingProduct(null);
       toast.success("Product updated successfully");
+      fetchProducts();
     } catch (error) {
       console.error("Error updating product:", error);
       toast.error("Product update failed");
@@ -86,201 +110,521 @@ const AlterProductsPage = () => {
     }
   };
 
-  const nextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+  const applyBulkUpdate = async () => {
+    if (!selectedCategory) {
+      toast.error("Please select a category first");
+      return;
+    }
+
+    const updateFields = Object.fromEntries(
+      Object.entries(bulkUpdateFields).filter(([_, value]) => value !== "")
+    );
+
+    if (Object.keys(updateFields).length === 0) {
+      toast.error("Please specify at least one field to update");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const response = await axios.put(
+        `http://localhost:5000/category-bulk-update`,
+        {
+          category: selectedCategory,
+          updateFields,
+        }
+      );
+
+      toast.success(
+        `Updated ${response.data.modifiedCount} products in ${selectedCategory}`
+      );
+      resetBulkUpdate();
+      fetchProducts();
+    } catch (error) {
+      console.error("Error in bulk update:", error);
+      toast.error("Bulk update failed");
+    } finally {
+      setUpdating(false);
     }
   };
 
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+  const filterByCategory = (category) => {
+    setSelectedCategory(category);
+    if (category) {
+      const filtered = products.filter(
+        (p) =>
+          p.category === category &&
+          p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    } else {
+      const filtered = products.filter((p) =>
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredProducts(filtered);
     }
   };
+
+  const resetBulkUpdate = () => {
+    setBulkUpdateMode(false);
+    setSelectedCategory("");
+    setBulkUpdateFields({ dp: "", tp: "", mrp: "" });
+    setFilteredProducts(products);
+  };
+
+  const handleSearch = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+
+    if (bulkUpdateMode && selectedCategory) {
+      const filtered = products.filter(
+        (p) =>
+          p.category === selectedCategory &&
+          p.name?.toLowerCase().includes(term.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    } else {
+      const filtered = products.filter((p) =>
+        p.name?.toLowerCase().includes(term.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  };
+
+  const displayProducts = bulkUpdateMode
+    ? filteredProducts
+    : products.filter((p) =>
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   return (
-    <div className="flex">
+    <div className="flex h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="p-4 w-full">
-        <h2 className="text-2xl font-bold mb-4">Alter Products</h2>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border rounded-lg shadow-md">
-            <thead className="bg-gray-200 text-left">
-              <tr>
-                <th className="border p-2">Name</th>
-                <th className="border p-2">Barcode</th>
-                <th className="border p-2">Brand</th>
-                <th className="border p-2">Category</th>
-                <th className="border p-2">DP</th>
-                <th className="border p-2">TP</th>
-                <th className="border p-2">MRP</th>
-                <th className="border p-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product._id} className="hover:bg-gray-100">
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <input
-                        type="text"
-                        value={product.name}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "name")
-                        }
-                        className="border p-1 w-full"
-                      />
-                    ) : (
-                      product.name
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <input
-                        type="text"
-                        value={product.barcode}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "barcode")
-                        }
-                        className="border p-1 w-full"
-                      />
-                    ) : (
-                      product.barcode
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <select
-                        value={product.brand || ""}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "brand")
-                        }
-                        className="border p-1 w-full"
-                      >
-                        <option value="">Select Brand</option>
-                        {brands.map((brand) => (
-                          <option key={brand} value={brand}>
-                            {brand}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      product.brand || "-"
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <select
-                        value={product.category}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "category")
-                        }
-                        className="border p-1 w-full"
-                      >
-                        <option value="">Select Category</option>
-                        {categories.map((category) => (
-                          <option key={category} value={category}>
-                            {category}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      product.category || "-"
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <input
-                        type="number"
-                        value={product.dp}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "dp")
-                        }
-                        className="border p-1 w-full"
-                      />
-                    ) : (
-                      `${product.dp} BDT`
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <input
-                        type="number"
-                        value={product.tp}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "tp")
-                        }
-                        className="border p-1 w-full"
-                      />
-                    ) : (
-                      `${product.tp} BDT`
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <input
-                        type="number"
-                        value={product.mrp}
-                        onChange={(e) =>
-                          handleInputChange(e, product._id, "mrp")
-                        }
-                        className="border p-1 w-full"
-                      />
-                    ) : (
-                      `${product.mrp} BDT`
-                    )}
-                  </td>
-                  <td className="border p-2">
-                    {editingProduct?._id === product._id ? (
-                      <button
-                        onClick={() => saveUpdate(product)}
-                        disabled={updating}
-                        className="bg-green-500 text-white px-3 py-1 rounded-md"
-                      >
-                        {updating ? "Saving..." : "Save"}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setEditingProduct(product)}
-                        className="text-blue-500"
-                      >
-                        <Pencil size={18} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="flex-1 overflow-auto">
+        <div className="p-6">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                Product Management
+              </h1>
+              <p className="text-sm text-gray-500">
+                {bulkUpdateMode
+                  ? `Bulk Update Mode - ${
+                      selectedCategory || "Select a category"
+                    }`
+                  : "Manage your product inventory"}
+              </p>
+            </div>
 
-        <div className="flex justify-center items-center gap-4 mt-4">
-          <button
-            onClick={prevPage}
-            disabled={currentPage === 1}
-            className={`px-4 py-2 rounded-md ${
-              currentPage === 1
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-blue-500 text-white"
-            }`}
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <span className="text-lg font-semibold">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={nextPage}
-            disabled={currentPage === totalPages}
-            className={`px-4 py-2 rounded-md ${
-              currentPage === totalPages
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-blue-500 text-white"
-            }`}
-          >
-            <ChevronRight size={20} />
-          </button>
+            <div className="flex items-center gap-3 mt-4 md:mt-0">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              </div>
+
+              <button
+                onClick={() =>
+                  bulkUpdateMode ? resetBulkUpdate() : setBulkUpdateMode(true)
+                }
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  bulkUpdateMode
+                    ? "bg-red-100 text-red-600 hover:bg-red-200"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                {bulkUpdateMode ? (
+                  <>
+                    <X size={18} /> Cancel
+                  </>
+                ) : (
+                  <>
+                    <SaveAll size={18} /> Bulk Update
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Bulk Update Panel */}
+          {bulkUpdateMode && (
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
+              <h3 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                <Filter size={18} className="text-blue-500" />
+                Bulk Update Products by Category
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => filterByCategory(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Dealer Price (DP)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500">
+                      ৳
+                    </span>
+                    <input
+                      type="number"
+                      placeholder="Current value"
+                      value={bulkUpdateFields.dp}
+                      onChange={(e) => handleBulkFieldChange(e, "dp")}
+                      className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Trade Price (TP)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500">
+                      ৳
+                    </span>
+                    <input
+                      type="number"
+                      placeholder="Current value"
+                      value={bulkUpdateFields.tp}
+                      onChange={(e) => handleBulkFieldChange(e, "tp")}
+                      className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Retail Price (MRP)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500">
+                      ৳
+                    </span>
+                    <input
+                      type="number"
+                      placeholder="Current value"
+                      value={bulkUpdateFields.mrp}
+                      onChange={(e) => handleBulkFieldChange(e, "mrp")}
+                      className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    onClick={applyBulkUpdate}
+                    disabled={updating || !selectedCategory}
+                    className="flex items-center justify-center gap-2 w-full h-[42px] bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {updating ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Check size={18} />
+                    )}
+                    Apply
+                  </button>
+                </div>
+              </div>
+
+              {selectedCategory && (
+                <div className="flex justify-between items-center bg-blue-50 px-4 py-2 rounded-lg">
+                  <span className="text-sm font-medium text-blue-800">
+                    {filteredProducts.length} products in{" "}
+                    <span className="font-semibold">{selectedCategory}</span>{" "}
+                    will be updated
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Products Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 size={32} className="animate-spin text-blue-500" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Product
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Barcode
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Brand
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Category
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        DP
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        TP
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        MRP
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {displayProducts.length > 0 ? (
+                      displayProducts.map((product) => (
+                        <tr
+                          key={product._id}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            {editingProduct?._id === product._id ? (
+                              <input
+                                type="text"
+                                value={product.name}
+                                onChange={(e) =>
+                                  handleInputChange(e, product._id, "name")
+                                }
+                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900 break-words min-w-[200px] max-w-[300px]">
+                                {product.name}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingProduct?._id === product._id ? (
+                              <input
+                                type="text"
+                                value={product.barcode}
+                                onChange={(e) =>
+                                  handleInputChange(e, product._id, "barcode")
+                                }
+                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            ) : (
+                              <div className="text-sm text-gray-500 font-mono">
+                                {product.barcode}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingProduct?._id === product._id ? (
+                              <select
+                                value={product.brand || ""}
+                                onChange={(e) =>
+                                  handleInputChange(e, product._id, "brand")
+                                }
+                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">Select Brand</option>
+                                {brands.map((brand) => (
+                                  <option key={brand} value={brand}>
+                                    {brand}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="text-sm text-gray-500">
+                                {product.brand || "-"}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingProduct?._id === product._id ? (
+                              <select
+                                value={product.category}
+                                onChange={(e) =>
+                                  handleInputChange(e, product._id, "category")
+                                }
+                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">Select Category</option>
+                                {categories.map((category) => (
+                                  <option key={category} value={category}>
+                                    {category}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {product.category || "-"}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingProduct?._id === product._id ? (
+                              <div className="relative">
+                                <span className="absolute left-2 top-1.5 text-gray-500">
+                                  ৳
+                                </span>
+                                <input
+                                  type="number"
+                                  value={product.dp}
+                                  onChange={(e) =>
+                                    handleInputChange(e, product._id, "dp")
+                                  }
+                                  className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-900">
+                                ৳{product.dp}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingProduct?._id === product._id ? (
+                              <div className="relative">
+                                <span className="absolute left-2 top-1.5 text-gray-500">
+                                  ৳
+                                </span>
+                                <input
+                                  type="number"
+                                  value={product.tp}
+                                  onChange={(e) =>
+                                    handleInputChange(e, product._id, "tp")
+                                  }
+                                  className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-900">
+                                ৳{product.tp}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingProduct?._id === product._id ? (
+                              <div className="relative">
+                                <span className="absolute left-2 top-1.5 text-gray-500">
+                                  ৳
+                                </span>
+                                <input
+                                  type="number"
+                                  value={product.mrp}
+                                  onChange={(e) =>
+                                    handleInputChange(e, product._id, "mrp")
+                                  }
+                                  className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            ) : (
+                              <div className="text-sm font-semibold text-gray-900">
+                                ৳{product.mrp}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {editingProduct?._id === product._id ? (
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => setEditingProduct(null)}
+                                  className="text-gray-500 hover:text-gray-700"
+                                >
+                                  <X size={18} />
+                                </button>
+                                <button
+                                  onClick={() => saveUpdate(product)}
+                                  disabled={updating}
+                                  className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+                                >
+                                  {updating ? (
+                                    <Loader2
+                                      size={18}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <Check size={18} />
+                                  )}
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingProduct(product)}
+                                className="text-blue-600 hover:text-blue-900 disabled:text-gray-400"
+                                disabled={bulkUpdateMode}
+                                title={
+                                  bulkUpdateMode
+                                    ? "Finish bulk update first"
+                                    : "Edit product"
+                                }
+                              >
+                                <Pencil size={18} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="8"
+                          className="px-6 py-4 text-center text-sm text-gray-500"
+                        >
+                          No products found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

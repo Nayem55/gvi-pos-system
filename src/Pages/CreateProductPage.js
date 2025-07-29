@@ -25,7 +25,7 @@ const CreateProductPage = () => {
   const fetchCategories = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, categories: true }));
-      const response = await axios.get("http://localhost:5000/categories");
+      const response = await axios.get("http://192.168.0.30:5000/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -39,7 +39,7 @@ const CreateProductPage = () => {
     try {
       setFetchingData((prev) => ({ ...prev, brands: true }));
       const response = await axios.get(
-        "http://localhost:5000/brands" // You'll need to create this endpoint
+        "http://192.168.0.30:5000/brands" // You'll need to create this endpoint
       );
       setBrands(response.data);
     } catch (error) {
@@ -59,7 +59,7 @@ const CreateProductPage = () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://localhost:5000/create-product-with-stocks",
+        "http://192.168.0.30:5000/create-product-with-stocks",
         { productData: newProduct }
       );
 

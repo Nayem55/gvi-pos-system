@@ -86,7 +86,7 @@ const SalarySheet = () => {
   //   try {
   //     setLoading((prev) => ({ ...prev, leaves: true }));
   //     const [year, monthNumber] = month.split("-");
-  //     const usersResponse = await axios.get("http://localhost:5000/getAllUser");
+  //     const usersResponse = await axios.get("http://192.168.0.30:5000/getAllUser");
   //     const users = usersResponse.data.filter((user) => user.attendance_id);
   //     const leaveRecords = {};
 
@@ -121,7 +121,7 @@ const SalarySheet = () => {
   //   try {
   //     setLoading((prev) => ({ ...prev, attendance: true }));
   //     const [year, monthNumber] = month.split("-");
-  //     const usersResponse = await axios.get("http://localhost:5000/getAllUser");
+  //     const usersResponse = await axios.get("http://192.168.0.30:5000/getAllUser");
   //     const users = usersResponse.data.filter((user) => user.attendance_id);
   //     const attendanceRecords = {};
 
@@ -220,7 +220,7 @@ const SalarySheet = () => {
     try {
       setLoading((prev) => ({ ...prev, tdda: true }));
       const response = await axios.get(
-        "http://localhost:5000/api/tdda-summary",
+        "http://192.168.0.30:5000/api/tdda-summary",
         { params: { month } }
       );
       setTddaData(response.data.data);
@@ -736,7 +736,7 @@ const SalarySheet = () => {
           "Office Return (DP)":
             report.officeReturn?.valueDP.toFixed(2) || "0.00",
           Collection: report.collection?.amount.toFixed(2) || "0.00",
-          "TD/DA Expense": tddaData[report.userId].toFixed(2), 
+          "TD/DA Expense": tddaData[report.userId].toFixed(2),
           // "Total Working Days": workingDaysData,
           // Holidays: dayCount - workingDaysData,
           // "Approved Leave": userAttendance.approvedLeave,
@@ -977,7 +977,8 @@ const SalarySheet = () => {
                     </thead>
                     <tbody>
                       {beltGroup.reports.map((report, index) => {
-                        {/* const userAttendance = attendanceData[
+                        {
+                          /* const userAttendance = attendanceData[
                           report.userId
                         ] || {
                           totalWorkingDays: workingDaysData,
@@ -987,7 +988,8 @@ const SalarySheet = () => {
                           extraDays: 0,
                           presentDays: 0,
                           checkInCount: 0,
-                        }; */}
+                        }; */
+                        }
 
                         return (
                           <tr

@@ -42,7 +42,7 @@ export default function OfficeReturn({
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://localhost:5000/search-product",
+          "http://192.168.0.30:5000/search-product",
           { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
@@ -66,7 +66,7 @@ export default function OfficeReturn({
 
     try {
       const stockRes = await axios.get(
-        `http://localhost:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
       const currentStock = stockRes.data.stock.currentStock || 0;
       const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
@@ -147,17 +147,20 @@ export default function OfficeReturn({
       );
 
       // First update the due amount
-      const dueResponse = await axios.put("http://localhost:5000/update-due", {
-        outlet: user.outlet,
-        currentDue: currentDue - totalAmount,
-      });
+      const dueResponse = await axios.put(
+        "http://192.168.0.30:5000/update-due",
+        {
+          outlet: user.outlet,
+          currentDue: currentDue - totalAmount,
+        }
+      );
 
       if (!dueResponse.data.success) {
         throw new Error("Failed to update due amount");
       }
 
       const requests = cart.map(async (item) => {
-        await axios.put("http://localhost:5000/update-outlet-stock", {
+        await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
           barcode: item.barcode,
           outlet: user.outlet,
           newStock: item.openingStock - item.officeReturn,
@@ -167,7 +170,7 @@ export default function OfficeReturn({
             item.currentStockTP - item.officeReturn * item.editableTP,
         });
 
-        await axios.post("http://localhost:5000/stock-transactions", {
+        await axios.post("http://192.168.0.30:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "office return",
@@ -186,7 +189,7 @@ export default function OfficeReturn({
       await Promise.all(requests);
 
       // Record money transaction for the office return voucher
-      await axios.post("http://localhost:5000/money-transfer", {
+      await axios.post("http://192.168.0.30:5000/money-transfer", {
         outlet: user.outlet,
         amount: totalAmount,
         asm: user.asm,
@@ -248,7 +251,7 @@ export default function OfficeReturn({
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
-            "http://localhost:5000/search-product",
+            "http://192.168.0.30:5000/search-product",
             {
               params: {
                 search: row["Barcode"] || row["Product Name"],
@@ -264,7 +267,7 @@ export default function OfficeReturn({
           }
 
           const stockRes = await axios.get(
-            "http://localhost:5000/outlet-stock",
+            "http://192.168.0.30:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 

@@ -110,7 +110,7 @@ const TadaVoucher = () => {
         },
       };
 
-      const response = await fetch("http://localhost:5000/tdda", {
+      const response = await fetch("http://192.168.0.30:5000/tdda", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

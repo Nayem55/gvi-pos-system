@@ -25,7 +25,7 @@ const LoginForm = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/login",
+        "http://192.168.0.30:5000/login",
         formData
       );
 

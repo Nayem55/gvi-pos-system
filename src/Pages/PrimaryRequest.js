@@ -19,7 +19,7 @@ export default function PrimaryRequest() {
     if (query.length > 2) {
       setIsSearching(true);
       try {
-        const res = await axios.get("http://localhost:5000/search-product", {
+        const res = await axios.get("http://192.168.0.30:5000/search-product", {
           params: { search: query, type: "name" },
         });
         setResults(res.data);
@@ -84,7 +84,7 @@ export default function PrimaryRequest() {
 
     try {
       setIsSubmitting(true);
-      await axios.post("http://localhost:5000/primary-request", order);
+      await axios.post("http://192.168.0.30:5000/primary-request", order);
       toast.success("Request submitted successfully!");
       setCart([]);
     } catch (err) {

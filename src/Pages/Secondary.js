@@ -58,7 +58,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://localhost:5000/search-product",
+          "http://192.168.0.30:5000/search-product",
           {
             params: { search: query, type: searchType },
           }
@@ -77,7 +77,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
   const addToCart = async (product) => {
     try {
       const stockResponse = await axios.get(
-        "http://localhost:5000/outlet-stock",
+        "http://192.168.0.30:5000/outlet-stock",
         {
           params: { barcode: product.barcode, outlet: user.outlet },
         }
@@ -216,10 +216,10 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
         })),
       };
 
-      await axios.post("http://localhost:5000/add-sale-report", saleEntry);
+      await axios.post("http://192.168.0.30:5000/add-sale-report", saleEntry);
 
       const updatePromises = cart.map(async (item) => {
-        await axios.post("http://localhost:5000/stock-transactions", {
+        await axios.post("http://192.168.0.30:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "secondary",
@@ -289,7 +289,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
-            "http://localhost:5000/search-product",
+            "http://192.168.0.30:5000/search-product",
             {
               params: {
                 search: row["Barcode"] || row["Product Name"],
@@ -305,7 +305,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
           }
 
           const stockRes = await axios.get(
-            "http://localhost:5000/outlet-stock",
+            "http://192.168.0.30:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 

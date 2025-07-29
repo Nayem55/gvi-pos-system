@@ -47,8 +47,8 @@ const CategoryTargetPage = () => {
     const fetchData = async () => {
       try {
         const [usersRes, categoriesRes] = await Promise.all([
-          axios.get("http://localhost:5000/getAllUser"),
-          axios.get("http://localhost:5000/categories"),
+          axios.get("http://192.168.0.30:5000/getAllUser"),
+          axios.get("http://192.168.0.30:5000/categories"),
         ]);
         setUsers(usersRes.data);
         setCategories(categoriesRes.data);
@@ -65,9 +65,12 @@ const CategoryTargetPage = () => {
       if (!year || !month) return;
 
       try {
-        const res = await axios.get("http://localhost:5000/categoryTargets", {
-          params: { year, month },
-        });
+        const res = await axios.get(
+          "http://192.168.0.30:5000/categoryTargets",
+          {
+            params: { year, month },
+          }
+        );
 
         // Transform targets into a more usable structure
         const targetsMap = {};
@@ -120,7 +123,7 @@ const CategoryTargetPage = () => {
           target: parseFloat(target),
         }));
 
-      await axios.post("http://localhost:5000/categoryTargets", {
+      await axios.post("http://192.168.0.30:5000/categoryTargets", {
         userID,
         year: parseInt(year),
         month: parseInt(month),
@@ -130,7 +133,7 @@ const CategoryTargetPage = () => {
       toast.success("Targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get("http://localhost:5000/categoryTargets", {
+      const res = await axios.get("http://192.168.0.30:5000/categoryTargets", {
         params: { year, month },
       });
 
@@ -177,7 +180,7 @@ const CategoryTargetPage = () => {
               target: parseFloat(target),
             }));
 
-          return axios.post("http://localhost:5000/categoryTargets", {
+          return axios.post("http://192.168.0.30:5000/categoryTargets", {
             userID,
             year: parseInt(year),
             month: parseInt(month),
@@ -190,7 +193,7 @@ const CategoryTargetPage = () => {
       toast.success("All targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get("http://localhost:5000/categoryTargets", {
+      const res = await axios.get("http://192.168.0.30:5000/categoryTargets", {
         params: { year, month },
       });
 

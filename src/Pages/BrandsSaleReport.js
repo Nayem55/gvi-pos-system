@@ -52,7 +52,7 @@ const BrandWiseSalesReport = () => {
         : dayjs().month() + 1;
 
       try {
-        const res = await axios.get("http://localhost:5000/brandTargets", {
+        const res = await axios.get("http://192.168.0.30:5000/brandTargets", {
           params: {
             year: currentYear,
             month: currentMonth,
@@ -89,7 +89,7 @@ const BrandWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://localhost:5000/sales/brand-wise",
+        "http://192.168.0.30:5000/sales/brand-wise",
         { params }
       );
       setSalesData(response.data);
@@ -133,7 +133,7 @@ const BrandWiseSalesReport = () => {
       params.brand = brand;
 
       const outletSalesRes = await axios.get(
-        "http://localhost:5000/sales/brand-wise/outlet-details",
+        "http://192.168.0.30:5000/sales/brand-wise/outlet-details",
         { params }
       );
 

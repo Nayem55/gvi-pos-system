@@ -21,7 +21,7 @@ const ManageStock = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/getAllUser");
+      const response = await axios.get("http://192.168.0.30:5000/getAllUser");
       setUsers(response.data);
       setLoading(false);
     } catch (error) {
@@ -39,7 +39,7 @@ const ManageStock = () => {
   const getStockValue = async (outletName) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/stock-value/${outletName}`
+        `http://192.168.0.30:5000/api/stock-value/${outletName}`
       );
       setStock({
         dp: response.data.totalCurrentDP,

@@ -32,7 +32,7 @@ const AlterUsersPage = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/getAllUser");
+      const response = await axios.get("http://192.168.0.30:5000/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -45,20 +45,20 @@ const AlterUsersPage = () => {
   const fetchDropdownData = async () => {
     try {
       const groups = await axios.get(
-        "http://localhost:5000/get-user-field-values?field=group"
+        "http://192.168.0.30:5000/get-user-field-values?field=group"
       );
       const zones = await axios.get(
-        "http://localhost:5000/get-user-field-values?field=zone"
+        "http://192.168.0.30:5000/get-user-field-values?field=zone"
       );
-      const outlets = await axios.get("http://localhost:5000/get-outlets");
+      const outlets = await axios.get("http://192.168.0.30:5000/get-outlets");
       const asms = await axios.get(
-        "http://localhost:5000/get-user-field-values?field=asm"
+        "http://192.168.0.30:5000/get-user-field-values?field=asm"
       );
       const rsms = await axios.get(
-        "http://localhost:5000/get-user-field-values?field=rsm"
+        "http://192.168.0.30:5000/get-user-field-values?field=rsm"
       );
       const soms = await axios.get(
-        "http://localhost:5000/get-user-field-values?field=som"
+        "http://192.168.0.30:5000/get-user-field-values?field=som"
       );
 
       setDropdownData((prev) => ({
@@ -88,7 +88,7 @@ const AlterUsersPage = () => {
     try {
       setLoading(true);
       await axios.put(
-        `http://localhost:5000/updateUser/${editingUser._id}`,
+        `http://192.168.0.30:5000/updateUser/${editingUser._id}`,
         editingUser
       );
       toast.success("User updated successfully!");

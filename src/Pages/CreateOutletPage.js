@@ -49,7 +49,7 @@ const CreateOutletPage = () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://localhost:5000/add-new-outlet",
+        "http://192.168.0.30:5000/add-new-outlet",
         newOutlet
       );
 

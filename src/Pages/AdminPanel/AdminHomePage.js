@@ -59,7 +59,7 @@ const AdminHomePage = () => {
 
     try {
       const salesPromise = axios
-        .get("http://localhost:5000/sales/zone-wise", {
+        .get("http://192.168.0.30:5000/sales/zone-wise", {
           params: {
             month: `${year}-${month.toString().padStart(2, "0")}`,
             year,
@@ -68,7 +68,7 @@ const AdminHomePage = () => {
         .catch(() => ({ data: [] }));
 
       const targetsPromise = axios
-        .get("http://localhost:5000/targets/zone-wise", {
+        .get("http://192.168.0.30:5000/targets/zone-wise", {
           params: { year, month },
         })
         .catch(() => ({ data: [] }));
@@ -105,8 +105,12 @@ const AdminHomePage = () => {
     let zone2TargetTotal = 0;
 
     // Filter data for Zone-01 and Zone-03
-    const zone1SalesData = salesData.filter(zone => zone._id && zone._id.includes("ZONE-01"));
-    const zone3SalesData = salesData.filter(zone => zone._id && zone._id.includes("ZONE-03"));
+    const zone1SalesData = salesData.filter(
+      (zone) => zone._id && zone._id.includes("ZONE-01")
+    );
+    const zone3SalesData = salesData.filter(
+      (zone) => zone._id && zone._id.includes("ZONE-03")
+    );
 
     setZone1Data(zone1SalesData);
     setZone3Data(zone3SalesData);
@@ -200,9 +204,7 @@ const AdminHomePage = () => {
               >
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip
-                  formatter={(value) => value.toLocaleString()}
-                />
+                <Tooltip formatter={(value) => value.toLocaleString()} />
                 <Legend />
                 <Bar
                   dataKey="total_tp"

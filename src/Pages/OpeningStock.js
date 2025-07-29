@@ -40,7 +40,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://localhost:5000/search-product",
+          "http://192.168.0.30:5000/search-product",
           { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
@@ -64,7 +64,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
     try {
       const stockRes = await axios.get(
-        `http://localhost:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
       );
       const currentStock = stockRes.data.stock.currentStock || 0;
       const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
@@ -133,7 +133,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
-            "http://localhost:5000/search-product",
+            "http://192.168.0.30:5000/search-product",
             {
               params: {
                 search: row["Barcode"] || row["Product Name"],
@@ -149,7 +149,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           }
 
           const stockRes = await axios.get(
-            "http://localhost:5000/outlet-stock",
+            "http://192.168.0.30:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 
@@ -303,7 +303,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
 
       // First update the opening due and current due
       const dueResponse = await axios.put(
-        "http://localhost:5000/update-due",
+        "http://192.168.0.30:5000/update-due",
         {
           outlet: user.outlet,
           isOpeningVoucher: true,
@@ -318,36 +318,30 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       // Then process all stock updates
       const requests = cart.map(async (item) => {
         if (item.canEdit) {
-          await axios.put(
-            "http://localhost:5000/update-outlet-stock",
-            {
-              barcode: item.barcode,
-              outlet: user.outlet,
-              newStock: item.newStock,
-              currentStockValueDP: item.newStock * item.editableDP,
-              currentStockValueTP: item.newStock * item.editableTP,
-              openingStockValueDP: item.newStock * item.editableDP,
-              openingStockValueTP: item.newStock * item.editableTP,
-            }
-          );
+          await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            newStock: item.newStock,
+            currentStockValueDP: item.newStock * item.editableDP,
+            currentStockValueTP: item.newStock * item.editableTP,
+            openingStockValueDP: item.newStock * item.editableDP,
+            openingStockValueTP: item.newStock * item.editableTP,
+          });
 
-          await axios.post(
-            "http://localhost:5000/stock-transactions",
-            {
-              barcode: item.barcode,
-              outlet: user.outlet,
-              type: "opening",
-              quantity: item.newStock,
-              date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
-              asm: user.asm,
-              rsm: user.rsm,
-              zone: user.zone,
-              user: user.name,
-              userID: user._id,
-              dp: item.editableDP,
-              tp: item.editableTP,
-            }
-          );
+          await axios.post("http://192.168.0.30:5000/stock-transactions", {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            type: "opening",
+            quantity: item.newStock,
+            date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+            asm: user.asm,
+            rsm: user.rsm,
+            zone: user.zone,
+            user: user.name,
+            userID: user._id,
+            dp: item.editableDP,
+            tp: item.editableTP,
+          });
         }
       });
 

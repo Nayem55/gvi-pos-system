@@ -10,7 +10,7 @@ import {
 import AdminSidebar from "../../Component/AdminSidebar";
 import toast from "react-hot-toast";
 
-const API_URL = "http://localhost:5000/products";
+const API_URL = "http://192.168.0.30:5000/products";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -47,7 +47,7 @@ const AdminProducts = () => {
   const fetchCategories = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/product-categories"
+        "http://192.168.0.30:5000/product-categories"
       );
       setCategories(response.data);
     } catch (error) {
@@ -59,12 +59,15 @@ const AdminProducts = () => {
     setProducts([]);
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/search-product", {
-        params: {
-          search: searchQuery,
-          type: "name",
-        },
-      });
+      const response = await axios.get(
+        "http://192.168.0.30:5000/search-product",
+        {
+          params: {
+            search: searchQuery,
+            type: "name",
+          },
+        }
+      );
       setProducts(response.data);
     } catch (error) {
       console.error("Error searching products:", error);
@@ -97,7 +100,7 @@ const AdminProducts = () => {
     try {
       await axios.put(`${API_URL}/${product._id}`, product);
       if (editingProduct && editingProduct.barcode !== product.barcode) {
-        await axios.put(`http://localhost:5000/update-outlet-barcode`, {
+        await axios.put(`http://192.168.0.30:5000/update-outlet-barcode`, {
           oldBarcode: editingProduct.barcode,
           newBarcode: product.barcode,
         });
@@ -152,7 +155,7 @@ const AdminProducts = () => {
     try {
       setIsBulkUpdating(true);
       const response = await axios.put(
-        "http://localhost:5000/category-bulk-update",
+        "http://192.168.0.30:5000/category-bulk-update",
         {
           category: selectedCategory,
           updateFields: {

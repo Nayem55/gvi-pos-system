@@ -37,7 +37,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://localhost:5000/search-product",
+          "http://192.168.0.30:5000/search-product",
           { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
@@ -59,9 +59,12 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
     }
 
     try {
-      const stockRes = await axios.get("http://localhost:5000/outlet-stock", {
-        params: { barcode: product.barcode, outlet: user.outlet },
-      });
+      const stockRes = await axios.get(
+        "http://192.168.0.30:5000/outlet-stock",
+        {
+          params: { barcode: product.barcode, outlet: user.outlet },
+        }
+      );
 
       const currentStock = stockRes.data.stock.currentStock || 0;
       const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
@@ -103,7 +106,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
-            "http://localhost:5000/search-product",
+            "http://192.168.0.30:5000/search-product",
             {
               params: {
                 search: row["Barcode"] || row["Product Name"],
@@ -119,7 +122,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
           }
 
           const stockRes = await axios.get(
-            "http://localhost:5000/outlet-stock",
+            "http://192.168.0.30:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 
@@ -217,10 +220,13 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
       );
 
       // First update the due amount
-      const dueResponse = await axios.put("http://localhost:5000/update-due", {
-        outlet: user.outlet,
-        currentDue: currentDue + totalAmount,
-      });
+      const dueResponse = await axios.put(
+        "http://192.168.0.30:5000/update-due",
+        {
+          outlet: user.outlet,
+          currentDue: currentDue + totalAmount,
+        }
+      );
 
       if (!dueResponse.data.success) {
         throw new Error("Failed to update due amount");
@@ -228,7 +234,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
 
       // Then process all stock updates
       const requests = cart.map(async (item) => {
-        await axios.put("http://localhost:5000/update-outlet-stock", {
+        await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
           barcode: item.barcode,
           outlet: user.outlet,
           newStock: item.openingStock + item.primary,
@@ -238,7 +244,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
             item.currentStockTP + item.primary * item.editableTP,
         });
 
-        await axios.post("http://localhost:5000/stock-transactions", {
+        await axios.post("http://192.168.0.30:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           asm: user.asm,
@@ -258,7 +264,7 @@ export default function Primary({ user, stock, getStockValue, currentDue }) {
       await Promise.all(requests);
 
       // Record money transaction for the primary voucher
-      await axios.post("http://localhost:5000/money-transfer", {
+      await axios.post("http://192.168.0.30:5000/money-transfer", {
         outlet: user.outlet,
         amount: totalAmount,
         asm: user.asm,

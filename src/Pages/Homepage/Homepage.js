@@ -101,8 +101,10 @@ export default function Home() {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
-        axios.get(`http://localhost:5000/api/stock-value/${encodedOutletName}`),
-        axios.get(`http://localhost:5000/current-due/${encodedOutletName}`),
+        axios.get(
+          `http://192.168.0.30:5000/api/stock-value/${encodedOutletName}`
+        ),
+        axios.get(`http://192.168.0.30:5000/current-due/${encodedOutletName}`),
       ]);
 
       setCurrentDue(dueResponse.data.current_due);
