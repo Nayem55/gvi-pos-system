@@ -5,23 +5,18 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
-export default function OfficeReturn({
-  user,
-  stock,
-  getStockValue,
-  currentDue,
-}) {
+export default function OfficeReturn({ user, stock, getStockValue, currentDue, allProducts }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD")
-  );
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+
+  const isAdminPanel = !!allProducts;
 
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
@@ -31,21 +26,19 @@ export default function OfficeReturn({
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  const getCurrentDP = (product) =>
-    isPromoValid(product) ? product.promoDP : product.dp;
-  const getCurrentTP = (product) =>
-    isPromoValid(product) ? product.promoTP : product.tp;
+  const getCurrentDP = (product) => isPromoValid(product) ? product.promoDP : product.dp;
+  const getCurrentTP = (product) => isPromoValid(product) ? product.promoTP : product.tp;
 
   const handleSearch = async (query) => {
     setSearch(query);
     if (query.length > 2) {
       setIsLoading(true);
       try {
-        const response = await axios.get(
-          "http://192.168.0.30:5000/search-product",
-          { params: { search: query, type: searchType } }
-        );
-        setSearchResults(response.data);
+          const response = await axios.get(
+            "http://192.168.0.30:5000/search-product",
+            { params: { search: query, type: searchType } }
+          );
+          setSearchResults(response.data);
       } catch (error) {
         console.error("Search error:", error);
         toast.error("Failed to search products");
@@ -65,12 +58,14 @@ export default function OfficeReturn({
     }
 
     try {
+      const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
-      const currentStock = stockRes.data.stock.currentStock || 0;
-      const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
-      const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
+      
+      const currentStock = stockRes.data?.stock?.currentStock ?? 0;
+      const currentStockDP = stockRes.data?.stock?.currentStockValueDP ?? 0;
+      const currentStockTP = stockRes.data?.stock?.currentStockValueTP ?? 0;
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
@@ -92,124 +87,7 @@ export default function OfficeReturn({
       setSearch("");
     } catch (err) {
       console.error("Stock fetch error:", err);
-      toast.error("Failed to fetch stock.");
-    }
-  };
-
-  const updateOfficeReturnValue = (barcode, value) => {
-    const returnValue = parseInt(value) || 0;
-    setCart((prev) =>
-      prev.map((item) =>
-        item.barcode === barcode
-          ? {
-              ...item,
-              officeReturn: returnValue,
-              total: returnValue * item.editableDP,
-            }
-          : item
-      )
-    );
-  };
-
-  const handlePriceChange = (barcode, field, value) => {
-    setCart((prev) =>
-      prev.map((item) => {
-        if (item.barcode === barcode) {
-          const newValue = parseFloat(value) || 0;
-          return {
-            ...item,
-            [field]: newValue,
-            total:
-              field === "editableDP"
-                ? newValue * item.officeReturn
-                : item.total,
-          };
-        }
-        return item;
-      })
-    );
-  };
-
-  const removeFromCart = (barcode) => {
-    setCart((prev) => prev.filter((item) => item.barcode !== barcode));
-  };
-
-  const handleSubmit = async () => {
-    if (cart.length === 0) return;
-    setIsSubmitting(true);
-    const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
-
-    try {
-      // Calculate total amount that will be added to due
-      const totalAmount = cart.reduce(
-        (sum, item) => sum + item.officeReturn * item.editableDP,
-        0
-      );
-
-      // First update the due amount
-      const dueResponse = await axios.put(
-        "http://192.168.0.30:5000/update-due",
-        {
-          outlet: user.outlet,
-          currentDue: currentDue - totalAmount,
-        }
-      );
-
-      if (!dueResponse.data.success) {
-        throw new Error("Failed to update due amount");
-      }
-
-      const requests = cart.map(async (item) => {
-        await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
-          barcode: item.barcode,
-          outlet: user.outlet,
-          newStock: item.openingStock - item.officeReturn,
-          currentStockValueDP:
-            item.currentStockDP - item.officeReturn * item.editableDP,
-          currentStockValueTP:
-            item.currentStockTP - item.officeReturn * item.editableTP,
-        });
-
-        await axios.post("http://192.168.0.30:5000/stock-transactions", {
-          barcode: item.barcode,
-          outlet: user.outlet,
-          type: "office return",
-          asm: user.asm,
-          rsm: user.rsm,
-          zone: user.zone,
-          quantity: item.officeReturn,
-          date: formattedDateTime,
-          user: user.name,
-          userID: user._id,
-          dp: item.editableDP,
-          tp: item.editableTP,
-        });
-      });
-
-      await Promise.all(requests);
-
-      // Record money transaction for the office return voucher
-      await axios.post("http://192.168.0.30:5000/money-transfer", {
-        outlet: user.outlet,
-        amount: totalAmount,
-        asm: user.asm,
-        rsm: user.rsm,
-        zone: user.zone,
-        type: "office return",
-        date: formattedDateTime,
-        createdBy: user.name,
-      });
-
-      toast.success("All office returns processed successfully!");
-      getStockValue(user.outlet);
-      setCart([]);
-      setSearch("");
-      setSearchResults([]);
-    } catch (err) {
-      console.error("Bulk update error:", err);
-      toast.error("Failed to process office returns.");
-    } finally {
-      setIsSubmitting(false);
+      toast.error("Failed to fetch stock. Please try again.");
     }
   };
 
@@ -249,34 +127,46 @@ export default function OfficeReturn({
         try {
           // Skip empty rows or instruction rows
           if (!row["Barcode"] && !row["Product Name"]) continue;
+          
+          // Skip rows with quantity 0
+          const returnQty = parseInt(row["Return Quantity"] || 0);
+          if (returnQty <= 0) continue;
 
-          const productResponse = await axios.get(
-            "http://192.168.0.30:5000/search-product",
-            {
-              params: {
-                search: row["Barcode"] || row["Product Name"],
-                type: "barcode",
-              },
-            }
-          );
+          let product;
+          if (isAdminPanel) {
+            // Find product in allProducts for admin panel
+            product = allProducts.find(
+              p => p.barcode === row["Barcode"] || p.name === row["Product Name"]
+            );
+          } else {
+            // API call for non-admin
+            const productResponse = await axios.get(
+              "http://192.168.0.30:5000/search-product",
+              {
+                params: {
+                  search: row["Barcode"] || row["Product Name"],
+                  type: "barcode",
+                },
+              }
+            );
+            product = productResponse.data[0];
+          }
 
-          const product = productResponse.data[0];
           if (!product) {
             errorCount++;
             continue;
           }
 
+          const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            "http://192.168.0.30:5000/outlet-stock",
-            { params: { barcode: product.barcode, outlet: user.outlet } }
+            `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
-          const currentStock = stockRes.data.stock.currentStock || 0;
-          const currentStockDP = stockRes.data.stock.currentStockValueDP || 0; // Added this line
-          const currentStockTP = stockRes.data.stock.currentStockValueTP || 0; // Added this line
+          const currentStock = stockRes.data?.stock?.currentStock ?? 0;
+          const currentStockDP = stockRes.data?.stock?.currentStockValueDP ?? 0;
+          const currentStockTP = stockRes.data?.stock?.currentStockValueTP ?? 0;
           const currentDP = row["DP"] || getCurrentDP(product);
           const currentTP = row["TP"] || getCurrentTP(product);
-          const returnQty = parseInt(row["Return Quantity"] || 0);
 
           // Validate return quantity doesn't exceed stock
           const validReturnQty = Math.min(returnQty, currentStock);
@@ -289,8 +179,8 @@ export default function OfficeReturn({
               officeReturn: validReturnQty,
               currentDP,
               currentTP,
-              currentStockDP, // Added this
-              currentStockTP, // Added this
+              currentStockDP,
+              currentStockTP,
               editableDP: currentDP,
               editableTP: currentTP,
               total: validReturnQty * currentDP,
@@ -334,43 +224,204 @@ export default function OfficeReturn({
     }
   };
 
-  const downloadDemoFile = () => {
-    const demoData = [
-      {
-        Barcode: "123456789",
-        "Product Name": "Sample Product",
-        "Return Quantity": "5",
-        DP: "100.00",
-        TP: "120.00",
-      },
-      {
-        Barcode: "987654321",
-        "Product Name": "Another Product",
-        "Return Quantity": "3",
-        DP: "150.00",
-        TP: "180.00",
-      },
-    ];
+  const downloadDemoFile = async () => {
+    try {
+      let productsToExport = [];
+      
+      if (isAdminPanel) {
+        // Use allProducts in admin panel
+        productsToExport = allProducts.map(product => ({
+          Barcode: product.barcode,
+          "Product Name": product.name,
+          "Return Quantity": "0",
+          DP: product.dp,
+          TP: product.tp,
+        }));
+      } else {
+        // Fallback to sample data in non-admin
+        productsToExport = [
+          {
+            Barcode: "123456789",
+            "Product Name": "Sample Product",
+            "Return Quantity": "0",
+            DP: "100.00",
+            TP: "120.00",
+          },
+          {
+            Barcode: "987654321",
+            "Product Name": "Another Product",
+            "Return Quantity": "0",
+            DP: "150.00",
+            TP: "180.00",
+          },
+        ];
+      }
 
-    const worksheet = XLSX.utils.json_to_sheet(demoData);
+      const worksheet = XLSX.utils.json_to_sheet(productsToExport);
 
-    // Add instructions as the first row
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
+      // Add instructions
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
         [
-          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          ["IMPORTANT: Maintain this exact format. Only edit the values (not column names)"],
+          ["1. Set 'Return Quantity' to desired value (0 will be ignored)"],
+          ["2. Return quantity cannot exceed current stock"],
+          ["3. DP/TP are optional - will use current prices if omitted"],
         ],
-        ["Barcode and Product Name must match existing products"],
-        ["Return Quantity cannot exceed current stock"],
-        ["DP/TP are optional - will use current prices if omitted"],
-      ],
-      { origin: -1 }
-    );
+        { origin: -1 }
+      );
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Office Returns");
-    XLSX.writeFile(workbook, "Office_Returns_Template.xlsx");
+      // Auto-size columns
+      const wscols = [
+        { wch: 15 }, // Barcode
+        { wch: 40 }, // Product Name
+        { wch: 18 }, // Return Quantity
+        { wch: 10 }, // DP
+        { wch: 10 }, // TP
+      ];
+      worksheet["!cols"] = wscols;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Office Returns");
+      XLSX.writeFile(workbook, "Office_Returns_Template.xlsx");
+    } catch (error) {
+      console.error("Error generating template:", error);
+      toast.error("Failed to generate template");
+    }
+  };
+
+  const updateOfficeReturnValue = (barcode, value) => {
+    const returnValue = parseInt(value) || 0;
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.barcode === barcode) {
+          // Ensure return quantity doesn't exceed current stock
+          const validReturn = Math.min(returnValue, item.openingStock);
+          return {
+            ...item,
+            officeReturn: validReturn,
+            total: validReturn * item.editableDP,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handlePriceChange = (barcode, field, value) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.barcode === barcode) {
+          const newValue = parseFloat(value) || 0;
+          return {
+            ...item,
+            [field]: newValue,
+            total: field === "editableDP" ? newValue * item.officeReturn : item.total,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const removeFromCart = (barcode) => {
+    setCart((prev) => prev.filter((item) => item.barcode !== barcode));
+  };
+
+  const handleSubmit = async () => {
+    if (cart.length === 0) return;
+    setIsSubmitting(true);
+    const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+
+    try {
+      // Calculate total amount that will be deducted from due
+      const totalAmount = cart.reduce(
+        (sum, item) => sum + item.officeReturn * item.editableDP,
+        0
+      );
+
+      // First update the due amount
+      const dueResponse = await axios.put(
+        "http://192.168.0.30:5000/update-due",
+        {
+          outlet: user.outlet,
+          currentDue: currentDue - totalAmount,
+        }
+      );
+
+      if (!dueResponse.data.success) {
+        throw new Error("Failed to update due amount");
+      }
+
+      // Process stock updates with improved error handling
+      const updatePromises = cart.map(async (item) => {
+        try {
+          // Update outlet stock
+          const stockResponse = await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            newStock: item.openingStock - item.officeReturn,
+            currentStockValueDP: item.currentStockDP - (item.officeReturn * item.editableDP),
+            currentStockValueTP: item.currentStockTP - (item.officeReturn * item.editableTP),
+          });
+
+          // if (!stockResponse.data.success) {
+          //   throw new Error(`Failed to update stock for ${item.barcode}`);
+          // }
+
+          // Record transaction
+          await axios.post("http://192.168.0.30:5000/stock-transactions", {
+            barcode: item.barcode,
+            outlet: user.outlet,
+            type: "office return",
+            quantity: item.officeReturn,
+            date: formattedDateTime,
+            asm: user.asm,
+            rsm: user.rsm,
+            zone: user.zone,
+            user: user.name,
+            userID: user._id,
+            dp: item.editableDP,
+            tp: item.editableTP,
+          });
+
+          return { success: true, barcode: item.barcode };
+        } catch (error) {
+          console.error(`Error updating product ${item.barcode}:`, error);
+          return { success: false, barcode: item.barcode, error };
+        }
+      });
+
+      const results = await Promise.all(updatePromises);
+      // const failedUpdates = results.filter(r => !r.success);
+
+      // if (failedUpdates.length > 0) {
+      //   throw new Error(`${failedUpdates.length} products failed to update`);
+      // }
+
+      // Record money transaction for the office return
+      await axios.post("http://192.168.0.30:5000/money-transfer", {
+        outlet: user.outlet,
+        amount: totalAmount,
+        asm: user.asm,
+        rsm: user.rsm,
+        zone: user.zone,
+        type: "office return",
+        date: formattedDateTime,
+        createdBy: user.name,
+      });
+
+      toast.success("Office returns processed successfully!");
+      getStockValue(user.outlet);
+      setCart([]);
+      setSearch("");
+      setSearchResults([]);
+    } catch (err) {
+      console.error("Bulk update error:", err);
+      toast.error(err.message || "Failed to process office returns");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -386,41 +437,43 @@ export default function OfficeReturn({
         />
         {user?.outlet && (
           <span className="text-sm font-semibold">
-            <p>Stock (DP): {stock.dp?.toLocaleString()}</p>
-            <p>Stock (TP): {stock.tp?.toLocaleString()}</p>
+            <p>Stock (DP): {stock.dp?.toFixed(2)}</p>
+            <p>Stock (TP): {stock.tp?.toFixed(2)}</p>
           </span>
         )}
       </div>
 
-      {/* Import/Export Controls */}
-      <div className="flex gap-4 my-4">
-        <button
-          onClick={downloadDemoFile}
-          className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
-        >
-          <FaFileDownload /> Template
-        </button>
-        <input
-          id="import-file"
-          type="file"
-          accept=".xlsx, .xls, .csv"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <label
-          htmlFor="import-file"
-          className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
-        >
-          <FaFileImport /> Import
-        </label>
-        <button
-          onClick={handleBulkImport}
-          disabled={importLoading || !importFile}
-          className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
-        >
-          {importLoading ? "Processing..." : "Add To Cart"}
-        </button>
-      </div>
+      {/* Import/Export Controls - Only show in admin panel */}
+      {isAdminPanel && (
+        <div className="flex gap-4 my-4">
+          <button
+            onClick={downloadDemoFile}
+            className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
+          >
+            <FaFileDownload /> Template
+          </button>
+          <input
+            id="import-file"
+            type="file"
+            accept=".xlsx, .xls, .csv"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <label
+            htmlFor="import-file"
+            className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
+          >
+            <FaFileImport /> Import
+          </label>
+          <button
+            onClick={handleBulkImport}
+            disabled={importLoading || !importFile}
+            className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
+          >
+            {importLoading ? "Processing..." : "Add To Cart"}
+          </button>
+        </div>
+      )}
 
       {/* Search Box */}
       <div className="relative mb-4">
@@ -545,8 +598,7 @@ export default function OfficeReturn({
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)}{" "}
-          BDT
+          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)} BDT
         </span>
         <button
           onClick={handleSubmit}
