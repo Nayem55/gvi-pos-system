@@ -5,7 +5,12 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
-export default function OpeningStock({ user, stock, getStockValue }) {
+export default function OpeningStock({
+  user,
+  stock,
+  getStockValue,
+  allProducts,
+}) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [searchResults, setSearchResults] = useState([]);
@@ -17,6 +22,8 @@ export default function OpeningStock({ user, stock, getStockValue }) {
   );
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+
+  const isAdminPanel = !!allProducts; // Determine if we're in admin panel (has allProducts)
 
   const isPromoValid = (product) => {
     if (!product.promoStartDate || !product.promoEndDate) return false;
@@ -63,12 +70,16 @@ export default function OpeningStock({ user, stock, getStockValue }) {
     }
 
     try {
+      // Encode the outlet name for URL
+      const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
-      const currentStock = stockRes.data.stock.currentStock || 0;
-      const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
-      const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
+
+      // Default to 0 if any values are undefined
+      const currentStock = stockRes.data?.stock?.currentStock ?? 0;
+      const currentStockDP = stockRes.data?.stock?.currentStockValueDP ?? 0;
+      const currentStockTP = stockRes.data?.stock?.currentStockValueTP ?? 0;
       const currentDP = getCurrentDP(product);
       const currentTP = getCurrentTP(product);
 
@@ -91,7 +102,7 @@ export default function OpeningStock({ user, stock, getStockValue }) {
       setSearch("");
     } catch (err) {
       console.error("Stock fetch error:", err);
-      toast.error("Failed to fetch stock.");
+      toast.error("Failed to fetch stock. Please try again.");
     }
   };
 
@@ -132,17 +143,31 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           // Skip empty rows or instruction rows
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
-          const productResponse = await axios.get(
-            "http://192.168.0.30:5000/search-product",
-            {
-              params: {
-                search: row["Barcode"] || row["Product Name"],
-                type: "barcode",
-              },
-            }
-          );
+          // Skip rows with quantity 0
+          const openingQty = parseInt(row["Opening Quantity"] || 0);
+          if (openingQty <= 0) continue;
 
-          const product = productResponse.data[0];
+          let product;
+          if (isAdminPanel) {
+            // Find product in allProducts for admin panel
+            product = allProducts.find(
+              (p) =>
+                p.barcode === row["Barcode"] || p.name === row["Product Name"]
+            );
+          } else {
+            // API call for non-admin
+            const productResponse = await axios.get(
+              "http://192.168.0.30:5000/search-product",
+              {
+                params: {
+                  search: row["Barcode"] || row["Product Name"],
+                  type: "barcode",
+                },
+              }
+            );
+            product = productResponse.data[0];
+          }
+
           if (!product) {
             errorCount++;
             continue;
@@ -158,7 +183,6 @@ export default function OpeningStock({ user, stock, getStockValue }) {
           const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
           const currentDP = row["DP"] || getCurrentDP(product);
           const currentTP = row["TP"] || getCurrentTP(product);
-          const openingQty = parseInt(row["Opening Quantity"] || 0);
 
           setCart((prev) => [
             ...prev.filter((item) => item.barcode !== product.barcode),
@@ -214,43 +238,74 @@ export default function OpeningStock({ user, stock, getStockValue }) {
     }
   };
 
-  const downloadDemoFile = () => {
-    const demoData = [
-      {
-        Barcode: "123456789",
-        "Product Name": "Sample Product",
-        "Opening Quantity": "10",
-        DP: "100.00",
-        TP: "120.00",
-      },
-      {
-        Barcode: "987654321",
-        "Product Name": "Another Product",
-        "Opening Quantity": "5",
-        DP: "150.00",
-        TP: "180.00",
-      },
-    ];
+  const downloadDemoFile = async () => {
+    try {
+      let productsToExport = [];
 
-    const worksheet = XLSX.utils.json_to_sheet(demoData);
+      if (isAdminPanel) {
+        // Use allProducts in admin panel
+        productsToExport = allProducts.map((product) => ({
+          Barcode: product.barcode,
+          "Product Name": product.name,
+          "Opening Quantity": "0",
+          DP: product.dp,
+          TP: product.tp,
+        }));
+      } else {
+        // Fallback to sample data in non-admin
+        productsToExport = [
+          {
+            Barcode: "123456789",
+            "Product Name": "Sample Product",
+            "Opening Quantity": "0",
+            DP: "100.00",
+            TP: "120.00",
+          },
+          {
+            Barcode: "987654321",
+            "Product Name": "Another Product",
+            "Opening Quantity": "0",
+            DP: "150.00",
+            TP: "180.00",
+          },
+        ];
+      }
 
-    // Add instructions as the first row
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
+      const worksheet = XLSX.utils.json_to_sheet(productsToExport);
+
+      // Add instructions
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
         [
-          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          [
+            "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          ],
+          ["1. Set 'Opening Quantity' to desired value (0 will be ignored)"],
+          ["2. DP/TP are optional - will use current prices if omitted"],
+          [
+            "3. Only products with zero current stock can be edited after import",
+          ],
         ],
-        ["Barcode and Product Name must match existing products"],
-        ["DP/TP are optional - will use current prices if omitted"],
-        ["Only products with zero current stock can be edited after import"],
-      ],
-      { origin: -1 }
-    );
+        { origin: -1 }
+      );
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Opening Stock");
-    XLSX.writeFile(workbook, "Opening_Stock_Template.xlsx");
+      // Auto-size columns
+      const wscols = [
+        { wch: 15 }, // Barcode
+        { wch: 40 }, // Product Name
+        { wch: 18 }, // Opening Quantity
+        { wch: 10 }, // DP
+        { wch: 10 }, // TP
+      ];
+      worksheet["!cols"] = wscols;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Opening Stock");
+      XLSX.writeFile(workbook, "Opening_Stock_Template.xlsx");
+    } catch (error) {
+      console.error("Error generating template:", error);
+      toast.error("Failed to generate template");
+    }
   };
 
   const updateStockValue = (barcode, value) => {
@@ -378,35 +433,37 @@ export default function OpeningStock({ user, stock, getStockValue }) {
         )}
       </div>
 
-      {/* Import/Export Controls */}
-      <div className="flex gap-4 my-4">
-        <button
-          onClick={downloadDemoFile}
-          className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
-        >
-          <FaFileDownload /> Template
-        </button>
-        <input
-          id="import-file"
-          type="file"
-          accept=".xlsx, .xls, .csv"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <label
-          htmlFor="import-file"
-          className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
-        >
-          <FaFileImport /> Import
-        </label>
-        <button
-          onClick={handleBulkImport}
-          disabled={importLoading || !importFile}
-          className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
-        >
-          {importLoading ? "Processing..." : "Add To Cart"}
-        </button>
-      </div>
+      {/* Import/Export Controls - Only show in admin panel */}
+      {isAdminPanel && (
+        <div className="flex gap-4 my-4">
+          <button
+            onClick={downloadDemoFile}
+            className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
+          >
+            <FaFileDownload /> Template
+          </button>
+          <input
+            id="import-file"
+            type="file"
+            accept=".xlsx, .xls, .csv"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <label
+            htmlFor="import-file"
+            className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
+          >
+            <FaFileImport /> Import
+          </label>
+          <button
+            onClick={handleBulkImport}
+            disabled={importLoading || !importFile}
+            className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
+          >
+            {importLoading ? "Processing..." : "Add To Cart"}
+          </button>
+        </div>
+      )}
 
       {/* Search Box */}
       <div className="relative mb-4">

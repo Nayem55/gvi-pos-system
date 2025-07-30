@@ -13,9 +13,12 @@ const ManageStock = () => {
   const [selectedTab, setSelectedTab] = useState("");
   const [stock, setStock] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]); // State for all products
+  const [productsLoading, setProductsLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
+    fetchAllProducts(); // Fetch products when component mounts
   }, []);
 
   const fetchUsers = async () => {
@@ -30,25 +33,41 @@ const ManageStock = () => {
     }
   };
 
+  // Fetch all products once
+  const fetchAllProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const response = await axios.get("http://192.168.0.30:5000/all-products");
+      setProducts(response.data);
+      setProductsLoading(false);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProductsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedUser && selectedUser.outlet) {
       getStockValue(selectedUser.outlet);
     }
   }, [selectedUser]);
 
-  const getStockValue = async (outletName) => {
+   const getStockValue = async (outletName) => {
     try {
+      const encodedOutletName = encodeURIComponent(outletName);
       const response = await axios.get(
-        `http://192.168.0.30:5000/api/stock-value/${outletName}`
+        `http://192.168.0.30:5000/api/stock-value/${encodedOutletName}`
       );
+
       setStock({
         dp: response.data.totalCurrentDP,
         tp: response.data.totalCurrentTP,
       });
     } catch (error) {
-      console.error("Error fetching stock value:", error);
+      console.error("Error fetching stock data:", error);
     }
   };
+
 
   const renderContent = () => {
     if (!selectedUser) {
@@ -59,52 +78,35 @@ const ManageStock = () => {
       );
     }
 
+    if (productsLoading) {
+      return (
+        <div className="text-center mt-10">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="mt-2">Loading products...</p>
+        </div>
+      );
+    }
+
+    // Common props for all voucher components
+    const commonProps = {
+      user: selectedUser,
+      stock: stock,
+      setStock: setStock,
+      getStockValue: getStockValue,
+      allProducts: products, // Pass all products to each component
+    };
+
     switch (selectedTab) {
       case "opening":
-        return (
-          <OpeningStock
-            user={selectedUser}
-            stock={stock}
-            setStock={setStock}
-            getStockValue={getStockValue}
-          />
-        );
+        return <OpeningStock {...commonProps} />;
       case "primary":
-        return (
-          <Primary
-            user={selectedUser}
-            stock={stock}
-            setStock={setStock}
-            getStockValue={getStockValue}
-          />
-        );
+        return <Primary {...commonProps} />;
       case "secondary":
-        return (
-          <Secondary
-            user={selectedUser}
-            stock={stock}
-            setStock={setStock}
-            getStockValue={getStockValue}
-          />
-        );
+        return <Secondary {...commonProps} />;
       case "officeReturn":
-        return (
-          <OfficeReturn
-            user={selectedUser}
-            stock={stock}
-            setStock={setStock}
-            getStockValue={getStockValue}
-          />
-        );
+        return <OfficeReturn {...commonProps} />;
       case "marketReturn":
-        return (
-          <MarketReturn
-            user={selectedUser}
-            stock={stock}
-            setStock={setStock}
-            getStockValue={getStockValue}
-          />
-        );
+        return <MarketReturn {...commonProps} />;
       default:
         return null;
     }
