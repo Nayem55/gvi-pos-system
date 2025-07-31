@@ -5,8 +5,19 @@ import toast from "react-hot-toast";
 import AdminSidebar from "../Component/AdminSidebar";
 
 const CreateUserPage = () => {
+  // Static mapping of zones to RSMs and SOMs
+  const zoneMappings = {
+    "ZONE-01": {
+      rsm: "MD. AL-AMIN",
+      som: "MD. NAZMUS SAKIB"
+    },
+    "ZONE-03": {
+      rsm: "MD JANANGIR ALAM",
+      som: "ASADUL HOQUE RIPON"
+    }
+  };
+
   const [newUser, setNewUser] = useState({
-    // Basic Info
     name: "",
     number: "",
     password: "",
@@ -17,8 +28,6 @@ const CreateUserPage = () => {
     asm: "",
     rsm: "",
     som: "",
-
-    // Personal Info
     nidType: "NID",
     nidNumber: "",
     dateOfBirth: "",
@@ -26,16 +35,10 @@ const CreateUserPage = () => {
     maritalStatus: "",
     spouseName: "",
     marriageDate: "",
-
-    // Address & Education
     presentAddress: "",
     educationalQualification: "",
-
-    // Employment Details
     joiningDate: "",
     presentSalary: "",
-
-    // Contact Info
     personalMobileNumber: "",
     familyContactNumber: "",
     relationWithContactPerson: "",
@@ -45,11 +48,11 @@ const CreateUserPage = () => {
   const [dropdownData, setDropdownData] = useState({
     roles: ["SO", "ASM", "RSM", "SOM"],
     groups: [],
-    zones: [],
+    zones: ["ZONE-01", "ZONE-03"],
     outlets: [],
     asms: [],
-    rsms: [],
-    soms: [],
+    rsms: ["MD. AL-AMIN", "MD JANANGIR ALAM"],
+    soms: ["MD. NAZMUS SAKIB", "ASADUL HOQUE RIPON"],
     nidTypes: ["NID", "BC"],
     bloodGroups: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     maritalStatuses: ["Single", "Married", "Divorced", "Widowed"],
@@ -68,8 +71,6 @@ const CreateUserPage = () => {
     zones: false,
     outlets: false,
     asms: false,
-    rsms: false,
-    soms: false,
   });
 
   const [showOutletModal, setShowOutletModal] = useState(false);
@@ -87,47 +88,40 @@ const CreateUserPage = () => {
   const [creatingOutlet, setCreatingOutlet] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
 
+  // Update RSM and SOM when zone changes
+  useEffect(() => {
+    if (newUser.zone && zoneMappings[newUser.zone]) {
+      setNewUser(prev => ({
+        ...prev,
+        rsm: zoneMappings[newUser.zone].rsm,
+        som: zoneMappings[newUser.zone].som
+      }));
+    } else {
+      setNewUser(prev => ({
+        ...prev,
+        rsm: "",
+        som: ""
+      }));
+    }
+  }, [newUser.zone]);
+
   // Fetch dropdown data when component mounts
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        // Fetch groups
         setFetchingData((prev) => ({ ...prev, groups: true }));
         const groups = await axios.get(
           "http://192.168.0.30:5000/get-user-field-values?field=group"
         );
         setDropdownData((prev) => ({ ...prev, groups: groups.data }));
 
-        // Fetch zones
-        setFetchingData((prev) => ({ ...prev, zones: true }));
-        const zones = await axios.get(
-          "http://192.168.0.30:5000/get-user-field-values?field=zone"
-        );
-        setDropdownData((prev) => ({ ...prev, zones: zones.data }));
-
-        // Fetch outlets
-        await fetchOutlets();
-
-        // Fetch ASMs
         setFetchingData((prev) => ({ ...prev, asms: true }));
         const asms = await axios.get(
           "http://192.168.0.30:5000/get-user-field-values?field=asm"
         );
         setDropdownData((prev) => ({ ...prev, asms: asms.data }));
 
-        // Fetch RSMs
-        setFetchingData((prev) => ({ ...prev, rsms: true }));
-        const rsms = await axios.get(
-          "http://192.168.0.30:5000/get-user-field-values?field=rsm"
-        );
-        setDropdownData((prev) => ({ ...prev, rsms: rsms.data }));
-
-        // Fetch SOMs
-        setFetchingData((prev) => ({ ...prev, soms: true }));
-        const soms = await axios.get(
-          "http://192.168.0.30:5000/get-user-field-values?field=som"
-        );
-        setDropdownData((prev) => ({ ...prev, soms: soms.data }));
+        await fetchOutlets();
       } catch (error) {
         console.error("Error fetching dropdown data:", error);
         toast.error("Failed to load dropdown options");
@@ -135,10 +129,7 @@ const CreateUserPage = () => {
         setFetchingData((prev) => ({
           ...prev,
           groups: false,
-          zones: false,
           asms: false,
-          rsms: false,
-          soms: false,
         }));
       }
     };
@@ -187,7 +178,6 @@ const CreateUserPage = () => {
     try {
       await axios.post("http://192.168.0.30:5000/api/users", newUser);
       toast.success("User created successfully!");
-      // Reset form
       setNewUser({
         name: "",
         number: "",
@@ -258,13 +248,13 @@ const CreateUserPage = () => {
     }
   };
 
-  // Helper component for dropdown fields
   const DropdownField = ({
     label,
     field,
     options,
     isLoading,
     showAddButton = false,
+    disabled = false
   }) => (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-1">
@@ -295,8 +285,9 @@ const CreateUserPage = () => {
             onChange={(e) =>
               setNewUser({ ...newUser, [field]: e.target.value })
             }
-            className="w-full p-2 border rounded-md bg-white text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={`w-full p-2 border rounded-md ${disabled ? 'bg-gray-100' : 'bg-white'} text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
             required={field === "role"}
+            disabled={disabled}
           >
             <option value="">Select {label}</option>
             {options.map((option) => (
@@ -311,7 +302,6 @@ const CreateUserPage = () => {
     </div>
   );
 
-  // Helper component for date fields
   const DateField = ({ label, field }) => (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -329,7 +319,6 @@ const CreateUserPage = () => {
     </div>
   );
 
-  // Tab navigation
   const TabButton = ({ tabName, label }) => (
     <button
       type="button"
@@ -355,7 +344,6 @@ const CreateUserPage = () => {
             </h2>
           </div>
 
-          {/* Outlet Creation Modal */}
           {showOutletModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
               <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -556,7 +544,6 @@ const CreateUserPage = () => {
           )}
 
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            {/* Tab Navigation */}
             <div className="border-b border-gray-200">
               <nav className="flex -mb-px">
                 <TabButton tabName="basic" label="Basic Information" />
@@ -567,7 +554,6 @@ const CreateUserPage = () => {
             </div>
 
             <form onSubmit={handleCreateUser} className="p-6">
-              {/* Basic Information Tab */}
               {activeTab === "basic" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="mb-4">
@@ -636,7 +622,7 @@ const CreateUserPage = () => {
                     label="Zone"
                     field="zone"
                     options={dropdownData.zones}
-                    isLoading={fetchingData.zones}
+                    isLoading={false}
                   />
 
                   <DropdownField
@@ -658,19 +644,20 @@ const CreateUserPage = () => {
                     label="RSM"
                     field="rsm"
                     options={dropdownData.rsms}
-                    isLoading={fetchingData.rsms}
+                    isLoading={false}
+                    disabled={true}
                   />
 
                   <DropdownField
                     label="SOM"
                     field="som"
                     options={dropdownData.soms}
-                    isLoading={fetchingData.soms}
+                    isLoading={false}
+                    disabled={true}
                   />
                 </div>
               )}
 
-              {/* Personal Details Tab */}
               {activeTab === "personal" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <DropdownField
@@ -762,7 +749,6 @@ const CreateUserPage = () => {
                 </div>
               )}
 
-              {/* Employment Info Tab */}
               {activeTab === "employment" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <DateField label="Joining Date" field="joiningDate" />
@@ -787,7 +773,6 @@ const CreateUserPage = () => {
                 </div>
               )}
 
-              {/* Contact Details Tab */}
               {activeTab === "contact" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="mb-4">
@@ -846,7 +831,6 @@ const CreateUserPage = () => {
                 </div>
               )}
 
-              {/* Form Navigation and Submit */}
               <div className="flex justify-between mt-8 pt-4 border-t border-gray-200">
                 <div className="flex gap-2">
                   {activeTab !== "basic" && (

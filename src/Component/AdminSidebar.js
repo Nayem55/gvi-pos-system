@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useLocation, matchPath } from "react-router-dom";
 import {
   Menu,
   X,
@@ -16,19 +16,63 @@ import {
   Edit3,
   SheetIcon,
   ListOrderedIcon,
+  Home,
+  ShoppingCart,
+  Clock,
+  FileText,
+  DollarSign,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
 import { BsCashCoin, BsShop } from "react-icons/bs";
+import { FaTrademark } from "react-icons/fa";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [dashboardDropdownOpen, setDashboardDropdownOpen] = useState(false);
-  const [salesDropdownOpen, setSalesDropdownOpen] = useState(false);
-  const [salesDropdown1Open, setSalesDropdown1Open] = useState(false);
-  const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
-  const [alterDropdownOpen, setAlterDropdownOpen] = useState(false);
-  const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const location = useLocation();
+
+  // Close sidebar on mobile when clicking a link
+  const closeSidebar = useCallback(() => {
+    if (window.innerWidth < 768) {
+      setIsOpen(false);
+    }
+  }, []);
+
+  // Close sidebar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && !event.target.closest('.sidebar-container')) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  // Close sidebar on window resize if it becomes desktop view
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const toggleDropdown = (dropdownName) => {
+    setActiveDropdown(activeDropdown === dropdownName ? null : dropdownName);
+  };
+
+  const isActive = (path, exact = true) => {
+    return exact 
+      ? location.pathname === path
+      : matchPath({ path: `${path}/*` }, location.pathname);
+  };
 
   const navItems = [
     {
@@ -44,7 +88,7 @@ const AdminSidebar = () => {
     {
       name: "Accounts",
       path: "/admin/money-transaction",
-      icon: <BsCashCoin size={20} />,
+      icon: <DollarSign size={20} />,
     },
     {
       name: "TA/DA Report",
@@ -54,7 +98,7 @@ const AdminSidebar = () => {
     {
       name: "Salary Sheet",
       path: "/admin/salary",
-      icon: <SheetIcon size={20} />,
+      icon: <FileText size={20} />,
     },
     {
       name: "Order Requests",
@@ -63,296 +107,208 @@ const AdminSidebar = () => {
     },
   ];
 
+  const dropdowns = [
+    {
+      name: "dashboard",
+      title: "Dashboard",
+      icon: <Grid size={20} />,
+      items: [
+        { name: "POS", path: "/admin", icon: <ShoppingCart size={16} /> },
+        { 
+          name: "Attendance", 
+          path: "https://rl.luvit.com.bd/admin-panel", 
+          icon: <Clock size={16} />,
+          external: true 
+        },
+      ],
+    },
+    {
+      name: "target",
+      title: "Target",
+      icon: <Target size={20} />,
+      items: [
+        { name: "Sale Target", path: "/admin/monthly-target", icon: <Target size={16} /> },
+        { name: "Category Wise Target", path: "/admin/category-target", icon: <BiCategoryAlt size={16} /> },
+        { name: "Brand Wise Target", path: "/admin/brand-target", icon: <Package size={16} /> },
+      ],
+    },
+    {
+      name: "create",
+      title: "Create",
+      icon: <PlusCircle size={20} />,
+      items: [
+        { name: "Product", path: "/admin/create-product", icon: <Package size={16} /> },
+        { name: "Category", path: "/admin/create-category", icon: <BiCategoryAlt size={16} /> },
+        { name: "Brand", path: "/admin/create-brand", icon: <FaTrademark size={16} /> },
+        { name: "User", path: "/admin/create-user", icon: <Users size={16} /> },
+        { name: "Outlet", path: "/admin/create-outlet", icon: <BsShop size={16} /> },
+      ],
+    },
+    {
+      name: "alter",
+      title: "Alter",
+      icon: <Edit3 size={20} />,
+      items: [
+        { name: "Products", path: "/admin/alter-products", icon: <Package size={16} /> },
+        { name: "Category", path: "/admin/alter-categories", icon: <BiCategoryAlt size={16} /> },
+        { name: "Brand", path: "/admin/alter-brands", icon: <FaTrademark size={16} /> },
+        { name: "Users", path: "/admin/alter-users", icon: <Users size={16} /> },
+        { name: "Outlets", path: "/admin/alter-outlets", icon: <BsShop size={16} /> },
+      ],
+    },
+    {
+      name: "salesMovement",
+      title: "Sales Movement",
+      icon: <BarChart2 size={20} />,
+      items: [
+        { name: "User Wise", path: "/admin/sales-movement/dealer-wise", icon: <Users size={16} /> },
+        { name: "Brand Wise", path: "/admin/sales-movement/brand-wise", icon: <Package size={16} /> },
+        { name: "Product Wise", path: "/admin/sales-movement/product-wise", icon: <Box size={16} /> },
+        { name: "Category Wise", path: "/admin/sales-movement/category-wise", icon: <BiCategoryAlt size={16} /> },
+      ],
+    },
+    {
+      name: "stockMovement",
+      title: "Stock Movement",
+      icon: <Box size={20} />,
+      items: [
+        { name: "Dealer Wise", path: "/stock-movement/dealer", icon: <Users size={16} /> },
+        { name: "Group Wise", path: "/stock-movement/group", icon: <BsShop size={16} /> },
+      ],
+    },
+  ];
+
   return (
     <>
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 bg-gray-800 text-white p-2 rounded-md shadow-md"
+        className="md:hidden fixed top-4 left-4 z-50 bg-gray-800 text-white p-2 rounded-md shadow-lg hover:bg-gray-700 transition-colors duration-200"
+        aria-label="Toggle menu"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full bg-gray-900 text-white w-72 p-5 shadow-lg transform transition-transform duration-300 ease-in-out 
-        ${isOpen ? "translate-x-0" : "-translate-x-64"} md:translate-x-0 md:relative md:h-screen`}
-        style={{ position: "sticky", top: 0 }}
+        className={`fixed top-0 left-0 h-[100vh] bg-[#3C3F46] text-white w-72 p-5 shadow-xl transform transition-transform duration-300 ease-in-out z-40
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:sticky md:top-0 md:z-0`}
       >
-        <h2 className="text-xl font-bold mb-6 text-left">Admin Panel</h2>
-
-        <nav className="space-y-2">
-          {/* Dashboard Dropdown */}
-          <div>
-            <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
-              onClick={() => setDashboardDropdownOpen(!dashboardDropdownOpen)}
-            >
-              <span className="flex items-center gap-3">
-                <Grid size={20} />
-                Dashboard
-              </span>
-              <ChevronDown
-                size={16}
-                className={dashboardDropdownOpen ? "rotate-180" : ""}
-              />
-            </button>
-            {dashboardDropdownOpen && (
-              <div className="ml-6 mt-2 space-y-2">
-                <Link
-                  to="/admin"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
-                >
-                  POS
-                </Link>
-                <a
-                  href="https://rl.luvit.com.bd/admin-panel"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
-                >
-                  Attendance
-                </a>
-                {/* <a
-                  href="https://attendance.luvit.com.bd/admin"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
-                >
-                  AMD / GVI / NMT
-                </a> */}
-              </div>
-            )}
+        <div className="flex flex-col h-full">
+          {/* Logo/Header */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Home size={24} className="text-blue-400" />
+              <span>Admin Panel</span>
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">Management Console</p>
           </div>
 
-          {/* Static Navigation Items */}
-          {navItems.map((item) => (
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto">
+            <ul className="space-y-1">
+              {/* Dropdown Menus */}
+              {dropdowns.map((dropdown) => (
+                <li key={dropdown.name}>
+                  <button
+                    className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                      activeDropdown === dropdown.name || dropdown.items.some(item => isActive(item.path))
+                        ? "bg-gray-500 text-white"
+                        : "hover:bg-gray-800 hover:text-blue-300"
+                    }`}
+                    onClick={() => toggleDropdown(dropdown.name)}
+                  >
+                    <span className="flex items-center gap-3">
+                      {dropdown.icon}
+                      {dropdown.title}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        activeDropdown === dropdown.name ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  
+                  {activeDropdown === dropdown.name && (
+                    <ul className="ml-8 mt-1 space-y-1 border-l-2 border-gray-700 pl-3 py-1">
+                      {dropdown.items.map((item) => (
+                        <li key={item.path}>
+                          {item.external ? (
+                            <a
+                              href={item.path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-blue-300 text-sm transition-colors duration-200"
+                            >
+                              {item.icon}
+                              {item.name}
+                            </a>
+                          ) : (
+                            <Link
+                              to={item.path}
+                              onClick={closeSidebar}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                                isActive(item.path)
+                                  ? "text-blue-400 font-medium"
+                                  : "hover:bg-gray-800 hover:text-blue-300"
+                              }`}
+                            >
+                              {item.icon}
+                              {item.name}
+                            </Link>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+
+              {/* Static Navigation Items */}
+              {navItems.map((item) => (
+                <li key={item.path}>
+                  <Link
+                    to={item.path}
+                    onClick={closeSidebar}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      isActive(item.path, true)
+                        ? "bg-blue-900/30 text-blue-400 border-l-4 border-blue-400"
+                        : "hover:bg-gray-800 hover:text-blue-300"
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Bottom Section */}
+          <div className="mt-auto pt-4 border-t border-gray-800">
             <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 ${
-                location.pathname === item.path
-                  ? "bg-gray-700"
-                  : "hover:bg-gray-800"
-              }`}
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors duration-200"
             >
-              {item.icon}
-              <span>{item.name}</span>
+              <Settings size={20} />
+              <span>Settings</span>
             </Link>
-          ))}
-
-          {/* Target Dropdown */}
-          <div>
-            <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
-              onClick={() => setTargetDropdownOpen(!targetDropdownOpen)}
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors duration-200"
             >
-              <span className="flex items-center gap-3">
-                <Target size={20} />
-                Target
-              </span>
-              <ChevronDown
-                size={16}
-                className={targetDropdownOpen ? "rotate-180" : ""}
-              />
-            </button>
-            {targetDropdownOpen && (
-              <div className="ml-6 mt-2 space-y-2">
-                <Link
-                  to="/admin/monthly-target"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
-                >
-                  Sale Target
-                </Link>
-                <Link
-                  to="/admin/category-target"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
-                >
-                  Category Wise Target
-                </Link>
-                <Link
-                  to="/admin/brand-target"
-                  className="block px-4 py-2 rounded-md transition-all duration-200 hover:bg-gray-800"
-                >
-                  Brand Wise Target
-                </Link>
-              </div>
-            )}
+              <HelpCircle size={20} />
+              <span>Help & Support</span>
+            </Link>
           </div>
-
-          {/* Create Dropdown */}
-          <div>
-            <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
-              onClick={() => setCreateDropdownOpen(!createDropdownOpen)}
-            >
-              <span className="flex items-center gap-3">
-                <PlusCircle size={20} />
-                Create
-              </span>
-              <ChevronDown
-                size={16}
-                className={createDropdownOpen ? "rotate-180" : ""}
-              />
-            </button>
-            {createDropdownOpen && (
-              <div className="ml-6 mt-2 space-y-2">
-                <Link
-                  to="/admin/create-product"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <Package size={16} /> Product
-                </Link>
-                <Link
-                  to="/admin/create-category"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <BiCategoryAlt size={16} /> Category
-                </Link>
-                <Link
-                  to="/admin/create-user"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <Users size={16} /> User
-                </Link>
-                <Link
-                  to="/admin/create-outlet"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <BsShop size={16} /> Outlet
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Alter Dropdown */}
-          <div>
-            <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-all duration-200 hover:bg-gray-800"
-              onClick={() => setAlterDropdownOpen(!alterDropdownOpen)}
-            >
-              <span className="flex items-center gap-3">
-                <Edit3 size={20} />
-                Alter
-              </span>
-              <ChevronDown
-                size={16}
-                className={alterDropdownOpen ? "rotate-180" : ""}
-              />
-            </button>
-            {alterDropdownOpen && (
-              <div className="ml-6 mt-2 space-y-2">
-                <Link
-                  to="/admin/alter-products"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <Package size={16} /> Products
-                </Link>
-                <Link
-                  to="/admin/alter-categories"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <BiCategoryAlt size={16} /> Category
-                </Link>
-                <Link
-                  to="/admin/alter-users"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <Users size={16} /> Users
-                </Link>
-                <Link
-                  to="/admin/alter-outlets"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"
-                >
-                  <BsShop size={16} /> Outlets
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Sales Movement Dropdown */}
-          <div>
-            <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md hover:bg-gray-800"
-              onClick={() => setSalesDropdownOpen(!salesDropdownOpen)}
-            >
-              <span className="flex items-center gap-3">
-                <BarChart2 size={20} />
-                Sales Movement
-              </span>
-              <ChevronDown
-                size={16}
-                className={salesDropdownOpen ? "rotate-180" : ""}
-              />
-            </button>
-            {salesDropdownOpen && (
-              <div className="ml-6 mt-2 space-y-2">
-                <Link
-                  to="/admin/sales-movement/dealer-wise"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                  User Wise
-                </Link>
-                <Link
-                  to="/admin/sales-movement/brand-wise"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                  Brand Wise
-                </Link>
-                <Link
-                  to="/admin/sales-movement/product-wise"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                  Product Wise
-                </Link>
-                <Link
-                  to="/admin/sales-movement/category-wise"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                  Category Wise
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Stock Movement Dropdown */}
-          <div>
-            <button
-              className="flex items-center justify-between w-full px-4 py-3 rounded-md hover:bg-gray-800"
-              onClick={() => setSalesDropdown1Open(!salesDropdown1Open)}
-            >
-              <span className="flex items-center gap-3">
-                <Box size={20} /> Stock Movement
-              </span>
-              <ChevronDown
-                size={16}
-                className={salesDropdown1Open ? "rotate-180" : ""}
-              />
-            </button>
-            {salesDropdown1Open && (
-              <div className="ml-6 mt-2 space-y-2">
-                <Link
-                  to="/stock-movement/dealer"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                  Dealer Wise
-                </Link>
-                <Link
-                  to="/stock-movement/group"
-                  className="block px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                  Group Wise
-                </Link>
-              </div>
-            )}
-          </div>
-        </nav>
+        </div>
       </div>
 
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}

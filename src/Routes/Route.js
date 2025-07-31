@@ -39,6 +39,8 @@ import TDDAdminPanel from "../Pages/TDDA";
 import SalarySheet from "../Pages/AdminPanel/SalarySheet";
 import OrderRequests from "../Pages/AdminPanel/OrderRequests";
 import PrimaryRequest from "../Pages/PrimaryRequest";
+import AlterBrandsPage from "../Pages/AdminPanel/AlterBrandsPage";
+import CreateBrandPage from "../Pages/AdminPanel/CreateBrandPage";
 
 const router = createBrowserRouter([
   {
@@ -115,8 +117,16 @@ const router = createBrowserRouter([
         element: <CreateProductPage/>,
       },
       {
+        path: "/admin/create-brand",
+        element: <CreateBrandPage/>,
+      },
+      {
         path: "/admin/alter-products",
         element: <AlterProductsPage />,
+      },
+      {
+        path: "/admin/alter-brands",
+        element: <AlterBrandsPage />,
       },
       {
         path: "/admin/create-user",

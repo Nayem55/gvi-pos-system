@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 import AdminSidebar from "../Component/AdminSidebar";
 
@@ -12,15 +12,19 @@ const CreateProductPage = () => {
     tp: "",
     mrp: "",
     category: "",
-    brand: "", // Added brand field
+    brand: "",
   });
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]); // State for brands
+  const [brands, setBrands] = useState([]);
   const [fetchingData, setFetchingData] = useState({
     categories: false,
     brands: false,
   });
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [newBrand, setNewBrand] = useState("");
 
   const fetchCategories = async () => {
     try {
@@ -38,9 +42,7 @@ const CreateProductPage = () => {
   const fetchBrands = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, brands: true }));
-      const response = await axios.get(
-        "http://192.168.0.30:5000/brands" // You'll need to create this endpoint
-      );
+      const response = await axios.get("http://192.168.0.30:5000/brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -81,6 +83,56 @@ const CreateProductPage = () => {
     }
   };
 
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategory.trim()) {
+      toast.error("Category name cannot be empty");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.post("http://192.168.0.30:5000/categories", {
+        name: newCategory,
+      });
+      toast.success("Category created successfully!");
+      setNewCategory("");
+      setShowCategoryModal(false);
+      await fetchCategories();
+      setNewProduct(prev => ({ ...prev, category: newCategory }));
+    } catch (error) {
+      console.error("Error creating category:", error);
+      toast.error(error.response?.data?.error || "Failed to create category");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateBrand = async (e) => {
+    e.preventDefault();
+    if (!newBrand.trim()) {
+      toast.error("Brand name cannot be empty");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.post("http://192.168.0.30:5000/brands", {
+        name: newBrand,
+      });
+      toast.success("Brand created successfully!");
+      setNewBrand("");
+      setShowBrandModal(false);
+      await fetchBrands();
+      setNewProduct(prev => ({ ...prev, brand: newBrand }));
+    } catch (error) {
+      console.error("Error creating brand:", error);
+      toast.error(error.response?.data?.error || "Failed to create brand");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex">
       <AdminSidebar />
@@ -89,9 +141,106 @@ const CreateProductPage = () => {
           <h2 className="text-2xl font-bold">Create New Product</h2>
         </div>
 
+        {/* Category Creation Modal */}
+        {showCategoryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Create New Category</h3>
+                <button
+                  onClick={() => setShowCategoryModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleCreateCategory}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    Category Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Enter category name"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoryModal(false)}
+                    className="px-4 py-2 border rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2"
+                  >
+                    <PlusCircle size={18} />
+                    {loading ? "Creating..." : "Create"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Brand Creation Modal */}
+        {showBrandModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Create New Brand</h3>
+                <button
+                  onClick={() => setShowBrandModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleCreateBrand}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    Brand Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newBrand}
+                    onChange={(e) => setNewBrand(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Enter brand name"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBrandModal(false)}
+                    className="px-4 py-2 border rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2"
+                  >
+                    <PlusCircle size={18} />
+                    {loading ? "Creating..." : "Create"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Existing fields (name, barcode) */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">
                 Product Name
@@ -122,9 +271,17 @@ const CreateProductPage = () => {
               />
             </div>
 
-            {/* Category Dropdown */}
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Category</label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium">Category</label>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <PlusCircle size={14} /> Add New
+                </button>
+              </div>
               {fetchingData.categories ? (
                 <select
                   className="w-full p-2 border rounded bg-gray-100"
@@ -151,9 +308,17 @@ const CreateProductPage = () => {
               )}
             </div>
 
-            {/* New Brand Dropdown */}
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Brand</label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium">Brand</label>
+                <button
+                  type="button"
+                  onClick={() => setShowBrandModal(true)}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <PlusCircle size={14} /> Add New
+                </button>
+              </div>
               {fetchingData.brands ? (
                 <select
                   className="w-full p-2 border rounded bg-gray-100"
@@ -180,7 +345,6 @@ const CreateProductPage = () => {
               )}
             </div>
 
-            {/* Price fields (dp, tp, mrp) */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">DP Price</label>
               <input
