@@ -18,6 +18,7 @@ const UserManagementPage = () => {
     asm: "",
     rsm: "",
     som: "",
+    pricelabel: "",
   });
   const [isAddUserVisible, setIsAddUserVisible] = useState(false);
   const [updateUser, setUpdateUser] = useState(null);
@@ -26,7 +27,7 @@ const UserManagementPage = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://192.168.0.30:5000/getAllUser");
+      const response = await axios.get("http://175.29.181.245:5000/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -41,7 +42,7 @@ const UserManagementPage = () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://192.168.0.30:5000/api/users",
+        "http://175.29.181.245:5000/api/users",
         newUser
       );
       toast.success("User created successfully!");
@@ -59,7 +60,7 @@ const UserManagementPage = () => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
       const response = await axios.delete(
-        `http://192.168.0.30:5000/api/users/${userId}`
+        `http://175.29.181.245:5000/api/users/${userId}`
       );
       if (response.status === 200) {
         toast.success("User deleted successfully!");
@@ -76,7 +77,7 @@ const UserManagementPage = () => {
     setLoading(true);
     try {
       const response = await axios.put(
-        `http://192.168.0.30:5000/updateUser/${updateUser._id}`,
+        `http://175.29.181.245:5000/updateUser/${updateUser._id}`,
         updateUser
       );
       if (response.status === 200) {

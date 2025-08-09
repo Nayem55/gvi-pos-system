@@ -47,8 +47,8 @@ const CategoryTargetPage = () => {
     const fetchData = async () => {
       try {
         const [usersRes, categoriesRes] = await Promise.all([
-          axios.get("http://192.168.0.30:5000/getAllUser"),
-          axios.get("http://192.168.0.30:5000/categories"),
+          axios.get("http://175.29.181.245:5000/getAllUser"),
+          axios.get("http://175.29.181.245:5000/categories"),
         ]);
         setUsers(usersRes.data);
         setCategories(categoriesRes.data);
@@ -66,7 +66,7 @@ const CategoryTargetPage = () => {
 
       try {
         const res = await axios.get(
-          "http://192.168.0.30:5000/categoryTargets",
+          "http://175.29.181.245:5000/categoryTargets",
           {
             params: { year, month },
           }
@@ -123,7 +123,7 @@ const CategoryTargetPage = () => {
           target: parseFloat(target),
         }));
 
-      await axios.post("http://192.168.0.30:5000/categoryTargets", {
+      await axios.post("http://175.29.181.245:5000/categoryTargets", {
         userID,
         year: parseInt(year),
         month: parseInt(month),
@@ -133,9 +133,12 @@ const CategoryTargetPage = () => {
       toast.success("Targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get("http://192.168.0.30:5000/categoryTargets", {
-        params: { year, month },
-      });
+      const res = await axios.get(
+        "http://175.29.181.245:5000/categoryTargets",
+        {
+          params: { year, month },
+        }
+      );
 
       const updatedTargets = {};
       res.data.forEach((userDoc) => {
@@ -180,7 +183,7 @@ const CategoryTargetPage = () => {
               target: parseFloat(target),
             }));
 
-          return axios.post("http://192.168.0.30:5000/categoryTargets", {
+          return axios.post("http://175.29.181.245:5000/categoryTargets", {
             userID,
             year: parseInt(year),
             month: parseInt(month),
@@ -193,9 +196,12 @@ const CategoryTargetPage = () => {
       toast.success("All targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get("http://192.168.0.30:5000/categoryTargets", {
-        params: { year, month },
-      });
+      const res = await axios.get(
+        "http://175.29.181.245:5000/categoryTargets",
+        {
+          params: { year, month },
+        }
+      );
 
       const updatedTargets = {};
       res.data.forEach((userDoc) => {

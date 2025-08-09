@@ -102,9 +102,11 @@ export default function Home() {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
         axios.get(
-          `http://192.168.0.30:5000/api/stock-value/${encodedOutletName}`
+          `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
         ),
-        axios.get(`http://192.168.0.30:5000/current-due/${encodedOutletName}`),
+        axios.get(
+          `http://175.29.181.245:5000/current-due/${encodedOutletName}`
+        ),
       ]);
 
       setCurrentDue(dueResponse.data.current_due);
@@ -126,7 +128,7 @@ export default function Home() {
           className="p-2 border rounded-lg w-[100%]"
         >
           <option value="opening">Opening Stock</option>
-          <option value="primary">Primary</option>
+          <option value="primary">Primary Request</option>
           <option value="secondary">Secondary</option>
           <option value="pos">POS</option>
           <option value="officeReturn">Office Return</option>
@@ -147,7 +149,7 @@ export default function Home() {
         />
       )}
       {selectedTab === "primary" && (
-        <Primary
+        <PrimaryRequest
           user={user}
           stock={stock}
           setStock={setStock}

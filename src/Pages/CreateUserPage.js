@@ -9,12 +9,12 @@ const CreateUserPage = () => {
   const zoneMappings = {
     "ZONE-01": {
       rsm: "MD. AL-AMIN",
-      som: "MD. NAZMUS SAKIB"
+      som: "MD. NAZMUS SAKIB",
     },
     "ZONE-03": {
       rsm: "MD JANANGIR ALAM",
-      som: "ASADUL HOQUE RIPON"
-    }
+      som: "ASADUL HOQUE RIPON",
+    },
   };
 
   const [newUser, setNewUser] = useState({
@@ -25,6 +25,7 @@ const CreateUserPage = () => {
     group: "",
     zone: "",
     outlet: "",
+    pricelabel: "",
     asm: "",
     rsm: "",
     som: "",
@@ -47,6 +48,7 @@ const CreateUserPage = () => {
   const [loading, setLoading] = useState(false);
   const [dropdownData, setDropdownData] = useState({
     roles: ["SO", "ASM", "RSM", "SOM"],
+    pricelabel: [], // Changed from hardcoded to empty array
     groups: [],
     zones: ["ZONE-01", "ZONE-03"],
     outlets: [],
@@ -65,7 +67,6 @@ const CreateUserPage = () => {
       "PhD",
     ],
   });
-
   const [fetchingData, setFetchingData] = useState({
     groups: false,
     zones: false,
@@ -91,16 +92,16 @@ const CreateUserPage = () => {
   // Update RSM and SOM when zone changes
   useEffect(() => {
     if (newUser.zone && zoneMappings[newUser.zone]) {
-      setNewUser(prev => ({
+      setNewUser((prev) => ({
         ...prev,
         rsm: zoneMappings[newUser.zone].rsm,
-        som: zoneMappings[newUser.zone].som
+        som: zoneMappings[newUser.zone].som,
       }));
     } else {
-      setNewUser(prev => ({
+      setNewUser((prev) => ({
         ...prev,
         rsm: "",
-        som: ""
+        som: "",
       }));
     }
   }, [newUser.zone]);
@@ -111,17 +112,18 @@ const CreateUserPage = () => {
       try {
         setFetchingData((prev) => ({ ...prev, groups: true }));
         const groups = await axios.get(
-          "http://192.168.0.30:5000/get-user-field-values?field=group"
+          "http://175.29.181.245:5000/get-user-field-values?field=group"
         );
         setDropdownData((prev) => ({ ...prev, groups: groups.data }));
 
         setFetchingData((prev) => ({ ...prev, asms: true }));
         const asms = await axios.get(
-          "http://192.168.0.30:5000/get-user-field-values?field=asm"
+          "http://175.29.181.245:5000/get-user-field-values?field=asm"
         );
         setDropdownData((prev) => ({ ...prev, asms: asms.data }));
 
         await fetchOutlets();
+        await fetchPriceLevels(); // Add this line
       } catch (error) {
         console.error("Error fetching dropdown data:", error);
         toast.error("Failed to load dropdown options");
@@ -137,10 +139,26 @@ const CreateUserPage = () => {
     fetchDropdownData();
   }, []);
 
+  const fetchPriceLevels = async () => {
+    try {
+      setFetchingData((prev) => ({ ...prev, pricelabel: true }));
+      const response = await axios.get(
+        "http://175.29.181.245:5000/api/pricelevels"
+      );
+      const priceLevels = response.data.map((level) => level.name);
+      setDropdownData((prev) => ({ ...prev, pricelabel: priceLevels }));
+    } catch (error) {
+      console.error("Error fetching price levels:", error);
+      toast.error("Failed to load price levels");
+    } finally {
+      setFetchingData((prev) => ({ ...prev, pricelabel: false }));
+    }
+  };
+
   const fetchOutlets = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, outlets: true }));
-      const outlets = await axios.get("http://192.168.0.30:5000/get-outlets");
+      const outlets = await axios.get("http://175.29.181.245:5000/get-outlets");
       setDropdownData((prev) => ({ ...prev, outlets: outlets.data }));
     } catch (error) {
       console.error("Error fetching outlets:", error);
@@ -176,7 +194,7 @@ const CreateUserPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("http://192.168.0.30:5000/api/users", newUser);
+      await axios.post("http://175.29.181.245:5000/api/users", newUser);
       toast.success("User created successfully!");
       setNewUser({
         name: "",
@@ -186,6 +204,7 @@ const CreateUserPage = () => {
         group: "",
         zone: "",
         outlet: "",
+        pricelabel: "",
         asm: "",
         rsm: "",
         som: "",
@@ -222,7 +241,7 @@ const CreateUserPage = () => {
     try {
       setCreatingOutlet(true);
       const response = await axios.post(
-        "http://192.168.0.30:5000/add-new-outlet",
+        "http://175.29.181.245:5000/add-new-outlet",
         newOutlet
       );
 
@@ -254,7 +273,7 @@ const CreateUserPage = () => {
     options,
     isLoading,
     showAddButton = false,
-    disabled = false
+    disabled = false,
   }) => (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-1">
@@ -285,7 +304,9 @@ const CreateUserPage = () => {
             onChange={(e) =>
               setNewUser({ ...newUser, [field]: e.target.value })
             }
-            className={`w-full p-2 border rounded-md ${disabled ? 'bg-gray-100' : 'bg-white'} text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            className={`w-full p-2 border rounded-md ${
+              disabled ? "bg-gray-100" : "bg-white"
+            } text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
             required={field === "role"}
             disabled={disabled}
           >
@@ -631,6 +652,12 @@ const CreateUserPage = () => {
                     options={dropdownData.outlets}
                     isLoading={fetchingData.outlets}
                     showAddButton={true}
+                  />
+                  <DropdownField
+                    label="Price Level"
+                    field="pricelabel"
+                    options={dropdownData.pricelabel}
+                    isLoading={fetchingData.pricelabel}
                   />
 
                   <DropdownField

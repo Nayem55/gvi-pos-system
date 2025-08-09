@@ -63,7 +63,7 @@ export default function PaymentVoucher({
 
     try {
       const dueResponse = await axios.put(
-        "http://192.168.0.30:5000/update-due",
+        "http://175.29.181.245:5000/update-due",
         {
           outlet: user.outlet,
           currentDue: currentDue - parseFloat(formData.amount),
@@ -74,7 +74,7 @@ export default function PaymentVoucher({
         throw new Error("Failed to update due amount");
       }
 
-      await axios.post("http://192.168.0.30:5000/money-transfer", {
+      await axios.post("http://175.29.181.245:5000/money-transfer", {
         outlet: user.outlet,
         userId: user._id,
         SO: user.name,

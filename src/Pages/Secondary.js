@@ -46,11 +46,17 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
   };
 
   const getCurrentTP = (product) => {
-    return isPromoValid(product) ? product.promoTP : product.tp;
+    const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
+    const outletTP = product.priceList?.[priceLabel]?.tp;
+
+    return isPromoValid(product) ? product.promoTP : outletTP ?? product.tp;
   };
 
   const getCurrentDP = (product) => {
-    return isPromoValid(product) ? product.promoDP : product.dp;
+    const priceLabel = user.pricelabel;
+    const outletDP = product.priceList?.[priceLabel]?.dp;
+
+    return isPromoValid(product) ? product.promoDP : outletDP ?? product.dp;
   };
 
   const handleSearch = async (query) => {
@@ -58,7 +64,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://192.168.0.30:5000/search-product",
+          "http://175.29.181.245:5000/search-product",
           {
             params: { search: query, type: searchType },
           }
@@ -77,7 +83,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
   const addToCart = async (product) => {
     try {
       const stockResponse = await axios.get(
-        "http://192.168.0.30:5000/outlet-stock",
+        "http://175.29.181.245:5000/outlet-stock",
         {
           params: { barcode: product.barcode, outlet: user.outlet },
         }
@@ -216,10 +222,10 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
         })),
       };
 
-      await axios.post("http://192.168.0.30:5000/add-sale-report", saleEntry);
+      await axios.post("http://175.29.181.245:5000/add-sale-report", saleEntry);
 
       const updatePromises = cart.map(async (item) => {
-        await axios.post("http://192.168.0.30:5000/stock-transactions", {
+        await axios.post("http://175.29.181.245:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "secondary",
@@ -289,7 +295,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
           const productResponse = await axios.get(
-            "http://192.168.0.30:5000/search-product",
+            "http://175.29.181.245:5000/search-product",
             {
               params: {
                 search: row["Barcode"] || row["Product Name"],
@@ -305,7 +311,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
           }
 
           const stockRes = await axios.get(
-            "http://192.168.0.30:5000/outlet-stock",
+            "http://175.29.181.245:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 

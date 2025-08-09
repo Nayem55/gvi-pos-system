@@ -26,7 +26,7 @@ const GroupStockMovementReport = () => {
     const fetchAreaOptions = async () => {
       try {
         const response = await axios.get(
-          "http://192.168.0.30:5000/api/area-options",
+          "http://175.29.181.245:5000/api/area-options",
           { params: { type: selectedType } }
         );
         if (response.data?.success) {
@@ -68,7 +68,7 @@ const GroupStockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "http://192.168.0.30:5000/api/area-stock-movement",
+        "http://175.29.181.245:5000/api/area-stock-movement",
         { params }
       );
 

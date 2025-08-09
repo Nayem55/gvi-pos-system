@@ -55,7 +55,7 @@ const CategoryWiseSalesReport = () => {
 
       try {
         const res = await axios.get(
-          "http://192.168.0.30:5000/categoryTargets",
+          "http://175.29.181.245:5000/categoryTargets",
           {
             params: {
               year: currentYear,
@@ -94,7 +94,7 @@ const CategoryWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://192.168.0.30:5000/sales/category-wise",
+        "http://175.29.181.245:5000/sales/category-wise",
         { params }
       );
       setSalesData(response.data);
@@ -135,7 +135,7 @@ const CategoryWiseSalesReport = () => {
       params.category = category;
 
       const outletSalesRes = await axios.get(
-        "http://192.168.0.30:5000/sales/category-wise/outlet-details",
+        "http://175.29.181.245:5000/sales/category-wise/outlet-details",
         { params }
       );
 

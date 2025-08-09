@@ -59,7 +59,7 @@ const AdminHomePage = () => {
 
     try {
       const salesPromise = axios
-        .get("http://192.168.0.30:5000/sales/zone-wise", {
+        .get("http://175.29.181.245:5000/sales/zone-wise", {
           params: {
             month: `${year}-${month.toString().padStart(2, "0")}`,
             year,
@@ -68,7 +68,7 @@ const AdminHomePage = () => {
         .catch(() => ({ data: [] }));
 
       const targetsPromise = axios
-        .get("http://192.168.0.30:5000/targets/zone-wise", {
+        .get("http://175.29.181.245:5000/targets/zone-wise", {
           params: { year, month },
         })
         .catch(() => ({ data: [] }));

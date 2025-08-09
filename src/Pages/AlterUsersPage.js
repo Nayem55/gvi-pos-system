@@ -10,6 +10,7 @@ const AlterUsersPage = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [dropdownData, setDropdownData] = useState({
     roles: ["SO", "ASM", "RSM", "SOM"],
+    pricelabel: [],
     groups: [],
     zones: [],
     outlets: [],
@@ -32,7 +33,7 @@ const AlterUsersPage = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://192.168.0.30:5000/getAllUser");
+      const response = await axios.get("http://175.29.181.245:5000/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -41,25 +42,38 @@ const AlterUsersPage = () => {
       setLoading(false);
     }
   };
+  const fetchPriceLevels = async () => {
+    try {
+      const response = await axios.get(
+        "http://175.29.181.245:5000/api/pricelevels"
+      );
+      const priceLevels = response.data.map((level) => level.name);
+      setDropdownData((prev) => ({ ...prev, pricelabel: priceLevels }));
+    } catch (error) {
+      console.error("Error fetching price levels:", error);
+      toast.error("Failed to load price levels");
+    }
+  };
 
   const fetchDropdownData = async () => {
     try {
       const groups = await axios.get(
-        "http://192.168.0.30:5000/get-user-field-values?field=group"
+        "http://175.29.181.245:5000/get-user-field-values?field=group"
       );
       const zones = await axios.get(
-        "http://192.168.0.30:5000/get-user-field-values?field=zone"
+        "http://175.29.181.245:5000/get-user-field-values?field=zone"
       );
-      const outlets = await axios.get("http://192.168.0.30:5000/get-outlets");
+      const outlets = await axios.get("http://175.29.181.245:5000/get-outlets");
       const asms = await axios.get(
-        "http://192.168.0.30:5000/get-user-field-values?field=asm"
+        "http://175.29.181.245:5000/get-user-field-values?field=asm"
       );
       const rsms = await axios.get(
-        "http://192.168.0.30:5000/get-user-field-values?field=rsm"
+        "http://175.29.181.245:5000/get-user-field-values?field=rsm"
       );
       const soms = await axios.get(
-        "http://192.168.0.30:5000/get-user-field-values?field=som"
+        "http://175.29.181.245:5000/get-user-field-values?field=som"
       );
+      await fetchPriceLevels(); // Add this line
 
       setDropdownData((prev) => ({
         ...prev,
@@ -88,7 +102,7 @@ const AlterUsersPage = () => {
     try {
       setLoading(true);
       await axios.put(
-        `http://192.168.0.30:5000/updateUser/${editingUser._id}`,
+        `http://175.29.181.245:5000/updateUser/${editingUser._id}`,
         editingUser
       );
       toast.success("User updated successfully!");
@@ -287,6 +301,12 @@ const AlterUsersPage = () => {
                   label="Outlet"
                   field="outlet"
                   options={dropdownData.outlets}
+                />
+
+                <DropdownField
+                  label="Pricelabel"
+                  field="pricelabel"
+                  options={dropdownData.pricelabel}
                 />
 
                 <DropdownField

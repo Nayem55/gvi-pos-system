@@ -37,7 +37,7 @@ const ProductWiseSalesReport = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://192.168.0.30:5000/api/sales/product-wise",
+        "http://175.29.181.245:5000/api/sales/product-wise",
         { params }
       );
       setSalesData(response.data);
@@ -65,7 +65,7 @@ const ProductWiseSalesReport = () => {
       params.productName = productName;
 
       const response = await axios.get(
-        "http://192.168.0.30:5000/api/sales/product-wise/outlet-details",
+        "http://175.29.181.245:5000/api/sales/product-wise/outlet-details",
         { params }
       );
 

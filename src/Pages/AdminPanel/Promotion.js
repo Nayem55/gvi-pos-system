@@ -41,15 +41,15 @@ export default function PromotionalPage() {
 
       if (debouncedSearch.trim()) {
         const response = await axios.get(
-          `http://192.168.0.30:5000/search-product?search=${debouncedSearch}`
+          `http://175.29.181.245:5000/search-product?search=${debouncedSearch}`
         );
         productsData = response.data;
         setTotalPages(1);
       } else {
         const res = await axios.get(
-          `http://192.168.0.30:5000/products?page=${currentPage}`
+          `http://175.29.181.245:5000/products?page=${currentPage}`
         );
-        const res2 = await axios.get(`http://192.168.0.30:5000/all-products`);
+        const res2 = await axios.get(`http://175.29.181.245:5000/all-products`);
         productsData = res.data.products;
         allProductsData = res2.data;
         setTotalPages(res.data.totalPages);
@@ -183,7 +183,7 @@ export default function PromotionalPage() {
 
     try {
       await axios.put(
-        `http://192.168.0.30:5000/products/${product._id}`,
+        `http://175.29.181.245:5000/products/${product._id}`,
         updatedProduct
       );
       toast.success("Promotion saved successfully!");
@@ -208,7 +208,7 @@ export default function PromotionalPage() {
 
     try {
       await axios.put(
-        `http://192.168.0.30:5000/products/${product._id}`,
+        `http://175.29.181.245:5000/products/${product._id}`,
         updatedProduct
       );
       toast.success("Promotion removed successfully!");
@@ -348,7 +348,7 @@ export default function PromotionalPage() {
         };
 
         await axios.put(
-          `http://192.168.0.30:5000/products/${product._id}`,
+          `http://175.29.181.245:5000/products/${product._id}`,
           updatedProduct
         );
 

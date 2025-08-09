@@ -5,7 +5,7 @@ import SignUpForm from "../Component/Signup";
 import Profile from "../Component/Profile";
 import TodaysSale from "../Pages/Homepage/Homepage";
 import UserDashboard from "../Pages/UserDashboard";
-import AdminProducts from './../Pages/AdminPanel/Products';
+import AdminProducts from "./../Pages/AdminPanel/Products";
 import DailyReport from "../Pages/AdminPanel/DailyReport";
 import ManageStock from "../Pages/AdminPanel/ManageStock";
 import UserManagementPage from "../Pages/AdminPanel/Users";
@@ -41,6 +41,8 @@ import OrderRequests from "../Pages/AdminPanel/OrderRequests";
 import PrimaryRequest from "../Pages/PrimaryRequest";
 import AlterBrandsPage from "../Pages/AdminPanel/AlterBrandsPage";
 import CreateBrandPage from "../Pages/AdminPanel/CreateBrandPage";
+import CreatePriceLevelPage from "../Pages/AdminPanel/CreatePriceLevelPage";
+import AlterPriceLevelsPage from "../Pages/AdminPanel/AlterPriceLevelsPage";
 
 const router = createBrowserRouter([
   {
@@ -49,7 +51,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Home/>,
+        element: <Home />,
       },
       {
         path: "/home",
@@ -62,63 +64,63 @@ const router = createBrowserRouter([
       },
       {
         path: "/signup",
-        element: <SignUpForm/>,
+        element: <SignUpForm />,
       },
       {
         path: "/profile",
-        element: <Profile/>,
+        element: <Profile />,
       },
       {
         path: "/primary-request",
-        element: <PrimaryRequest/>,
+        element: <PrimaryRequest />,
       },
       {
         path: "/dashboard",
-        element: <UserDashboard/>,
+        element: <UserDashboard />,
       },
       {
         path: "/accounts",
-        element: <Accounts/>,
+        element: <Accounts />,
       },
       {
         path: "/stock-movement/dealer",
-        element: <StockMovementReport/>,
+        element: <StockMovementReport />,
       },
       {
         path: "/stock-movement/group",
-        element: <GroupStockMovementReport/>,
+        element: <GroupStockMovementReport />,
       },
       {
         path: "/admin/money-transaction",
-        element: <FinancialMovementReport/>,
+        element: <FinancialMovementReport />,
       },
       {
         path: "/manage-stock",
-        element: <ManageUserStock/>,
+        element: <ManageUserStock />,
       },
       {
         path: "admin/tada",
-        element: <TDDAdminPanel/>,
+        element: <TDDAdminPanel />,
       },
       {
         path: "/admin",
-        element: <AdminHomePage/>,
+        element: <AdminHomePage />,
       },
       {
         path: "/admin/salary",
-        element: <SalarySheet/>,
+        element: <SalarySheet />,
       },
       {
         path: "/admin/products",
-        element: <AdminProducts/>,
+        element: <AdminProducts />,
       },
       {
         path: "/admin/create-product",
-        element: <CreateProductPage/>,
+        element: <CreateProductPage />,
       },
       {
         path: "/admin/create-brand",
-        element: <CreateBrandPage/>,
+        element: <CreateBrandPage />,
       },
       {
         path: "/admin/alter-products",
@@ -154,69 +156,75 @@ const router = createBrowserRouter([
       },
       {
         path: "/admin/promotion",
-        element: <PromotionalPage/>,
+        element: <PromotionalPage />,
       },
       {
         path: "/admin/stock-movement",
-        element: <StockMovementReport/>,
+        element: <StockMovementReport />,
       },
       {
         path: "/admin/sales-movement/dealer-wise",
-        element: <DealerSalesReport/>,
+        element: <DealerSalesReport />,
       },
       {
         path: "/admin/sales-movement/category-wise",
-        element: <CategoryWiseSalesReport/>,
+        element: <CategoryWiseSalesReport />,
       },
       {
         path: "/admin/sales-movement/brand-wise",
-        element: <BrandWiseSalesReport/>,
+        element: <BrandWiseSalesReport />,
       },
       {
         path: "/admin/sales-movement/category-wise/detail/:category",
-        element: <CategoryReportDetails/>,
+        element: <CategoryReportDetails />,
       },
       {
         path: "/admin/sales-movement/product-wise",
-        element: <ProductWiseSalesReport/>,
+        element: <ProductWiseSalesReport />,
       },
       {
         path: "/sales-report/daily/:userId",
-        element: <DailyReport/>,
+        element: <DailyReport />,
       },
       {
         path: "/admin/manage-stock",
-        element: <ManageStock/>,
+        element: <ManageStock />,
       },
       {
         path: "/admin/order-requests",
-        element: <OrderRequests/>,
+        element: <OrderRequests />,
       },
       {
         path: "/admin/users",
-        element: <UserManagementPage/>,
+        element: <UserManagementPage />,
       },
       {
         path: "/admin/monthly-target",
-        element: <MonthlyTargetPage/>,
+        element: <MonthlyTargetPage />,
       },
       {
         path: "/admin/category-target",
-        element: <CategoryTargetPage/>,
+        element: <CategoryTargetPage />,
       },
       {
         path: "/admin/brand-target",
-        element: <BrandTargetPage/>,
+        element: <BrandTargetPage />,
       },
       {
         path: "/admin/daily/dealer-sales-report",
-        element: <DailyDealerSalesReport/>,
+        element: <DailyDealerSalesReport />,
       },
- 
-
+      // Add these routes to your admin routes
+      {
+        path: "/admin/create-pricelevel",
+        element: <CreatePriceLevelPage />,
+      },
+      {
+        path: "/admin/alter-pricelevels",
+        element: <AlterPriceLevelsPage />,
+      },
     ],
   },
-
 ]);
 
 export default router;

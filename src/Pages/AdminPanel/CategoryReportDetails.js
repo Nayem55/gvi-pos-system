@@ -13,7 +13,7 @@ const CategoryReportDetails = () => {
     const fetchCategoryDetails = async () => {
       try {
         const response = await axios.get(
-          `http://192.168.0.30:5000/api/sales/category/${category}`
+          `http://175.29.181.245:5000/api/sales/category/${category}`
         );
         setProducts(response.data);
       } catch (err) {

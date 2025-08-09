@@ -43,13 +43,13 @@ const AdminSidebar = () => {
   // Close sidebar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isOpen && !event.target.closest('.sidebar-container')) {
+      if (isOpen && !event.target.closest(".sidebar-container")) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
   // Close sidebar on window resize if it becomes desktop view
@@ -60,8 +60,8 @@ const AdminSidebar = () => {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const toggleDropdown = (dropdownName) => {
@@ -69,7 +69,7 @@ const AdminSidebar = () => {
   };
 
   const isActive = (path, exact = true) => {
-    return exact 
+    return exact
       ? location.pathname === path
       : matchPath({ path: `${path}/*` }, location.pathname);
   };
@@ -114,11 +114,11 @@ const AdminSidebar = () => {
       icon: <Grid size={20} />,
       items: [
         { name: "POS", path: "/admin", icon: <ShoppingCart size={16} /> },
-        { 
-          name: "Attendance", 
-          path: "https://rl.luvit.com.bd/admin-panel", 
+        {
+          name: "Attendance",
+          path: "https://rl.luvit.com.bd/admin-panel",
           icon: <Clock size={16} />,
-          external: true 
+          external: true,
         },
       ],
     },
@@ -127,21 +127,55 @@ const AdminSidebar = () => {
       title: "Target",
       icon: <Target size={20} />,
       items: [
-        { name: "Sale Target", path: "/admin/monthly-target", icon: <Target size={16} /> },
-        { name: "Category Wise Target", path: "/admin/category-target", icon: <BiCategoryAlt size={16} /> },
-        { name: "Brand Wise Target", path: "/admin/brand-target", icon: <Package size={16} /> },
+        {
+          name: "Sale Target",
+          path: "/admin/monthly-target",
+          icon: <Target size={16} />,
+        },
+        {
+          name: "Category Wise Target",
+          path: "/admin/category-target",
+          icon: <BiCategoryAlt size={16} />,
+        },
+        {
+          name: "Brand Wise Target",
+          path: "/admin/brand-target",
+          icon: <Package size={16} />,
+        },
       ],
     },
+    // In the dropdowns array, update the "create" and "alter" sections:
     {
       name: "create",
       title: "Create",
       icon: <PlusCircle size={20} />,
       items: [
-        { name: "Product", path: "/admin/create-product", icon: <Package size={16} /> },
-        { name: "Category", path: "/admin/create-category", icon: <BiCategoryAlt size={16} /> },
-        { name: "Brand", path: "/admin/create-brand", icon: <FaTrademark size={16} /> },
+        {
+          name: "Product",
+          path: "/admin/create-product",
+          icon: <Package size={16} />,
+        },
+        {
+          name: "Category",
+          path: "/admin/create-category",
+          icon: <BiCategoryAlt size={16} />,
+        },
+        {
+          name: "Brand",
+          path: "/admin/create-brand",
+          icon: <FaTrademark size={16} />,
+        },
         { name: "User", path: "/admin/create-user", icon: <Users size={16} /> },
-        { name: "Outlet", path: "/admin/create-outlet", icon: <BsShop size={16} /> },
+        {
+          name: "Outlet",
+          path: "/admin/create-outlet",
+          icon: <BsShop size={16} />,
+        },
+        {
+          name: "Price Level",
+          path: "/admin/create-pricelevel",
+          icon: <DollarSign size={16} />,
+        }, // New item
       ],
     },
     {
@@ -149,11 +183,36 @@ const AdminSidebar = () => {
       title: "Alter",
       icon: <Edit3 size={20} />,
       items: [
-        { name: "Products", path: "/admin/alter-products", icon: <Package size={16} /> },
-        { name: "Category", path: "/admin/alter-categories", icon: <BiCategoryAlt size={16} /> },
-        { name: "Brand", path: "/admin/alter-brands", icon: <FaTrademark size={16} /> },
-        { name: "Users", path: "/admin/alter-users", icon: <Users size={16} /> },
-        { name: "Outlets", path: "/admin/alter-outlets", icon: <BsShop size={16} /> },
+        {
+          name: "Products",
+          path: "/admin/alter-products",
+          icon: <Package size={16} />,
+        },
+        {
+          name: "Category",
+          path: "/admin/alter-categories",
+          icon: <BiCategoryAlt size={16} />,
+        },
+        {
+          name: "Brand",
+          path: "/admin/alter-brands",
+          icon: <FaTrademark size={16} />,
+        },
+        {
+          name: "Users",
+          path: "/admin/alter-users",
+          icon: <Users size={16} />,
+        },
+        {
+          name: "Outlets",
+          path: "/admin/alter-outlets",
+          icon: <BsShop size={16} />,
+        },
+        {
+          name: "Price Levels",
+          path: "/admin/alter-pricelevels",
+          icon: <DollarSign size={16} />,
+        }, // New item
       ],
     },
     {
@@ -161,10 +220,26 @@ const AdminSidebar = () => {
       title: "Sales Movement",
       icon: <BarChart2 size={20} />,
       items: [
-        { name: "User Wise", path: "/admin/sales-movement/dealer-wise", icon: <Users size={16} /> },
-        { name: "Brand Wise", path: "/admin/sales-movement/brand-wise", icon: <Package size={16} /> },
-        { name: "Product Wise", path: "/admin/sales-movement/product-wise", icon: <Box size={16} /> },
-        { name: "Category Wise", path: "/admin/sales-movement/category-wise", icon: <BiCategoryAlt size={16} /> },
+        {
+          name: "User Wise",
+          path: "/admin/sales-movement/dealer-wise",
+          icon: <Users size={16} />,
+        },
+        {
+          name: "Brand Wise",
+          path: "/admin/sales-movement/brand-wise",
+          icon: <Package size={16} />,
+        },
+        {
+          name: "Product Wise",
+          path: "/admin/sales-movement/product-wise",
+          icon: <Box size={16} />,
+        },
+        {
+          name: "Category Wise",
+          path: "/admin/sales-movement/category-wise",
+          icon: <BiCategoryAlt size={16} />,
+        },
       ],
     },
     {
@@ -172,8 +247,16 @@ const AdminSidebar = () => {
       title: "Stock Movement",
       icon: <Box size={20} />,
       items: [
-        { name: "Dealer Wise", path: "/stock-movement/dealer", icon: <Users size={16} /> },
-        { name: "Group Wise", path: "/stock-movement/group", icon: <BsShop size={16} /> },
+        {
+          name: "Dealer Wise",
+          path: "/stock-movement/dealer",
+          icon: <Users size={16} />,
+        },
+        {
+          name: "Group Wise",
+          path: "/stock-movement/group",
+          icon: <BsShop size={16} />,
+        },
       ],
     },
   ];
@@ -192,7 +275,9 @@ const AdminSidebar = () => {
       {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-[100vh] bg-[#3C3F46] text-white w-72 p-5 shadow-xl transform transition-transform duration-300 ease-in-out z-40
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:sticky md:top-0 md:z-0`}
+        ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 md:sticky md:top-0 md:z-0`}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
@@ -212,7 +297,8 @@ const AdminSidebar = () => {
                 <li key={dropdown.name}>
                   <button
                     className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                      activeDropdown === dropdown.name || dropdown.items.some(item => isActive(item.path))
+                      activeDropdown === dropdown.name ||
+                      dropdown.items.some((item) => isActive(item.path))
                         ? "bg-gray-500 text-white"
                         : "hover:bg-gray-800 hover:text-blue-300"
                     }`}
@@ -229,7 +315,7 @@ const AdminSidebar = () => {
                       }`}
                     />
                   </button>
-                  
+
                   {activeDropdown === dropdown.name && (
                     <ul className="ml-8 mt-1 space-y-1 border-l-2 border-gray-700 pl-3 py-1">
                       {dropdown.items.map((item) => (

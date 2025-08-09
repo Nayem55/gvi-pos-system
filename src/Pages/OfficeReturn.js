@@ -5,14 +5,22 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
-export default function OfficeReturn({ user, stock, getStockValue, currentDue, allProducts }) {
+export default function OfficeReturn({
+  user,
+  stock,
+  getStockValue,
+  currentDue,
+  allProducts,
+}) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
 
@@ -26,19 +34,21 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  const getCurrentDP = (product) => isPromoValid(product) ? product.promoDP : product.dp;
-  const getCurrentTP = (product) => isPromoValid(product) ? product.promoTP : product.tp;
+  const getCurrentDP = (product) =>
+    isPromoValid(product) ? product.promoDP : product.dp;
+  const getCurrentTP = (product) =>
+    isPromoValid(product) ? product.promoTP : product.tp;
 
   const handleSearch = async (query) => {
     setSearch(query);
     if (query.length > 2) {
       setIsLoading(true);
       try {
-          const response = await axios.get(
-            "http://192.168.0.30:5000/search-product",
-            { params: { search: query, type: searchType } }
-          );
-          setSearchResults(response.data);
+        const response = await axios.get(
+          "http://175.29.181.245:5000/search-product",
+          { params: { search: query, type: searchType } }
+        );
+        setSearchResults(response.data);
       } catch (error) {
         console.error("Search error:", error);
         toast.error("Failed to search products");
@@ -60,9 +70,9 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
     try {
       const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+        `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
-      
+
       const currentStock = stockRes.data?.stock?.currentStock ?? 0;
       const currentStockDP = stockRes.data?.stock?.currentStockValueDP ?? 0;
       const currentStockTP = stockRes.data?.stock?.currentStockValueTP ?? 0;
@@ -127,7 +137,7 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
         try {
           // Skip empty rows or instruction rows
           if (!row["Barcode"] && !row["Product Name"]) continue;
-          
+
           // Skip rows with quantity 0
           const returnQty = parseInt(row["Return Quantity"] || 0);
           if (returnQty <= 0) continue;
@@ -136,12 +146,13 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
           if (isAdminPanel) {
             // Find product in allProducts for admin panel
             product = allProducts.find(
-              p => p.barcode === row["Barcode"] || p.name === row["Product Name"]
+              (p) =>
+                p.barcode === row["Barcode"] || p.name === row["Product Name"]
             );
           } else {
             // API call for non-admin
             const productResponse = await axios.get(
-              "http://192.168.0.30:5000/search-product",
+              "http://175.29.181.245:5000/search-product",
               {
                 params: {
                   search: row["Barcode"] || row["Product Name"],
@@ -159,7 +170,7 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
 
           const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+            `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
           const currentStock = stockRes.data?.stock?.currentStock ?? 0;
@@ -227,10 +238,10 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
   const downloadDemoFile = async () => {
     try {
       let productsToExport = [];
-      
+
       if (isAdminPanel) {
         // Use allProducts in admin panel
-        productsToExport = allProducts.map(product => ({
+        productsToExport = allProducts.map((product) => ({
           Barcode: product.barcode,
           "Product Name": product.name,
           "Return Quantity": "0",
@@ -263,7 +274,9 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
       XLSX.utils.sheet_add_aoa(
         worksheet,
         [
-          ["IMPORTANT: Maintain this exact format. Only edit the values (not column names)"],
+          [
+            "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          ],
           ["1. Set 'Return Quantity' to desired value (0 will be ignored)"],
           ["2. Return quantity cannot exceed current stock"],
           ["3. DP/TP are optional - will use current prices if omitted"],
@@ -316,7 +329,10 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
           return {
             ...item,
             [field]: newValue,
-            total: field === "editableDP" ? newValue * item.officeReturn : item.total,
+            total:
+              field === "editableDP"
+                ? newValue * item.officeReturn
+                : item.total,
           };
         }
         return item;
@@ -342,7 +358,7 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
 
       // First update the due amount
       const dueResponse = await axios.put(
-        "http://192.168.0.30:5000/update-due",
+        "http://175.29.181.245:5000/update-due",
         {
           outlet: user.outlet,
           currentDue: currentDue - totalAmount,
@@ -357,20 +373,25 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
       const updatePromises = cart.map(async (item) => {
         try {
           // Update outlet stock
-          const stockResponse = await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
-            barcode: item.barcode,
-            outlet: user.outlet,
-            newStock: item.openingStock - item.officeReturn,
-            currentStockValueDP: item.currentStockDP - (item.officeReturn * item.editableDP),
-            currentStockValueTP: item.currentStockTP - (item.officeReturn * item.editableTP),
-          });
+          const stockResponse = await axios.put(
+            "http://175.29.181.245:5000/update-outlet-stock",
+            {
+              barcode: item.barcode,
+              outlet: user.outlet,
+              newStock: item.openingStock - item.officeReturn,
+              currentStockValueDP:
+                item.currentStockDP - item.officeReturn * item.editableDP,
+              currentStockValueTP:
+                item.currentStockTP - item.officeReturn * item.editableTP,
+            }
+          );
 
           // if (!stockResponse.data.success) {
           //   throw new Error(`Failed to update stock for ${item.barcode}`);
           // }
 
           // Record transaction
-          await axios.post("http://192.168.0.30:5000/stock-transactions", {
+          await axios.post("http://175.29.181.245:5000/stock-transactions", {
             barcode: item.barcode,
             outlet: user.outlet,
             type: "office return",
@@ -400,7 +421,7 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
       // }
 
       // Record money transaction for the office return
-      await axios.post("http://192.168.0.30:5000/money-transfer", {
+      await axios.post("http://175.29.181.245:5000/money-transfer", {
         outlet: user.outlet,
         amount: totalAmount,
         asm: user.asm,
@@ -598,7 +619,8 @@ export default function OfficeReturn({ user, stock, getStockValue, currentDue, a
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)} BDT
+          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)}{" "}
+          BDT
         </span>
         <button
           onClick={handleSubmit}

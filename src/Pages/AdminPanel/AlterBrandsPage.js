@@ -14,7 +14,7 @@ const AlterBrandsPage = () => {
   const fetchBrands = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://192.168.0.30:5000/all-brands");
+      const response = await axios.get("http://175.29.181.245:5000/all-brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -40,12 +40,12 @@ const AlterBrandsPage = () => {
       setUpdatingProducts(true);
 
       // 1. First update the brand name
-      await axios.put(`http://192.168.0.30:5000/brands/${id}`, {
+      await axios.put(`http://175.29.181.245:5000/brands/${id}`, {
         name: editedName,
       });
 
       // 2. Then update all products with this brand
-      await axios.put("http://192.168.0.30:5000/update-products-brand", {
+      await axios.put("http://175.29.181.245:5000/update-products-brand", {
         oldBrand: oldName,
         newBrand: editedName,
       });
@@ -105,9 +105,7 @@ const AlterBrandsPage = () => {
                       {editingId === brand._id ? (
                         <div className="flex gap-2">
                           <button
-                            onClick={() =>
-                              handleUpdate(brand._id, brand.name)
-                            }
+                            onClick={() => handleUpdate(brand._id, brand.name)}
                             disabled={updatingProducts}
                             className={`px-3 py-1 rounded ${
                               updatingProducts

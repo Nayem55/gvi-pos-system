@@ -47,7 +47,7 @@ export default function OpeningStock({
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://192.168.0.30:5000/search-product",
+          "http://175.29.181.245:5000/search-product",
           { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
@@ -73,7 +73,7 @@ export default function OpeningStock({
       // Encode the outlet name for URL
       const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+        `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
 
       // Default to 0 if any values are undefined
@@ -157,7 +157,7 @@ export default function OpeningStock({
           } else {
             // API call for non-admin
             const productResponse = await axios.get(
-              "http://192.168.0.30:5000/search-product",
+              "http://175.29.181.245:5000/search-product",
               {
                 params: {
                   search: row["Barcode"] || row["Product Name"],
@@ -174,7 +174,7 @@ export default function OpeningStock({
           }
 
           const stockRes = await axios.get(
-            "http://192.168.0.30:5000/outlet-stock",
+            "http://175.29.181.245:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 
@@ -358,7 +358,7 @@ export default function OpeningStock({
 
       // First update the opening due and current due
       const dueResponse = await axios.put(
-        "http://192.168.0.30:5000/update-due",
+        "http://175.29.181.245:5000/update-due",
         {
           outlet: user.outlet,
           isOpeningVoucher: true,
@@ -373,7 +373,7 @@ export default function OpeningStock({
       // Then process all stock updates
       const requests = cart.map(async (item) => {
         if (item.canEdit) {
-          await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
+          await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
             barcode: item.barcode,
             outlet: user.outlet,
             newStock: item.newStock,
@@ -383,7 +383,7 @@ export default function OpeningStock({
             openingStockValueTP: item.newStock * item.editableTP,
           });
 
-          await axios.post("http://192.168.0.30:5000/stock-transactions", {
+          await axios.post("http://175.29.181.245:5000/stock-transactions", {
             barcode: item.barcode,
             outlet: user.outlet,
             type: "opening",

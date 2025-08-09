@@ -23,7 +23,7 @@ const UserDashboard = () => {
   const fetchDailyReports = async () => {
     try {
       const response = await axios.get(
-        `http://192.168.0.30:5000/sales-reports/${user._id}?month=${selectedMonth}`
+        `http://175.29.181.245:5000/sales-reports/${user._id}?month=${selectedMonth}`
       );
       setReports(response.data);
     } catch (error) {
@@ -37,7 +37,7 @@ const UserDashboard = () => {
       const year = selectedMonth.split("-")[0];
       const month = selectedMonth.split("-")[1];
 
-      const response = await axios.get("http://192.168.0.30:5000/targets", {
+      const response = await axios.get("http://175.29.181.245:5000/targets", {
         params: { year, month, userID: user._id },
       });
 
@@ -60,7 +60,7 @@ const UserDashboard = () => {
   const fetchProductStock = async (barcode) => {
     try {
       const response = await axios.get(
-        "http://192.168.0.30:5000/outlet-stock",
+        "http://175.29.181.245:5000/outlet-stock",
         {
           params: { barcode, outlet: user.outlet },
         }
@@ -111,7 +111,7 @@ const UserDashboard = () => {
         editingReport.products.map(async (product) => {
           // Get current stock info
           const stockRes = await axios.get(
-            "http://192.168.0.30:5000/outlet-stock",
+            "http://175.29.181.245:5000/outlet-stock",
             { params: { barcode: product.barcode, outlet: user.outlet } }
           );
 
@@ -138,7 +138,7 @@ const UserDashboard = () => {
       await Promise.all(
         stockUpdates.map(
           ({ barcode, newStock, currentStockValueDP, currentStockValueTP }) => {
-            return axios.put("http://192.168.0.30:5000/update-outlet-stock", {
+            return axios.put("http://175.29.181.245:5000/update-outlet-stock", {
               barcode,
               outlet: user.outlet,
               newStock,
@@ -156,7 +156,7 @@ const UserDashboard = () => {
       };
 
       await axios.put(
-        `http://192.168.0.30:5000/update-sales-report/${editingReport._id}`,
+        `http://175.29.181.245:5000/update-sales-report/${editingReport._id}`,
         updatedReport
       );
 
@@ -181,7 +181,7 @@ const UserDashboard = () => {
   //   try {
   //     // First get the report to know what quantities to restore
   //     const reportResponse = await axios.get(
-  //       `http://192.168.0.30:5000/sales-reports/${reportId}`
+  //       `http://175.29.181.245:5000/sales-reports/${reportId}`
   //     );
   //     const report = reportResponse.data;
 
@@ -190,13 +190,13 @@ const UserDashboard = () => {
   //       report.products.map(async (product) => {
   //         // Get current stock info
   //         const stockRes = await axios.get(
-  //           "http://192.168.0.30:5000/outlet-stock",
+  //           "http://175.29.181.245:5000/outlet-stock",
   //           { params: { barcode: product.barcode, outlet: user.outlet } }
   //         );
   //         const currentStock = stockRes.data.stock || 0;
 
   //         return axios.put(
-  //           "http://192.168.0.30:5000/update-outlet-stock",
+  //           "http://175.29.181.245:5000/update-outlet-stock",
   //           {
   //             barcode: product.barcode,
   //             outlet: user.outlet,
@@ -212,7 +212,7 @@ const UserDashboard = () => {
 
   //     // Then delete the report
   //     await axios.delete(
-  //       `http://192.168.0.30:5000/delete-sales-report/${reportId}`
+  //       `http://175.29.181.245:5000/delete-sales-report/${reportId}`
   //     );
 
   //     toast.success(

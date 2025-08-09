@@ -86,7 +86,7 @@ const SalarySheet = () => {
   //   try {
   //     setLoading((prev) => ({ ...prev, leaves: true }));
   //     const [year, monthNumber] = month.split("-");
-  //     const usersResponse = await axios.get("http://192.168.0.30:5000/getAllUser");
+  //     const usersResponse = await axios.get("http://175.29.181.245:5000/getAllUser");
   //     const users = usersResponse.data.filter((user) => user.attendance_id);
   //     const leaveRecords = {};
 
@@ -121,7 +121,7 @@ const SalarySheet = () => {
   //   try {
   //     setLoading((prev) => ({ ...prev, attendance: true }));
   //     const [year, monthNumber] = month.split("-");
-  //     const usersResponse = await axios.get("http://192.168.0.30:5000/getAllUser");
+  //     const usersResponse = await axios.get("http://175.29.181.245:5000/getAllUser");
   //     const users = usersResponse.data.filter((user) => user.attendance_id);
   //     const attendanceRecords = {};
 
@@ -220,7 +220,7 @@ const SalarySheet = () => {
     try {
       setLoading((prev) => ({ ...prev, tdda: true }));
       const response = await axios.get(
-        "http://192.168.0.30:5000/api/tdda-summary",
+        "http://175.29.181.245:5000/api/tdda-summary",
         { params: { month } }
       );
       setTddaData(response.data.data);

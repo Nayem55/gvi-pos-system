@@ -34,14 +34,14 @@ const ManageUserStock = () => {
       if (searchQuery) {
         // Search query, disable pagination
         response = await axios.get(
-          `http://192.168.0.30:5000/search-product?search=${searchQuery}&type=name`
+          `http://175.29.181.245:5000/search-product?search=${searchQuery}&type=name`
         );
         fetchedProducts = response.data;
         setHasMore(false); // No more products for pagination if searching
       } else {
         // Regular fetch with pagination
         response = await axios.get(
-          `http://192.168.0.30:5000/products?page=${pageNumber}`
+          `http://175.29.181.245:5000/products?page=${pageNumber}`
         );
         fetchedProducts = response.data.products;
         setHasMore(response.data.products.length > 0);
@@ -55,7 +55,7 @@ const ManageUserStock = () => {
       const stockRequests = fetchedProducts.map(async (product) => {
         try {
           const stockResponse = await axios.get(
-            `http://192.168.0.30:5000/outlet-stock?barcode=${product.barcode}&outlet=${selectedOutlet}`
+            `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${selectedOutlet}`
           );
           const stockValue = stockResponse.data.stock || 0;
           stockData[product.barcode] = stockValue;
@@ -104,7 +104,7 @@ const ManageUserStock = () => {
 
   const updateStock = async (barcode) => {
     try {
-      await axios.put("http://192.168.0.30:5000/update-outlet-stock", {
+      await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
         barcode,
         outlet: selectedOutlet,
         newStock: stocks[barcode],

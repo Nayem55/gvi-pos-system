@@ -10,6 +10,8 @@ import {
   Check,
   Loader2,
   Search,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import AdminSidebar from "../Component/AdminSidebar";
@@ -30,12 +32,13 @@ const AlterProductsPage = () => {
     mrp: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedPriceLists, setExpandedPriceLists] = useState({});
 
-  const API_URL = "http://localhost:5000/products";
+  const API_URL = "http://175.29.181.245:5000/products";
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/categories");
+      const response = await axios.get("http://175.29.181.245:5000/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -45,7 +48,7 @@ const AlterProductsPage = () => {
 
   const fetchBrands = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/brands");
+      const response = await axios.get("http://175.29.181.245:5000/brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -56,9 +59,16 @@ const AlterProductsPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/all-products`);
+      const res = await axios.get(`http://175.29.181.245:5000/all-products`);
       setProducts(res.data);
       setFilteredProducts(res.data);
+
+      // Initialize expanded price lists state
+      const initialExpandedState = {};
+      res.data.forEach((product) => {
+        initialExpandedState[product._id] = false;
+      });
+      setExpandedPriceLists(initialExpandedState);
     } catch (error) {
       console.error("Error fetching products:", error);
       toast.error("Failed to load products");
@@ -79,11 +89,48 @@ const AlterProductsPage = () => {
     );
     setProducts(updatedProducts);
 
-    // Also update filtered products if in bulk mode
     if (bulkUpdateMode && selectedCategory) {
       const updatedFiltered = filteredProducts.map((product) =>
         product._id === id ? { ...product, [field]: e.target.value } : product
       );
+      setFilteredProducts(updatedFiltered);
+    }
+  };
+
+  const handlePriceListChange = (productId, outlet, field, value) => {
+    const updatedProducts = products.map((product) => {
+      if (product._id === productId) {
+        return {
+          ...product,
+          priceList: {
+            ...product.priceList,
+            [outlet]: {
+              ...product.priceList?.[outlet],
+              [field]: value,
+            },
+          },
+        };
+      }
+      return product;
+    });
+    setProducts(updatedProducts);
+
+    if (bulkUpdateMode && selectedCategory) {
+      const updatedFiltered = filteredProducts.map((product) => {
+        if (product._id === productId) {
+          return {
+            ...product,
+            priceList: {
+              ...product.priceList,
+              [outlet]: {
+                ...product.priceList?.[outlet],
+                [field]: value,
+              },
+            },
+          };
+        }
+        return product;
+      });
       setFilteredProducts(updatedFiltered);
     }
   };
@@ -128,7 +175,7 @@ const AlterProductsPage = () => {
     setUpdating(true);
     try {
       const response = await axios.put(
-        `http://localhost:5000/category-bulk-update`,
+        `http://175.29.181.245:5000/category-bulk-update`,
         {
           category: selectedCategory,
           updateFields,
@@ -189,6 +236,13 @@ const AlterProductsPage = () => {
       );
       setFilteredProducts(filtered);
     }
+  };
+
+  const togglePriceList = (productId) => {
+    setExpandedPriceLists((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
   };
 
   const displayProducts = bulkUpdateMode
@@ -375,6 +429,12 @@ const AlterProductsPage = () => {
                     <tr>
                       <th
                         scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"
+                      >
+                        {/* Empty for expand/collapse button */}
+                      </th>
+                      <th
+                        scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
                         Product
@@ -426,194 +486,320 @@ const AlterProductsPage = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {displayProducts.length > 0 ? (
                       displayProducts.map((product) => (
-                        <tr
-                          key={product._id}
-                          className="hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="px-6 py-4">
-                            {editingProduct?._id === product._id ? (
-                              <input
-                                type="text"
-                                value={product.name}
-                                onChange={(e) =>
-                                  handleInputChange(e, product._id, "name")
-                                }
-                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-gray-900 break-words min-w-[200px] max-w-[300px]">
-                                {product.name}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingProduct?._id === product._id ? (
-                              <input
-                                type="text"
-                                value={product.barcode}
-                                onChange={(e) =>
-                                  handleInputChange(e, product._id, "barcode")
-                                }
-                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            ) : (
-                              <div className="text-sm text-gray-500 font-mono">
-                                {product.barcode}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingProduct?._id === product._id ? (
-                              <select
-                                value={product.brand || ""}
-                                onChange={(e) =>
-                                  handleInputChange(e, product._id, "brand")
-                                }
-                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              >
-                                <option value="">Select Brand</option>
-                                {brands.map((brand) => (
-                                  <option key={brand} value={brand}>
-                                    {brand}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <div className="text-sm text-gray-500">
-                                {product.brand || "-"}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingProduct?._id === product._id ? (
-                              <select
-                                value={product.category}
-                                onChange={(e) =>
-                                  handleInputChange(e, product._id, "category")
-                                }
-                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              >
-                                <option value="">Select Category</option>
-                                {categories.map((category) => (
-                                  <option key={category} value={category}>
-                                    {category}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {product.category || "-"}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingProduct?._id === product._id ? (
-                              <div className="relative">
-                                <span className="absolute left-2 top-1.5 text-gray-500">
-                                  ৳
-                                </span>
+                        <>
+                          <tr
+                            key={product._id}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="px-2 py-4 text-center">
+                              {product.priceList &&
+                                Object.keys(product.priceList).length > 0 && (
+                                  <button
+                                    onClick={() => togglePriceList(product._id)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                  >
+                                    {expandedPriceLists[product._id] ? (
+                                      <ChevronUp size={18} />
+                                    ) : (
+                                      <ChevronDown size={18} />
+                                    )}
+                                  </button>
+                                )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {editingProduct?._id === product._id ? (
                                 <input
-                                  type="number"
-                                  value={product.dp}
+                                  type="text"
+                                  value={product.name}
                                   onChange={(e) =>
-                                    handleInputChange(e, product._id, "dp")
+                                    handleInputChange(e, product._id, "name")
                                   }
-                                  className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-900">
-                                ৳{product.dp}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingProduct?._id === product._id ? (
-                              <div className="relative">
-                                <span className="absolute left-2 top-1.5 text-gray-500">
-                                  ৳
-                                </span>
+                              ) : (
+                                <div className="text-sm font-medium text-gray-900 break-words min-w-[200px] max-w-[300px]">
+                                  {product.name}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {editingProduct?._id === product._id ? (
                                 <input
-                                  type="number"
-                                  value={product.tp}
+                                  type="text"
+                                  value={product.barcode}
                                   onChange={(e) =>
-                                    handleInputChange(e, product._id, "tp")
+                                    handleInputChange(e, product._id, "barcode")
                                   }
-                                  className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-900">
-                                ৳{product.tp}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingProduct?._id === product._id ? (
-                              <div className="relative">
-                                <span className="absolute left-2 top-1.5 text-gray-500">
-                                  ৳
-                                </span>
-                                <input
-                                  type="number"
-                                  value={product.mrp}
+                              ) : (
+                                <div className="text-sm text-gray-500 font-mono">
+                                  {product.barcode}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {editingProduct?._id === product._id ? (
+                                <select
+                                  value={product.brand || ""}
                                   onChange={(e) =>
-                                    handleInputChange(e, product._id, "mrp")
+                                    handleInputChange(e, product._id, "brand")
                                   }
-                                  className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                              </div>
-                            ) : (
-                              <div className="text-sm font-semibold text-gray-900">
-                                ৳{product.mrp}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            {editingProduct?._id === product._id ? (
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  onClick={() => setEditingProduct(null)}
-                                  className="text-gray-500 hover:text-gray-700"
+                                  className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                  <X size={18} />
-                                </button>
-                                <button
-                                  onClick={() => saveUpdate(product)}
-                                  disabled={updating}
-                                  className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+                                  <option value="">Select Brand</option>
+                                  {brands.map((brand) => (
+                                    <option key={brand} value={brand}>
+                                      {brand}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <div className="text-sm text-gray-500">
+                                  {product.brand || "-"}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {editingProduct?._id === product._id ? (
+                                <select
+                                  value={product.category}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      e,
+                                      product._id,
+                                      "category"
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                  {updating ? (
-                                    <Loader2
-                                      size={18}
-                                      className="animate-spin"
-                                    />
-                                  ) : (
-                                    <Check size={18} />
-                                  )}
+                                  <option value="">Select Category</option>
+                                  {categories.map((category) => (
+                                    <option key={category} value={category}>
+                                      {category}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                  {product.category || "-"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {editingProduct?._id === product._id ? (
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1.5 text-gray-500">
+                                    ৳
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={product.dp}
+                                    onChange={(e) =>
+                                      handleInputChange(e, product._id, "dp")
+                                    }
+                                    className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-900">
+                                  ৳{product.dp}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {editingProduct?._id === product._id ? (
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1.5 text-gray-500">
+                                    ৳
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={product.tp}
+                                    onChange={(e) =>
+                                      handleInputChange(e, product._id, "tp")
+                                    }
+                                    className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-900">
+                                  ৳{product.tp}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {editingProduct?._id === product._id ? (
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1.5 text-gray-500">
+                                    ৳
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={product.mrp}
+                                    onChange={(e) =>
+                                      handleInputChange(e, product._id, "mrp")
+                                    }
+                                    className="pl-6 pr-2 py-1 w-24 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="text-sm font-semibold text-gray-900">
+                                  ৳{product.mrp}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              {editingProduct?._id === product._id ? (
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    onClick={() => setEditingProduct(null)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                  >
+                                    <X size={18} />
+                                  </button>
+                                  <button
+                                    onClick={() => saveUpdate(product)}
+                                    disabled={updating}
+                                    className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+                                  >
+                                    {updating ? (
+                                      <Loader2
+                                        size={18}
+                                        className="animate-spin"
+                                      />
+                                    ) : (
+                                      <Check size={18} />
+                                    )}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setEditingProduct(product)}
+                                  className="text-blue-600 hover:text-blue-900 disabled:text-gray-400"
+                                  disabled={bulkUpdateMode}
+                                  title={
+                                    bulkUpdateMode
+                                      ? "Finish bulk update first"
+                                      : "Edit product"
+                                  }
+                                >
+                                  <Pencil size={18} />
                                 </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setEditingProduct(product)}
-                                className="text-blue-600 hover:text-blue-900 disabled:text-gray-400"
-                                disabled={bulkUpdateMode}
-                                title={
-                                  bulkUpdateMode
-                                    ? "Finish bulk update first"
-                                    : "Edit product"
-                                }
-                              >
-                                <Pencil size={18} />
-                              </button>
+                              )}
+                            </td>
+                          </tr>
+
+                          {/* Price List Row */}
+                          {expandedPriceLists[product._id] &&
+                            product.priceList && (
+                              <tr className="bg-gray-50">
+                                <td colSpan="9" className="px-6 py-4">
+                                  <div className="ml-8">
+                                    <h4 className="font-medium text-gray-700 mb-2">
+                                      Outlet Specific Prices
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                      {Object.entries(product.priceList).map(
+                                        ([outlet, prices]) => (
+                                          <div
+                                            key={outlet}
+                                            className="border p-3 rounded bg-white"
+                                          >
+                                            <h5 className="font-medium capitalize mb-2">
+                                              {outlet}
+                                            </h5>
+                                            <div className="space-y-2">
+                                              <div>
+                                                <label className="text-xs text-gray-500">
+                                                  DP Price
+                                                </label>
+                                                {editingProduct?._id ===
+                                                product._id ? (
+                                                  <input
+                                                    type="number"
+                                                    value={prices.dp || ""}
+                                                    onChange={(e) =>
+                                                      handlePriceListChange(
+                                                        product._id,
+                                                        outlet,
+                                                        "dp",
+                                                        e.target.value
+                                                      )
+                                                    }
+                                                    className="w-full px-2 py-1 border rounded text-sm"
+                                                  />
+                                                ) : (
+                                                  <div className="text-sm">
+                                                    ৳{prices.dp || "-"}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div>
+                                                <label className="text-xs text-gray-500">
+                                                  TP Price
+                                                </label>
+                                                {editingProduct?._id ===
+                                                product._id ? (
+                                                  <input
+                                                    type="number"
+                                                    value={prices.tp || ""}
+                                                    onChange={(e) =>
+                                                      handlePriceListChange(
+                                                        product._id,
+                                                        outlet,
+                                                        "tp",
+                                                        e.target.value
+                                                      )
+                                                    }
+                                                    className="w-full px-2 py-1 border rounded text-sm"
+                                                  />
+                                                ) : (
+                                                  <div className="text-sm">
+                                                    ৳{prices.tp || "-"}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div>
+                                                <label className="text-xs text-gray-500">
+                                                  MRP Price
+                                                </label>
+                                                {editingProduct?._id ===
+                                                product._id ? (
+                                                  <input
+                                                    type="number"
+                                                    value={prices.mrp || ""}
+                                                    onChange={(e) =>
+                                                      handlePriceListChange(
+                                                        product._id,
+                                                        outlet,
+                                                        "mrp",
+                                                        e.target.value
+                                                      )
+                                                    }
+                                                    className="w-full px-2 py-1 border rounded text-sm"
+                                                  />
+                                                ) : (
+                                                  <div className="text-sm font-medium">
+                                                    ৳{prices.mrp || "-"}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
                             )}
-                          </td>
-                        </tr>
+                        </>
                       ))
                     ) : (
                       <tr>
                         <td
-                          colSpan="8"
+                          colSpan="9"
                           className="px-6 py-4 text-center text-sm text-gray-500"
                         >
                           No products found

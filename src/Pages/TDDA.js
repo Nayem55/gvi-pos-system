@@ -22,7 +22,9 @@ const TDDAdminPanel = () => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get("http://192.168.0.30:5000/tdda/users");
+        const response = await axios.get(
+          "http://175.29.181.245:5000/tdda/users"
+        );
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -45,7 +47,7 @@ const TDDAdminPanel = () => {
     try {
       setIsGenerating(true);
       const response = await axios.get(
-        "http://192.168.0.30:5000/tdda/admin-report",
+        "http://175.29.181.245:5000/tdda/admin-report",
         {
           params: {
             userId: selectedUser,

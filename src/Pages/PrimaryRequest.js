@@ -19,9 +19,12 @@ export default function PrimaryRequest() {
     if (query.length > 2) {
       setIsSearching(true);
       try {
-        const res = await axios.get("http://192.168.0.30:5000/search-product", {
-          params: { search: query, type: "name" },
-        });
+        const res = await axios.get(
+          "http://175.29.181.245:5000/search-product",
+          {
+            params: { search: query, type: "name" },
+          }
+        );
         setResults(res.data);
       } catch (err) {
         console.error(err);
@@ -84,7 +87,7 @@ export default function PrimaryRequest() {
 
     try {
       setIsSubmitting(true);
-      await axios.post("http://192.168.0.30:5000/primary-request", order);
+      await axios.post("http://175.29.181.245:5000/primary-request", order);
       toast.success("Request submitted successfully!");
       setCart([]);
     } catch (err) {

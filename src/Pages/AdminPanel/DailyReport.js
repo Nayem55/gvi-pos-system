@@ -44,7 +44,7 @@ const DailyReport = () => {
       }
 
       const response = await axios.get(
-        `http://192.168.0.30:5000/sales-reports/${userId}`,
+        `http://175.29.181.245:5000/sales-reports/${userId}`,
         { params }
       );
       setReports(response.data);

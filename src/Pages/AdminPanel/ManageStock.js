@@ -24,7 +24,7 @@ const ManageStock = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://192.168.0.30:5000/getAllUser");
+      const response = await axios.get("http://175.29.181.245:5000/getAllUser");
       setUsers(response.data);
       setLoading(false);
     } catch (error) {
@@ -37,7 +37,9 @@ const ManageStock = () => {
   const fetchAllProducts = async () => {
     try {
       setProductsLoading(true);
-      const response = await axios.get("http://192.168.0.30:5000/all-products");
+      const response = await axios.get(
+        "http://175.29.181.245:5000/all-products"
+      );
       setProducts(response.data);
       setProductsLoading(false);
     } catch (error) {
@@ -52,11 +54,11 @@ const ManageStock = () => {
     }
   }, [selectedUser]);
 
-   const getStockValue = async (outletName) => {
+  const getStockValue = async (outletName) => {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
       const response = await axios.get(
-        `http://192.168.0.30:5000/api/stock-value/${encodedOutletName}`
+        `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
       );
 
       setStock({
@@ -67,7 +69,6 @@ const ManageStock = () => {
       console.error("Error fetching stock data:", error);
     }
   };
-
 
   const renderContent = () => {
     if (!selectedUser) {

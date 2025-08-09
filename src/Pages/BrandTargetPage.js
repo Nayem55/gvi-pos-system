@@ -47,8 +47,8 @@ const BrandTargetPage = () => {
     const fetchData = async () => {
       try {
         const [usersRes, brandsRes] = await Promise.all([
-          axios.get("http://192.168.0.30:5000/getAllUser"),
-          axios.get("http://192.168.0.30:5000/brands"),
+          axios.get("http://175.29.181.245:5000/getAllUser"),
+          axios.get("http://175.29.181.245:5000/brands"),
         ]);
         setUsers(usersRes.data);
         setBrands(brandsRes.data);
@@ -65,7 +65,7 @@ const BrandTargetPage = () => {
       if (!year || !month) return;
 
       try {
-        const res = await axios.get("http://192.168.0.30:5000/brandTargets", {
+        const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
           params: { year, month },
         });
 
@@ -120,7 +120,7 @@ const BrandTargetPage = () => {
           target: parseFloat(target),
         }));
 
-      await axios.post("http://192.168.0.30:5000/brandTargets", {
+      await axios.post("http://175.29.181.245:5000/brandTargets", {
         userID,
         year: parseInt(year),
         month: parseInt(month),
@@ -130,7 +130,7 @@ const BrandTargetPage = () => {
       toast.success("Targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get("http://192.168.0.30:5000/brandTargets", {
+      const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
         params: { year, month },
       });
 
@@ -176,7 +176,7 @@ const BrandTargetPage = () => {
               target: parseFloat(target),
             }));
 
-          return axios.post("http://192.168.0.30:5000/brandTargets", {
+          return axios.post("http://175.29.181.245:5000/brandTargets", {
             userID,
             year: parseInt(year),
             month: parseInt(month),
@@ -189,7 +189,7 @@ const BrandTargetPage = () => {
       toast.success("All targets saved successfully");
 
       // Refresh targets
-      const res = await axios.get("http://192.168.0.30:5000/brandTargets", {
+      const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
         params: { year, month },
       });
 

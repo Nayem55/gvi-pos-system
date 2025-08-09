@@ -27,7 +27,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://192.168.0.30:5000/get-outlets-full"
+        "http://175.29.181.245:5000/get-outlets-full"
       );
       setOutlets(response.data);
     } catch (error) {
@@ -56,7 +56,7 @@ const AlterOutletsPage = () => {
     try {
       setIsTransferring(true);
       const response = await axios.post(
-        "http://192.168.0.30:5000/transfer-outlet-stock",
+        "http://175.29.181.245:5000/transfer-outlet-stock",
         {
           sourceOutlet: selectedSource,
           targetOutlet: selectedTarget,
@@ -88,7 +88,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       await axios.put(
-        `http://192.168.0.30:5000/update-outlet/${currentOutlet.originalOutletName}`,
+        `http://175.29.181.245:5000/update-outlet/${currentOutlet.originalOutletName}`,
         {
           name: currentOutlet.outlet_name,
           proprietorName: currentOutlet.proprietor_name,
@@ -116,7 +116,7 @@ const AlterOutletsPage = () => {
     try {
       setLoading(true);
       const response = await axios.delete(
-        `http://192.168.0.30:5000/delete-outlet/${outletName}`
+        `http://175.29.181.245:5000/delete-outlet/${outletName}`
       );
       toast.success(response.data.message);
       setDeleteConfirm(null);
