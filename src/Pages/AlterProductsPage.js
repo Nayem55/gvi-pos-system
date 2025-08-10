@@ -325,86 +325,94 @@ const AlterProductsPage = () => {
     }
 
     setImportLoading(true);
+
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+      // Wrap FileReader in a Promise to properly handle async flow
+      const importResult = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-        // Transform and validate data
-        const importData = jsonData.map((row) => {
-          const priceList = {};
+        reader.onload = async (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-          // Process price lists
-          Object.keys(row).forEach((key) => {
-            if (
-              key.includes(" DP") ||
-              key.includes(" TP") ||
-              key.includes(" MRP")
-            ) {
-              const [outlet, type] = key.split(" ");
-              if (!priceList[outlet]) priceList[outlet] = {};
-              priceList[outlet][type.toLowerCase()] = Number(row[key]) || 0;
-            }
-          });
+            const importData = jsonData.map((row) => {
+              const priceList = {};
 
-          // Ensure _id is included but won't be updated
-          return {
-            _id: row["Product ID"], // This will be used for filtering only
-            name: row["Product Name"] || "",
-            barcode: row["Barcode"] || "",
-            brand: row["Brand"] || "",
-            category: row["Category"] || "",
-            dp: Number(row["DP"]) || 0,
-            tp: Number(row["TP"]) || 0,
-            mrp: Number(row["MRP"]) || 0,
-            ...(Object.keys(priceList).length > 0 && { priceList }),
-          };
-        });
+              Object.keys(row).forEach((key) => {
+                if (
+                  key.includes(" DP") ||
+                  key.includes(" TP") ||
+                  key.includes(" MRP")
+                ) {
+                  const [outlet, type] = key.split(" ");
+                  if (!priceList[outlet]) priceList[outlet] = {};
+                  priceList[outlet][type.toLowerCase()] = Number(row[key]) || 0;
+                }
+              });
 
-        try {
-          const response = await axios.post(
-            "http://175.29.181.245:5000/bulk-import-products",
-            { updatedProducts: importData }
-          );
+              return {
+                _id: row["Product ID"],
+                name: row["Product Name"] || "",
+                barcode: row["Barcode"] || "",
+                brand: row["Brand"] || "",
+                category: row["Category"] || "",
+                dp: Number(row["DP"]) || 0,
+                tp: Number(row["TP"]) || 0,
+                mrp: Number(row["MRP"]) || 0,
+                ...(Object.keys(priceList).length > 0 && { priceList }),
+              };
+            });
 
-          if (response.data.success) {
-            toast.success(`Processed ${response.data.totalProcessed} products`);
-            if (response.data.insertedCount > 0) {
-              toast.success(
-                `Added ${response.data.insertedCount} new products`
-              );
-            }
-            if (response.data.updatedCount > 0) {
-              toast.success(`Updated ${response.data.updatedCount} products`);
-            }
-            if (
-              response.data.updatedCount === 0 &&
-              response.data.insertedCount === 0
-            ) {
-              toast("No changes needed - data matches existing records");
-            }
-          } else {
-            toast.error(response.data.error || "Import completed with issues");
+            const response = await axios.post(
+              "http://175.29.181.245:5000/bulk-import-products",
+              { updatedProducts: importData }
+            );
+
+            resolve(response.data);
+          } catch (error) {
+            reject(error);
           }
-        } catch (error) {
-          console.error("API Error:", error);
-          toast.error(
-            error.response?.data?.error || "Failed to import products"
-          );
-        }
+        };
 
-        setImportModalOpen(false);
-        fetchProducts();
-      };
-      reader.readAsArrayBuffer(importFile);
+        reader.onerror = () => {
+          reject(new Error("File reading failed"));
+        };
+
+        reader.readAsArrayBuffer(importFile);
+      });
+
+      if (importResult.success) {
+        toast.success(`Processed ${importResult.totalProcessed} products`);
+        if (importResult.insertedCount > 0) {
+          toast.success(`Added ${importResult.insertedCount} new products`);
+        }
+        if (importResult.updatedCount > 0) {
+          toast.success(`Updated ${importResult.updatedCount} products`);
+        }
+        if (
+          importResult.updatedCount === 0 &&
+          importResult.insertedCount === 0
+        ) {
+          toast("No changes needed - data matches existing records");
+        }
+      } else {
+        toast.error(importResult.error || "Import completed with issues");
+      }
     } catch (error) {
-      console.error("Import processing error:", error);
-      toast.error("Failed to process import file");
+      console.error("Import error:", error);
+      toast.error(
+        error.response?.data?.error ||
+          error.message ||
+          "Failed to import products"
+      );
     } finally {
       setImportLoading(false);
+      setImportModalOpen(false);
+      setImportPreview([])
+      fetchProducts(); 
     }
   };
 
@@ -541,7 +549,7 @@ const AlterProductsPage = () => {
                       file:mr-4 file:py-2 file:px-4
                       file:rounded-lg file:border-0
                       file:text-sm file:font-semibold
-                      file:bg-blue-50 file:text-blue-700
+                      file:bg-blue-50 file:text-blue-700 file:cursor-pointer
                       hover:file:bg-blue-100"
                   />
                   <p className="mt-1 text-sm text-gray-500">
