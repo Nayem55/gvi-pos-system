@@ -12,8 +12,11 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  Download,
+  Upload,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 import AdminSidebar from "../Component/AdminSidebar";
 
 const AlterProductsPage = () => {
@@ -33,6 +36,11 @@ const AlterProductsPage = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedPriceLists, setExpandedPriceLists] = useState({});
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const API_URL = "http://175.29.181.245:5000/products";
 
@@ -63,7 +71,6 @@ const AlterProductsPage = () => {
       setProducts(res.data);
       setFilteredProducts(res.data);
 
-      // Initialize expanded price lists state
       const initialExpandedState = {};
       res.data.forEach((product) => {
         initialExpandedState[product._id] = false;
@@ -245,6 +252,180 @@ const AlterProductsPage = () => {
     }));
   };
 
+  const exportToExcel = () => {
+    setExportLoading(true);
+    try {
+      // Prepare data for export
+      const exportData = products.map((product) => {
+        const baseData = {
+          "Product ID": product._id,
+          "Product Name": product.name,
+          Barcode: product.barcode,
+          Brand: product.brand,
+          Category: product.category,
+          DP: product.dp,
+          TP: product.tp,
+          MRP: product.mrp,
+        };
+
+        // Add price list data if available
+        if (product.priceList) {
+          Object.entries(product.priceList).forEach(([outlet, prices]) => {
+            baseData[`${outlet} DP`] = prices.dp || "";
+            baseData[`${outlet} TP`] = prices.tp || "";
+            baseData[`${outlet} MRP`] = prices.mrp || "";
+          });
+        }
+
+        return baseData;
+      });
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Products");
+
+      // Generate file and download
+      const fileName = `products_export_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success("Export completed successfully");
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to export products");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleImportFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImportFile(file);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+      setImportPreview(jsonData.slice(0, 5)); // Show preview of first 5 rows
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const processImport = async () => {
+    if (!importFile) {
+      toast.error("Please select a file first");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+        // Transform and validate data
+        const importData = jsonData.map((row) => {
+          const priceList = {};
+
+          // Process price lists
+          Object.keys(row).forEach((key) => {
+            if (
+              key.includes(" DP") ||
+              key.includes(" TP") ||
+              key.includes(" MRP")
+            ) {
+              const [outlet, type] = key.split(" ");
+              if (!priceList[outlet]) priceList[outlet] = {};
+              priceList[outlet][type.toLowerCase()] = Number(row[key]) || 0;
+            }
+          });
+
+          // Ensure _id is included but won't be updated
+          return {
+            _id: row["Product ID"], // This will be used for filtering only
+            name: row["Product Name"] || "",
+            barcode: row["Barcode"] || "",
+            brand: row["Brand"] || "",
+            category: row["Category"] || "",
+            dp: Number(row["DP"]) || 0,
+            tp: Number(row["TP"]) || 0,
+            mrp: Number(row["MRP"]) || 0,
+            ...(Object.keys(priceList).length > 0 && { priceList }),
+          };
+        });
+
+        try {
+          const response = await axios.post(
+            "http://175.29.181.245:5000/bulk-import-products",
+            { updatedProducts: importData }
+          );
+
+          if (response.data.success) {
+            toast.success(`Processed ${response.data.totalProcessed} products`);
+            if (response.data.insertedCount > 0) {
+              toast.success(
+                `Added ${response.data.insertedCount} new products`
+              );
+            }
+            if (response.data.updatedCount > 0) {
+              toast.success(`Updated ${response.data.updatedCount} products`);
+            }
+            if (
+              response.data.updatedCount === 0 &&
+              response.data.insertedCount === 0
+            ) {
+              toast("No changes needed - data matches existing records");
+            }
+          } else {
+            toast.error(response.data.error || "Import completed with issues");
+          }
+        } catch (error) {
+          console.error("API Error:", error);
+          toast.error(
+            error.response?.data?.error || "Failed to import products"
+          );
+        }
+
+        setImportModalOpen(false);
+        fetchProducts();
+      };
+      reader.readAsArrayBuffer(importFile);
+    } catch (error) {
+      console.error("Import processing error:", error);
+      toast.error("Failed to process import file");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // const generateNewId = () => {
+  //   return new mongoose.Types.ObjectId().toString();
+  // };
+
+  const extractPriceList = (row) => {
+    const priceList = {};
+    Object.keys(row).forEach((key) => {
+      if (key.includes(" DP") || key.includes(" TP") || key.includes(" MRP")) {
+        const [outlet, priceType] = key.split(" ");
+        if (!priceList[outlet]) {
+          priceList[outlet] = {};
+        }
+        priceList[outlet][priceType.toLowerCase()] = row[key];
+      }
+    });
+    return priceList;
+  };
+
   const displayProducts = bulkUpdateMode
     ? filteredProducts
     : products.filter((p) =>
@@ -285,6 +466,27 @@ const AlterProductsPage = () => {
               </div>
 
               <button
+                onClick={exportToExcel}
+                disabled={exportLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {exportLoading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Download size={18} />
+                )}
+                Export
+              </button>
+
+              <button
+                onClick={() => setImportModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              >
+                <Upload size={18} />
+                Import
+              </button>
+
+              <button
                 onClick={() =>
                   bulkUpdateMode ? resetBulkUpdate() : setBulkUpdateMode(true)
                 }
@@ -306,6 +508,116 @@ const AlterProductsPage = () => {
               </button>
             </div>
           </div>
+
+          {/* Import Modal */}
+          {importModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    Import Products from Excel
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setImportModalOpen(false);
+                      setImportFile(null);
+                      setImportPreview([]);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Excel File
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleImportFileChange}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-lg file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100"
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Please upload an Excel file with product data. Download the
+                    template first if needed.
+                  </p>
+                </div>
+
+                {importPreview.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Data Preview (First 5 Rows)
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            {Object.keys(importPreview[0]).map((key) => (
+                              <th
+                                key={key}
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              >
+                                {key}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {importPreview.map((row, index) => (
+                            <tr key={index}>
+                              {Object.values(row).map((value, i) => (
+                                <td
+                                  key={i}
+                                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                                >
+                                  {value}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setImportModalOpen(false);
+                      setImportFile(null);
+                      setImportPreview([]);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={processImport}
+                    disabled={!importFile || importLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[120px]"
+                  >
+                    {importLoading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Confirm Import"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bulk Update Panel */}
           {bulkUpdateMode && (
@@ -429,7 +741,7 @@ const AlterProductsPage = () => {
                     <tr>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"
+                        className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"
                       >
                         {/* Empty for expand/collapse button */}
                       </th>
