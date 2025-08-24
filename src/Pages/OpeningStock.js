@@ -26,19 +26,43 @@ export default function OpeningStock({
   const isAdminPanel = !!allProducts; // Determine if we're in admin panel (has allProducts)
 
   const isPromoValid = (product) => {
-    if (!product.promoStartDate || !product.promoEndDate) return false;
-    const today = dayjs();
-    const startDate = dayjs(product.promoStartDate);
-    const endDate = dayjs(product.promoEndDate);
+    const priceLabel = user.pricelabel; // e.g., 'mt'
+    const promoDetails = product.promoPriceList?.[priceLabel];
+
+    if (!promoDetails?.promoStartDate || !promoDetails?.promoEndDate)
+      return false;
+
+    const today = dayjs().startOf("day"); // Use start of day to avoid time issues
+    const startDate = dayjs(promoDetails.promoStartDate);
+    const endDate = dayjs(promoDetails.promoEndDate);
+
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  const getCurrentDP = (product) => {
-    return isPromoValid(product) ? product.promoDP : product.dp;
+  const getCurrentTP = (product) => {
+    const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
+    const outletTP = product.priceList?.[priceLabel]?.tp;
+
+    if (
+      isPromoValid(product) &&
+      product.promoPriceList?.[priceLabel]?.promoTP
+    ) {
+      return product.promoPriceList[priceLabel].promoTP;
+    }
+    return outletTP ?? product.tp;
   };
 
-  const getCurrentTP = (product) => {
-    return isPromoValid(product) ? product.promoTP : product.tp;
+  const getCurrentDP = (product) => {
+    const priceLabel = user.pricelabel;
+    const outletDP = product.priceList?.[priceLabel]?.dp;
+
+    if (
+      isPromoValid(product) &&
+      product.promoPriceList?.[priceLabel]?.promoDP
+    ) {
+      return product.promoPriceList[priceLabel].promoDP;
+    }
+    return outletDP ?? product.dp;
   };
 
   const handleSearch = async (query) => {
@@ -63,6 +87,7 @@ export default function OpeningStock({
   };
 
   const addToCart = async (product) => {
+    console.log(product);
     const alreadyAdded = cart.find((item) => item.barcode === product.barcode);
     if (alreadyAdded) {
       toast.error("Already added to cart!");
@@ -357,18 +382,18 @@ export default function OpeningStock({
       );
 
       // First update the opening due and current due
-      const dueResponse = await axios.put(
-        "http://175.29.181.245:5000/update-due",
-        {
-          outlet: user.outlet,
-          isOpeningVoucher: true,
-          newOpeningDue: totalDPValue,
-        }
-      );
+      // const dueResponse = await axios.put(
+      //   "http://175.29.181.245:5000/update-due",
+      //   {
+      //     outlet: user.outlet,
+      //     isOpeningVoucher: true,
+      //     newOpeningDue: totalDPValue,
+      //   }
+      // );
 
-      if (!dueResponse.data.success) {
-        throw new Error("Failed to update due amount");
-      }
+      // if (!dueResponse.data.success) {
+      //   throw new Error("Failed to update due amount");
+      // }
 
       // Then process all stock updates
       const requests = cart.map(async (item) => {

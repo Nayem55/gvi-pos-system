@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import { FaSave, FaTrash, FaFileDownload, FaFileImport } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Configure dayjs to handle date formats consistently
 dayjs.locale("en");
@@ -13,6 +14,7 @@ export default function PromotionalPage() {
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [selectedPromotions, setSelectedPromotions] = useState({});
+  const [expandedPromos, setExpandedPromos] = useState({});
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,39 +61,67 @@ export default function PromotionalPage() {
       setAllProducts(allProductsData);
 
       const initialPromotions = {};
+      const initialExpanded = {};
       productsData.forEach((product) => {
-        let type = "quantity";
-        let promo = null;
-        let paid = 0;
-        let free = 0;
-        let percentage = 0;
+        initialExpanded[product._id] = false;
 
-        if (product.promoType === "percentage") {
-          type = "percentage";
-          percentage = product.promoPercentage || 0;
-        } else if (product.promoPlan && product.promoPlan !== "None") {
+        let baseType = product.promoType || "quantity";
+        let basePaid = 0;
+        let baseFree = 0;
+        let basePercentage = product.promoPercentage || 0;
+
+        if (baseType === "quantity" && product.promoPlan && product.promoPlan !== "None") {
           const [p, f] = product.promoPlan.split("+").map(Number);
-          promo = { paid: p, total: p + f };
-          paid = p;
-          free = f;
+          basePaid = p;
+          baseFree = f;
         }
 
         initialPromotions[product._id] = {
-          type,
-          promo,
-          paid,
-          free,
-          percentage,
-          startDate: product.promoStartDate
-            ? dayjs(product.promoStartDate).format("YYYY-MM-DD")
-            : "",
-          endDate: product.promoEndDate
-            ? dayjs(product.promoEndDate).format("YYYY-MM-DD")
-            : "",
+          base: {
+            type: baseType,
+            paid: basePaid,
+            free: baseFree,
+            percentage: basePercentage,
+            startDate: product.promoStartDate
+              ? dayjs(product.promoStartDate).format("YYYY-MM-DD")
+              : "",
+            endDate: product.promoEndDate
+              ? dayjs(product.promoEndDate).format("YYYY-MM-DD")
+              : "",
+          },
         };
+
+        if (product.promoPriceList) {
+          Object.entries(product.promoPriceList).forEach(([outlet, promo]) => {
+            let outletType = promo.promoType || "quantity";
+            let outletPaid = 0;
+            let outletFree = 0;
+            let outletPercentage = promo.promoPercentage || 0;
+
+            if (outletType === "quantity" && promo.promoPlan && promo.promoPlan !== "None") {
+              const [p, f] = promo.promoPlan.split("+").map(Number);
+              outletPaid = p;
+              outletFree = f;
+            }
+
+            initialPromotions[product._id][outlet] = {
+              type: outletType,
+              paid: outletPaid,
+              free: outletFree,
+              percentage: outletPercentage,
+              startDate: promo.promoStartDate
+                ? dayjs(promo.promoStartDate).format("YYYY-MM-DD")
+                : "",
+              endDate: promo.promoEndDate
+                ? dayjs(promo.promoEndDate).format("YYYY-MM-DD")
+                : "",
+            };
+          });
+        }
       });
 
       setSelectedPromotions(initialPromotions);
+      setExpandedPromos(initialExpanded);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -99,9 +129,10 @@ export default function PromotionalPage() {
     }
   };
 
-  const handlePromotionChange = (productId, field, value) => {
+  const handlePromotionChange = (productId, level, field, value) => {
     setSelectedPromotions((prev) => {
-      const current = prev[productId] || {};
+      const productPromos = { ...prev[productId] };
+      const current = productPromos[level] || {};
       let updated = { ...current };
 
       if (field === "type") {
@@ -111,7 +142,6 @@ export default function PromotionalPage() {
           paid: 0,
           free: 0,
           percentage: 0,
-          promo: null,
         };
       } else if (field === "paid" || field === "free") {
         const numValue = parseInt(value) || 0;
@@ -119,13 +149,6 @@ export default function PromotionalPage() {
           ...updated,
           [field]: numValue,
         };
-
-        if (updated.type === "quantity") {
-          const paid = field === "paid" ? numValue : updated.paid;
-          const free = field === "free" ? numValue : updated.free;
-          updated.promo =
-            paid > 0 || free > 0 ? { paid, free, total: paid + free } : null;
-        }
       } else if (field === "percentage") {
         updated = {
           ...updated,
@@ -135,62 +158,94 @@ export default function PromotionalPage() {
         updated[field] = value;
       }
 
+      productPromos[level] = updated;
       return {
         ...prev,
-        [productId]: updated,
+        [productId]: productPromos,
       };
     });
   };
 
   const calculatePromotionalPrice = (original, promotion) => {
-    if (!promotion) return original;
+    if (!promotion || (!promotion.paid && !promotion.free && !promotion.percentage)) return original;
 
     if (promotion.type === "percentage") {
       return (original * (1 - (promotion.percentage || 0) / 100)).toFixed(2);
     }
 
-    if (promotion.type === "quantity" && promotion.promo) {
-      if (promotion.promo.paid === 0 || promotion.promo.total === 0) {
-        return original;
-      }
-      return (
-        (original * promotion.promo.paid) /
-        promotion.promo.total
-      ).toFixed(2);
+    if (promotion.type === "quantity") {
+      const paid = promotion.paid || 0;
+      const total = paid + (promotion.free || 0);
+      if (paid === 0 || total === 0) return original;
+      return (original * paid / total).toFixed(2);
     }
 
     return original;
   };
 
+  const validateDates = (startDate, endDate) => {
+    if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
+      return false;
+    }
+    return true;
+  };
+
   const savePromotion = async (product) => {
-    const promotion = selectedPromotions[product._id];
-    const promo = promotion?.promo;
+    const promotions = selectedPromotions[product._id] || {};
+    const basePromo = promotions.base || {};
+
+    if (!validateDates(basePromo.startDate, basePromo.endDate)) {
+      toast.error("Start date must be before end date for base promotion");
+      return;
+    }
 
     const updatedProduct = {
       ...product,
-      promoType: promotion?.type,
+      promoType: basePromo.type || "none",
       promoPlan:
-        promotion.type === "quantity" && promo
-          ? `${promo.paid}+${promo.total - promo.paid}`
+        basePromo.type === "quantity" && basePromo.paid > 0
+          ? `${basePromo.paid}+${basePromo.free || 0}`
           : "None",
-      promoPercentage:
-        promotion.type === "percentage" ? promotion.percentage || 0 : 0,
-      promoDP: calculatePromotionalPrice(product.dp, promotion),
-      promoTP: calculatePromotionalPrice(product.tp, promotion),
-      promoStartDate: promotion?.startDate || null,
-      promoEndDate: promotion?.endDate || null,
+      promoPercentage: basePromo.type === "percentage" ? basePromo.percentage || 0 : 0,
+      promoDP: calculatePromotionalPrice(product.dp, basePromo),
+      promoTP: calculatePromotionalPrice(product.tp, basePromo),
+      promoStartDate: basePromo.startDate || null,
+      promoEndDate: basePromo.endDate || null,
+      promoPriceList: {},
     };
+
+    Object.entries(promotions).forEach(([level, promo]) => {
+      if (level === "base" || !product.priceList?.[level]) return;
+
+      if (!validateDates(promo.startDate, promo.endDate)) {
+        toast.error(`Start date must be before end date for ${level}`);
+        return;
+      }
+
+      updatedProduct.promoPriceList[level] = {
+        promoType: promo.type || "none",
+        promoPlan:
+          promo.type === "quantity" && promo.paid > 0
+            ? `${promo.paid}+${promo.free || 0}`
+            : "None",
+        promoPercentage: promo.type === "percentage" ? promo.percentage || 0 : 0,
+        promoDP: calculatePromotionalPrice(product.priceList[level].dp, promo),
+        promoTP: calculatePromotionalPrice(product.priceList[level].tp, promo),
+        promoStartDate: promo.startDate || null,
+        promoEndDate: promo.endDate || null,
+      };
+    });
 
     try {
       await axios.put(
         `http://175.29.181.245:5000/products/${product._id}`,
         updatedProduct
       );
-      toast.success("Promotion saved successfully!");
+      toast.success("Promotions saved successfully!");
       fetchProducts();
     } catch (error) {
-      console.error("Error saving promotion:", error);
-      toast.error("Failed to save promotion");
+      console.error("Error saving promotions:", error);
+      toast.error("Failed to save promotions");
     }
   };
 
@@ -204,31 +259,43 @@ export default function PromotionalPage() {
       promoTP: product.tp,
       promoStartDate: null,
       promoEndDate: null,
+      promoPriceList: {},
     };
+
+    if (product.promoPriceList) {
+      Object.keys(product.promoPriceList).forEach((outlet) => {
+        if (product.priceList?.[outlet]) {
+          updatedProduct.promoPriceList[outlet] = {
+            promoType: "none",
+            promoPlan: "None",
+            promoPercentage: 0,
+            promoDP: product.priceList[outlet].dp,
+            promoTP: product.priceList[outlet].tp,
+            promoStartDate: null,
+            promoEndDate: null,
+          };
+        }
+      });
+    }
 
     try {
       await axios.put(
         `http://175.29.181.245:5000/products/${product._id}`,
         updatedProduct
       );
-      toast.success("Promotion removed successfully!");
-      setSelectedPromotions((prev) => ({
-        ...prev,
-        [product._id]: {
-          type: "quantity",
-          promo: null,
-          paid: 0,
-          free: 0,
-          percentage: 0,
-          startDate: null,
-          endDate: null,
-        },
-      }));
+      toast.success("Promotions removed successfully!");
       fetchProducts();
     } catch (error) {
-      console.error("Error removing promotion:", error);
-      toast.error("Failed to remove promotion");
+      console.error("Error removing promotions:", error);
+      toast.error("Failed to remove promotions");
     }
+  };
+
+  const togglePromoList = (productId) => {
+    setExpandedPromos((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
   };
 
   const handleFileUpload = (e) => {
@@ -258,93 +325,117 @@ export default function PromotionalPage() {
     });
   };
 
+  const processDate = (rawDate) => {
+    if (!rawDate) return "";
+    if (typeof rawDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+      return rawDate;
+    }
+    if (rawDate instanceof Date) {
+      return dayjs(rawDate).format("YYYY-MM-DD");
+    }
+    throw new Error(`Invalid date format: ${rawDate}. Use YYYY-MM-DD.`);
+  };
+
   const processExcelData = async (data) => {
     let successCount = 0;
     let errorCount = 0;
-    const dateFormatRegex = /^\d{4}-\d{2}-\d{2}$/;
-    const dateErrors = [];
+    const errors = [];
 
     for (const [index, row] of data.entries()) {
       try {
-        // Skip instruction rows or empty rows
         if (!row["Product ID"] && !row["Product Name"]) continue;
 
-        const product = products.find(
+        const product = allProducts.find(
           (p) => p._id === row["Product ID"] || p.name === row["Product Name"]
         );
         if (!product) {
-          errorCount++;
-          continue;
+          throw new Error("Product not found");
         }
 
-        // Validate and format dates
-        let startDate = "";
-        if (row["Start Date"]) {
-          if (
-            typeof row["Start Date"] === "string" &&
-            dateFormatRegex.test(row["Start Date"])
-          ) {
-            startDate = row["Start Date"];
-          } else if (row["Start Date"] instanceof Date) {
-            startDate = dayjs(row["Start Date"]).format("YYYY-MM-DD");
-          } else {
-            throw new Error(
-              `Invalid date format for Start Date: ${row["Start Date"]}`
-            );
-          }
+        // Parse base promotion
+        const baseType = row["Promo Type"] || "quantity";
+        const basePaid = parseInt(row["Paid Quantity"] || 0);
+        const baseFree = parseInt(row["Free Quantity"] || 0);
+        const basePercentage = parseFloat(row["Percentage"] || 0);
+        const baseStartDate = processDate(row["Start Date"]);
+        const baseEndDate = processDate(row["End Date"]);
+
+        if (!validateDates(baseStartDate, baseEndDate)) {
+          throw new Error("Base start date must be before end date");
         }
 
-        let endDate = "";
-        if (row["End Date"]) {
-          if (
-            typeof row["End Date"] === "string" &&
-            dateFormatRegex.test(row["End Date"])
-          ) {
-            endDate = row["End Date"];
-          } else if (row["End Date"] instanceof Date) {
-            endDate = dayjs(row["End Date"]).format("YYYY-MM-DD");
-          } else {
-            throw new Error(
-              `Invalid date format for End Date: ${row["End Date"]}`
-            );
-          }
-        }
-
-        // Validate start date is before end date if both exist
-        if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
-          throw new Error("Start date must be before end date");
-        }
-
-        const promotion = {
-          type: row["Promo Type"] || "quantity",
-          paid: parseInt(row["Paid Quantity"] || 0),
-          free: parseInt(row["Free Quantity"] || 0),
-          percentage: parseFloat(row["Percentage"] || 0),
-          startDate,
-          endDate,
+        const basePromotion = {
+          type: baseType,
+          paid: basePaid,
+          free: baseFree,
+          percentage: basePercentage,
+          startDate: baseStartDate,
+          endDate: baseEndDate,
         };
 
-        if (promotion.type === "quantity") {
-          promotion.promo = {
-            paid: promotion.paid,
-            free: promotion.free,
-            total: promotion.paid + promotion.free,
+        // Parse outlet promotions
+        const outletPromoColumns = {};
+        Object.keys(row).forEach((key) => {
+          const match = key.match(/^(.+) (Promo Type|Paid Quantity|Free Quantity|Percentage|Start Date|End Date)$/);
+          if (match) {
+            const outlet = match[1];
+            const field = match[2].replace(/ /g, "");
+            if (!outletPromoColumns[outlet]) outletPromoColumns[outlet] = {};
+            outletPromoColumns[outlet][field] = row[key];
+          }
+        });
+
+        const promoPriceList = {};
+        for (const [outlet, col] of Object.entries(outletPromoColumns)) {
+          if (!product.priceList?.[outlet]) continue; // Skip if outlet not in priceList
+
+          const outletType = col.PromoType || "quantity";
+          const outletPaid = parseInt(col.PaidQuantity || 0);
+          const outletFree = parseInt(col.FreeQuantity || 0);
+          const outletPercentage = parseFloat(col.Percentage || 0);
+          const outletStartDate = processDate(col.StartDate);
+          const outletEndDate = processDate(col.EndDate);
+
+          if (!validateDates(outletStartDate, outletEndDate)) {
+            throw new Error(`${outlet} start date must be before end date`);
+          }
+
+          const outletPromotion = {
+            type: outletType,
+            paid: outletPaid,
+            free: outletFree,
+            percentage: outletPercentage,
+            startDate: outletStartDate,
+            endDate: outletEndDate,
+          };
+
+          promoPriceList[outlet] = {
+            promoType: outletType,
+            promoPlan:
+              outletType === "quantity" && outletPaid > 0
+                ? `${outletPaid}+${outletFree}`
+                : "None",
+            promoPercentage: outletType === "percentage" ? outletPercentage : 0,
+            promoDP: calculatePromotionalPrice(product.priceList[outlet].dp, outletPromotion),
+            promoTP: calculatePromotionalPrice(product.priceList[outlet].tp, outletPromotion),
+            promoStartDate: outletStartDate || null,
+            promoEndDate: outletEndDate || null,
           };
         }
 
         const updatedProduct = {
           ...product,
-          promoType: promotion.type,
+          promoType: baseType,
           promoPlan:
-            promotion.type === "quantity" && promotion.promo
-              ? `${promotion.paid}+${promotion.free}`
+            baseType === "quantity" && basePaid > 0
+              ? `${basePaid}+${baseFree}`
               : "None",
-          promoPercentage:
-            promotion.type === "percentage" ? promotion.percentage : 0,
-          promoDP: calculatePromotionalPrice(product.dp, promotion),
-          promoTP: calculatePromotionalPrice(product.tp, promotion),
-          promoStartDate: promotion.startDate || null,
-          promoEndDate: promotion.endDate || null,
+          promoPercentage: baseType === "percentage" ? basePercentage : 0,
+          promoDP: calculatePromotionalPrice(product.dp, basePromotion),
+          promoTP: calculatePromotionalPrice(product.tp, basePromotion),
+          promoStartDate: baseStartDate || null,
+          promoEndDate: baseEndDate || null,
+          promoPriceList,
         };
 
         await axios.put(
@@ -355,15 +446,15 @@ export default function PromotionalPage() {
         successCount++;
       } catch (error) {
         console.error(`Error processing row ${index + 2}:`, error);
-        dateErrors.push(`Row ${index + 2}: ${error.message}`);
+        errors.push(`Row ${index + 2}: ${error.message}`);
         errorCount++;
       }
     }
 
-    if (dateErrors.length > 0) {
+    if (errors.length > 0) {
       toast.error(
-        `Date format errors detected in ${dateErrors.length} rows. Please use YYYY-MM-DD format.`,
-        { duration: 5000 }
+        `Errors in ${errors.length} rows: ${errors.join(", ")}`,
+        { duration: 8000 }
       );
     }
 
@@ -403,37 +494,58 @@ export default function PromotionalPage() {
   };
 
   const downloadDemoFile = () => {
-    const demoData = allProducts.map((product) => ({
-      "Product ID": product._id,
-      "Product Name": product.name,
-      "Price DP": product.dp,
-      "Price TP": product.tp,
-      "Promo Type": "quantity",
-      "Paid Quantity": "",
-      "Free Quantity": "",
-      Percentage: "",
-      "Start Date": "",
-      "End Date": "",
-    }));
+    const allOutlets = new Set();
+    allProducts.forEach((product) => {
+      if (product.priceList) {
+        Object.keys(product.priceList).forEach((outlet) => allOutlets.add(outlet));
+      }
+    });
+
+    const demoData = allProducts.map((product) => {
+      const row = {
+        "Product ID": product._id,
+        "Product Name": product.name,
+        "Price DP": product.dp,
+        "Price TP": product.tp,
+        "Promo Type": "quantity",
+        "Paid Quantity": "",
+        "Free Quantity": "",
+        Percentage: "",
+        "Start Date": "",
+        "End Date": "",
+      };
+
+      allOutlets.forEach((outlet) => {
+        row[`${outlet} Promo Type`] = "quantity";
+        row[`${outlet} Paid Quantity`] = "";
+        row[`${outlet} Free Quantity`] = "";
+        row[`${outlet} Percentage`] = "";
+        row[`${outlet} Start Date`] = "";
+        row[`${outlet} End Date`] = "";
+      });
+
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(demoData);
 
-    // Add date format instructions to the worksheet
     if (!worksheet["!cols"]) worksheet["!cols"] = [];
-    worksheet["!cols"][6] = {
-      // Start Date column (G)
-      wch: 12,
-      t: "d",
-      z: "yyyy-mm-dd", // Excel format code for dates
-    };
-    worksheet["!cols"][7] = {
-      // End Date column (H)
-      wch: 12,
-      t: "d",
-      z: "yyyy-mm-dd",
-    };
+    const dateColumns = [8, 9]; // Base Start/End
+    let colIndex = 10; // After base
+    allOutlets.forEach(() => {
+      dateColumns.push(colIndex + 4); // Start Date for outlet
+      dateColumns.push(colIndex + 5); // End Date for outlet
+      colIndex += 6; // 6 columns per outlet
+    });
 
-    // Add instructions as the first row
+    dateColumns.forEach((col) => {
+      worksheet["!cols"][col] = {
+        wch: 12,
+        t: "d",
+        z: "yyyy-mm-dd",
+      };
+    });
+
     XLSX.utils.sheet_add_aoa(
       worksheet,
       [
@@ -444,19 +556,9 @@ export default function PromotionalPage() {
       { origin: -1 }
     );
 
-    // Add example data
-    if (allProducts.length > 0) {
-      XLSX.utils.sheet_add_aoa(
-        worksheet,
-        [["", "", "", "", "", "", "2023-12-01", "2023-12-31"]],
-        { origin: 1 }
-      );
-    }
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Promotions");
 
-    // Create a custom date for the filename
     const today = dayjs().format("YYYY-MM-DD");
     XLSX.writeFile(workbook, `Promotions_Template_${today}.xlsx`);
   };
@@ -500,9 +602,6 @@ export default function PromotionalPage() {
               >
                 <FaFileImport /> Import Promotions
               </label>
-              {/* {importFile && (
-                <span className="ml-2 text-sm text-gray-600">{importFile.name}</span>
-              )} */}
             </div>
 
             {importFile && (
@@ -523,7 +622,7 @@ export default function PromotionalPage() {
             <li>Download the template file to get the correct format</li>
             <li>
               Fill in the promotion details (either Paid+Free quantities or
-              Percentage)
+              Percentage) for base and outlets
             </li>
             <li>
               <strong>Date format must be YYYY-MM-DD (e.g., 2023-12-31)</strong>
@@ -539,7 +638,7 @@ export default function PromotionalPage() {
                 <li>Example dates are provided in the template</li>
               </ul>
             </li>
-            <li>Start date must be before end date</li>
+            <li>Start date must be before end date for each promotion level</li>
             <li>Do not modify the "Product ID" or "Product Name" columns</li>
             <li>Upload the completed file</li>
           </ol>
@@ -549,6 +648,7 @@ export default function PromotionalPage() {
           <table className="min-w-full table-auto text-sm">
             <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
               <tr>
+                <th className="p-3 w-8"></th> {/* Expand column */}
                 <th className="p-3 text-left">Product</th>
                 <th className="p-3 text-center">DP</th>
                 <th className="p-3 text-center">TP</th>
@@ -563,147 +663,323 @@ export default function PromotionalPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-6 text-gray-500">
+                  <td colSpan="10" className="text-center py-6 text-gray-500">
                     Loading products...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-6 text-gray-500">
+                  <td colSpan="10" className="text-center py-6 text-gray-500">
                     No products found
                   </td>
                 </tr>
               ) : (
                 products.map((product) => {
-                  const promotion = selectedPromotions[product._id] || {};
+                  const promotions = selectedPromotions[product._id] || {};
+                  const basePromo = promotions.base || {};
                   return (
-                    <tr
-                      key={product._id}
-                      className="border-b hover:bg-gray-50 transition duration-200"
-                    >
-                      <td className="p-3 font-medium text-gray-800">
-                        {product.name}
-                      </td>
-                      <td className="p-3 text-center">{product.dp}</td>
-                      <td className="p-3 text-center">{product.tp}</td>
-                      <td className="p-3 text-center">
-                        <select
-                          value={promotion.type}
-                          onChange={(e) =>
-                            handlePromotionChange(
-                              product._id,
-                              "type",
-                              e.target.value
-                            )
-                          }
-                          className="border rounded px-2 py-1 text-sm"
-                        >
-                          <option value="quantity">Quantity</option>
-                          <option value="percentage">Percentage</option>
-                        </select>
-                      </td>
-                      <td className="p-3 text-center">
-                        {promotion.type === "quantity" ? (
-                          <div className="flex justify-center space-x-1">
+                    <>
+                      <tr
+                        key={product._id}
+                        className="border-b hover:bg-gray-50 transition duration-200"
+                      >
+                        <td className="p-3 text-center">
+                          {product.priceList && Object.keys(product.priceList).length > 0 && (
+                            <button
+                              onClick={() => togglePromoList(product._id)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              {expandedPromos[product._id] ? (
+                                <ChevronUp size={18} />
+                              ) : (
+                                <ChevronDown size={18} />
+                              )}
+                            </button>
+                          )}
+                        </td>
+                        <td className="p-3 font-medium text-gray-800">
+                          {product.name}
+                        </td>
+                        <td className="p-3 text-center">{product.dp}</td>
+                        <td className="p-3 text-center">{product.tp}</td>
+                        <td className="p-3 text-center">
+                          <select
+                            value={basePromo.type || "quantity"}
+                            onChange={(e) =>
+                              handlePromotionChange(
+                                product._id,
+                                "base",
+                                "type",
+                                e.target.value
+                              )
+                            }
+                            className="border rounded px-2 py-1 text-sm"
+                          >
+                            <option value="quantity">Quantity</option>
+                            <option value="percentage">Percentage</option>
+                          </select>
+                        </td>
+                        <td className="p-3 text-center">
+                          {basePromo.type === "quantity" ? (
+                            <div className="flex justify-center space-x-1">
+                              <input
+                                type="number"
+                                min="0"
+                                value={basePromo.paid || ""}
+                                onChange={(e) =>
+                                  handlePromotionChange(
+                                    product._id,
+                                    "base",
+                                    "paid",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-12 text-center border rounded"
+                              />
+                              <span className="self-center">+</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={basePromo.free || ""}
+                                onChange={(e) =>
+                                  handlePromotionChange(
+                                    product._id,
+                                    "base",
+                                    "free",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-12 text-center border rounded"
+                              />
+                            </div>
+                          ) : (
                             <input
                               type="number"
                               min="0"
-                              value={promotion.paid || ""}
+                              max="100"
+                              value={basePromo.percentage || ""}
                               onChange={(e) =>
                                 handlePromotionChange(
                                   product._id,
-                                  "paid",
+                                  "base",
+                                  "percentage",
                                   e.target.value
                                 )
                               }
-                              className="w-12 text-center border rounded"
+                              className="w-16 text-center border rounded"
+                              placeholder="%"
                             />
-                            <span className="self-center">+</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          {calculatePromotionalPrice(product.dp, basePromo)}
+                        </td>
+                        <td className="p-3 text-center">
+                          {calculatePromotionalPrice(product.tp, basePromo)}
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex flex-col space-y-1">
                             <input
-                              type="number"
-                              min="0"
-                              value={promotion.free || ""}
+                              type="date"
+                              value={basePromo.startDate || ""}
                               onChange={(e) =>
                                 handlePromotionChange(
                                   product._id,
-                                  "free",
+                                  "base",
+                                  "startDate",
                                   e.target.value
                                 )
                               }
-                              className="w-12 text-center border rounded"
+                              className="text-sm p-1 border rounded"
+                            />
+                            <input
+                              type="date"
+                              value={basePromo.endDate || ""}
+                              onChange={(e) =>
+                                handlePromotionChange(
+                                  product._id,
+                                  "base",
+                                  "endDate",
+                                  e.target.value
+                                )
+                              }
+                              className="text-sm p-1 border rounded"
                             />
                           </div>
-                        ) : (
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={promotion.percentage || ""}
-                            onChange={(e) =>
-                              handlePromotionChange(
-                                product._id,
-                                "percentage",
-                                e.target.value
-                              )
-                            }
-                            className="w-16 text-center border rounded"
-                            placeholder="%"
-                          />
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {calculatePromotionalPrice(product.dp, promotion)}
-                      </td>
-                      <td className="p-3 text-center">
-                        {calculatePromotionalPrice(product.tp, promotion)}
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex flex-col space-y-1">
-                          <input
-                            type="date"
-                            value={promotion.startDate || ""}
-                            onChange={(e) =>
-                              handlePromotionChange(
-                                product._id,
-                                "startDate",
-                                e.target.value
-                              )
-                            }
-                            className="text-sm p-1 border rounded"
-                          />
-                          <input
-                            type="date"
-                            value={promotion.endDate || ""}
-                            onChange={(e) =>
-                              handlePromotionChange(
-                                product._id,
-                                "endDate",
-                                e.target.value
-                              )
-                            }
-                            className="text-sm p-1 border rounded"
-                          />
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center space-x-2">
-                          <button
-                            onClick={() => savePromotion(product)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded flex items-center space-x-1"
-                          >
-                            <FaSave />
-                            <span>Save</span>
-                          </button>
-                          <button
-                            onClick={() => removePromotion(product)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded flex items-center space-x-1"
-                          >
-                            <FaTrash />
-                            <span>Remove</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex justify-center space-x-2">
+                            <button
+                              onClick={() => savePromotion(product)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded flex items-center space-x-1"
+                            >
+                              <FaSave />
+                              <span>Save</span>
+                            </button>
+                            <button
+                              onClick={() => removePromotion(product)}
+                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded flex items-center space-x-1"
+                            >
+                              <FaTrash />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {expandedPromos[product._id] && product.priceList && (
+                        <tr className="bg-gray-50">
+                          <td colSpan="10" className="px-6 py-4">
+                            <div className="ml-8">
+                              <h4 className="font-medium text-gray-700 mb-2">
+                                Outlet Specific Promotions
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {Object.entries(product.priceList).map(([outlet, prices]) => {
+                                  const outletPromo = promotions[outlet] || {
+                                    type: "quantity",
+                                    paid: 0,
+                                    free: 0,
+                                    percentage: 0,
+                                    startDate: "",
+                                    endDate: "",
+                                  };
+                                  return (
+                                    <div
+                                      key={outlet}
+                                      className="border p-3 rounded bg-white"
+                                    >
+                                      <h5 className="font-medium capitalize mb-2">
+                                        {outlet}
+                                      </h5>
+                                      <div className="space-y-2">
+                                        <div>
+                                          <label className="text-xs text-gray-500 block">
+                                            Promo Type
+                                          </label>
+                                          <select
+                                            value={outletPromo.type}
+                                            onChange={(e) =>
+                                              handlePromotionChange(
+                                                product._id,
+                                                outlet,
+                                                "type",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full border rounded px-2 py-1 text-sm"
+                                          >
+                                            <option value="quantity">Quantity</option>
+                                            <option value="percentage">Percentage</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="text-xs text-gray-500 block">
+                                            Promotion
+                                          </label>
+                                          {outletPromo.type === "quantity" ? (
+                                            <div className="flex space-x-1">
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                value={outletPromo.paid || ""}
+                                                onChange={(e) =>
+                                                  handlePromotionChange(
+                                                    product._id,
+                                                    outlet,
+                                                    "paid",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-1/2 text-center border rounded"
+                                              />
+                                              <span className="self-center">+</span>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                value={outletPromo.free || ""}
+                                                onChange={(e) =>
+                                                  handlePromotionChange(
+                                                    product._id,
+                                                    outlet,
+                                                    "free",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-1/2 text-center border rounded"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="100"
+                                              value={outletPromo.percentage || ""}
+                                              onChange={(e) =>
+                                                handlePromotionChange(
+                                                  product._id,
+                                                  outlet,
+                                                  "percentage",
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full text-center border rounded"
+                                              placeholder="%"
+                                            />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <label className="text-xs text-gray-500 block">
+                                            Promo DP / TP
+                                          </label>
+                                          <div className="flex justify-between text-sm">
+                                            <span>{calculatePromotionalPrice(prices.dp, outletPromo)}</span>
+                                            <span>{calculatePromotionalPrice(prices.tp, outletPromo)}</span>
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label className="text-xs text-gray-500 block">
+                                            Validity
+                                          </label>
+                                          <div className="space-y-1">
+                                            <input
+                                              type="date"
+                                              value={outletPromo.startDate || ""}
+                                              onChange={(e) =>
+                                                handlePromotionChange(
+                                                  product._id,
+                                                  outlet,
+                                                  "startDate",
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full text-sm p-1 border rounded"
+                                            />
+                                            <input
+                                              type="date"
+                                              value={outletPromo.endDate || ""}
+                                              onChange={(e) =>
+                                                handlePromotionChange(
+                                                  product._id,
+                                                  outlet,
+                                                  "endDate",
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full text-sm p-1 border rounded"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })
               )}

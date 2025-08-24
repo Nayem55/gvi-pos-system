@@ -128,7 +128,8 @@ export default function Home() {
           className="p-2 border rounded-lg w-[100%]"
         >
           <option value="opening">Opening Stock</option>
-          <option value="primary">Primary Request</option>
+          <option value="primary request">Primary Request</option>
+          <option value="primary">Primary</option>
           <option value="secondary">Secondary</option>
           <option value="pos">POS</option>
           <option value="officeReturn">Office Return</option>
@@ -148,8 +149,17 @@ export default function Home() {
           getStockValue={getStockValue}
         />
       )}
-      {selectedTab === "primary" && (
+      {selectedTab === "primary request" && (
         <PrimaryRequest
+          user={user}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+        />
+      )}
+      {selectedTab === "primary" && (
+        <Primary
           user={user}
           stock={stock}
           setStock={setStock}

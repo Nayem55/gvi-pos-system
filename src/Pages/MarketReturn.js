@@ -30,11 +30,18 @@ export default function MarketReturn({ user, stock, getStockValue }) {
   };
 
   // Get the appropriate DP price based on promo validity
-  const getCurrentDP = (product) => {
-    return isPromoValid(product) ? product.promoDP : product.dp;
-  };
   const getCurrentTP = (product) => {
-    return isPromoValid(product) ? product.promoTP : product.tp;
+    const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
+    const outletTP = product.priceList?.[priceLabel]?.tp;
+
+    return isPromoValid(product) ? product.promoTP : outletTP ?? product.tp;
+  };
+
+  const getCurrentDP = (product) => {
+    const priceLabel = user.pricelabel;
+    const outletDP = product.priceList?.[priceLabel]?.dp;
+
+    return isPromoValid(product) ? product.promoDP : outletDP ?? product.dp;
   };
 
   // Handle product search

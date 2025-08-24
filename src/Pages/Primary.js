@@ -34,10 +34,19 @@ export default function Primary({
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  const getCurrentDP = (product) =>
-    isPromoValid(product) ? product.promoDP : product.dp;
-  const getCurrentTP = (product) =>
-    isPromoValid(product) ? product.promoTP : product.tp;
+  const getCurrentTP = (product) => {
+    const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
+    const outletTP = product.priceList?.[priceLabel]?.tp;
+
+    return isPromoValid(product) ? product.promoTP : outletTP ?? product.tp;
+  };
+
+  const getCurrentDP = (product) => {
+    const priceLabel = user.pricelabel;
+    const outletDP = product.priceList?.[priceLabel]?.dp;
+
+    return isPromoValid(product) ? product.promoDP : outletDP ?? product.dp;
+  };
 
   const handleSearch = async (query) => {
     setSearch(query);

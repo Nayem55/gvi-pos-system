@@ -6,7 +6,7 @@ import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
 
 const API_CONFIG = {
-  baseURL: "http://localhost:5000",
+  baseURL: "http://175.29.181.245:5000",
   timeout: 5000000,
 };
 

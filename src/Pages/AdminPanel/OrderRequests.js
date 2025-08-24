@@ -14,7 +14,7 @@ import {
 
 /* ─────────────────────────── axios helper ─────────────────────────── */
 const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: "http://175.29.181.245:5000",
   timeout: 50000,
 });
 
