@@ -27,10 +27,16 @@ export default function Primary({
   const isAdminPanel = !!allProducts;
 
   const isPromoValid = (product) => {
-    if (!product.promoStartDate || !product.promoEndDate) return false;
-    const today = dayjs();
-    const startDate = dayjs(product.promoStartDate);
-    const endDate = dayjs(product.promoEndDate);
+    const priceLabel = user.pricelabel; // e.g., 'mt'
+    const promoDetails = product.promoPriceList?.[priceLabel];
+
+    if (!promoDetails?.promoStartDate || !promoDetails?.promoEndDate)
+      return false;
+
+    const today = dayjs().startOf("day"); // Use start of day to avoid time issues
+    const startDate = dayjs(promoDetails.promoStartDate);
+    const endDate = dayjs(promoDetails.promoEndDate);
+
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
@@ -38,14 +44,26 @@ export default function Primary({
     const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
     const outletTP = product.priceList?.[priceLabel]?.tp;
 
-    return isPromoValid(product) ? product.promoTP : outletTP ?? product.tp;
+    if (
+      isPromoValid(product) &&
+      product.promoPriceList?.[priceLabel]?.promoTP
+    ) {
+      return product.promoPriceList[priceLabel].promoTP;
+    }
+    return outletTP ?? product.tp;
   };
 
   const getCurrentDP = (product) => {
     const priceLabel = user.pricelabel;
     const outletDP = product.priceList?.[priceLabel]?.dp;
 
-    return isPromoValid(product) ? product.promoDP : outletDP ?? product.dp;
+    if (
+      isPromoValid(product) &&
+      product.promoPriceList?.[priceLabel]?.promoDP
+    ) {
+      return product.promoPriceList[priceLabel].promoDP;
+    }
+    return outletDP ?? product.dp;
   };
 
   const handleSearch = async (query) => {

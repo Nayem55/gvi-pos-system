@@ -21,7 +21,7 @@ const MonthlyTargetPage = () => {
         const res = await axios.get("http://175.29.181.245:5000/getAllUser");
         setUsers(res.data);
       } catch (error) {
-        console.error("Failed to fetch users");
+        console.error("Failed to fetch users", error);
         toast.error("Failed to fetch users");
       }
     };
@@ -110,15 +110,11 @@ const MonthlyTargetPage = () => {
         await axios.put("http://175.29.181.245:5000/targets", targetData);
         toast.success("Target updated successfully");
       } else {
-        await axios.post("http://175.29.181.245:5000/targets", {
-          year: parseInt(year),
-          month: parseInt(month),
-          targets: [targetData],
-        });
+        await axios.post("http://175.29.181.245:5000/targets", targetData); // Changed to send targetData directly for consistency
         toast.success("Target created successfully");
       }
 
-      // Refresh targets after update
+      // Refresh targets
       const res = await axios.get("http://175.29.181.245:5000/targets", {
         params: { year, month },
       });
@@ -144,10 +140,7 @@ const MonthlyTargetPage = () => {
       setTargets(updatedTargetsMap);
       setTempTargets(updatedTargetsMap);
     } catch (error) {
-      console.error(
-        "Failed to save or update target",
-        error.response?.data || error
-      );
+      console.error("Failed to save or update target", error.response?.data || error);
       toast.error(error.response?.data?.message || "Error saving target");
     } finally {
       setLoading(false);
@@ -175,11 +168,7 @@ const MonthlyTargetPage = () => {
           dp: tempTargets[user._id].dp,
         }));
 
-      await axios.post("http://175.29.181.245:5000/targets/bulk", {
-        year: parseInt(year),
-        month: parseInt(month),
-        targets: targetsToSave,
-      });
+      await axios.post("http://175.29.181.245:5000/targets/bulk", targetsToSave); // Changed to send array directly for simplicity
 
       toast.success(`Successfully saved ${targetsToSave.length} targets`);
 
@@ -207,6 +196,7 @@ const MonthlyTargetPage = () => {
       });
 
       setTargets(updatedTargetsMap);
+      setTempTargets(updatedTargetsMap); // Reset temp after save
     } catch (error) {
       console.error("Bulk save failed:", error);
       toast.error(error.response?.data?.message || "Bulk save failed");
@@ -214,6 +204,42 @@ const MonthlyTargetPage = () => {
       setLoading(false);
     }
   };
+
+  // const handleSyncUserDetails = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const res = await axios.put("http://175.29.181.245:5000/targets/bulk-update");
+  //     toast.success(`Synced user details for ${res.data.modifiedCount} records`);
+  //     // Refresh targets after sync
+  //     const fetchRes = await axios.get("http://175.29.181.245:5000/targets", {
+  //       params: { year, month },
+  //     });
+  //     const updatedTargetsMap = {};
+  //     fetchRes.data.forEach((targetEntry) => {
+  //       targetEntry.targets.forEach((target) => {
+  //         if (
+  //           target.year === parseInt(year) &&
+  //           target.month === parseInt(month)
+  //         ) {
+  //           updatedTargetsMap[targetEntry.userID] = {
+  //             dp: target.dp,
+  //             tp: (target.dp * 1.07).toFixed(2),
+  //             userName: targetEntry.userName,
+  //             userNumber: targetEntry.userNumber,
+  //             userZone: targetEntry.userZone,
+  //           };
+  //         }
+  //       });
+  //     });
+  //     setTargets(updatedTargetsMap);
+  //     setTempTargets(updatedTargetsMap);
+  //   } catch (error) {
+  //     console.error("Failed to sync user details:", error);
+  //     toast.error(error.response?.data?.message || "Failed to sync user details");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleFileUpload = (e) => {
     const uploadedFile = e.target.files[0];
@@ -265,7 +291,7 @@ const MonthlyTargetPage = () => {
       const processedCount = processExcelData(data);
 
       if (processedCount > 0) {
-        toast.success(`Processed ${processedCount} targets from file`);
+        toast.success(`Imported and processed ${processedCount} targets. Review and save.`);
       } else {
         toast.error("No valid targets found in the file");
       }
@@ -275,7 +301,9 @@ const MonthlyTargetPage = () => {
     } finally {
       setImportLoading(false);
       setFile(null);
-      document.getElementById("file-upload").value = "";
+      if (document.getElementById("file-upload")) {
+        document.getElementById("file-upload").value = "";
+      }
     }
   };
 
@@ -313,7 +341,21 @@ const MonthlyTargetPage = () => {
     const worksheet = XLSX.utils.json_to_sheet(demoData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Targets");
-    XLSX.writeFile(workbook, `Monthly_Targets_${year}_${month}.xlsx`);
+    XLSX.writeFile(workbook, `Monthly_Targets_Template_${year}_${month}.xlsx`);
+  };
+
+  const calculateTotalTargets = () => {
+    let totalDP = 0;
+    let totalTP = 0;
+
+    Object.values(tempTargets).forEach((target) => {
+      const dp = parseFloat(target.dp) || 0;
+      const tp = parseFloat(target.tp) || 0;
+      totalDP += dp;
+      totalTP += tp;
+    });
+
+    return { totalDP: totalDP.toFixed(2), totalTP: totalTP.toFixed(2) };
   };
 
   return (
@@ -321,15 +363,30 @@ const MonthlyTargetPage = () => {
       <AdminSidebar />
       <div className="p-6 bg-gray-100 min-h-screen flex-1">
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto">
-          <h2 className="text-2xl font-semibold mb-6">Set Monthly Targets</h2>
+          <h2 className="text-2xl font-semibold mb-6">Monthly Target Management</h2>
 
-          <div className="mb-6 flex gap-4 items-center flex-wrap">
+          {/* Total Targets Display */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
+            <h3 className="text-lg font-medium mb-2">
+              Summary for {dayjs().month(month - 1).format("MMMM")} {year}
+            </h3>
+            <div className="flex gap-8">
+              <p>
+                <span className="font-semibold">Total DP Target:</span> {calculateTotalTargets().totalDP}
+              </p>
+              <p>
+                <span className="font-semibold">Total TP Target:</span> {calculateTotalTargets().totalTP}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex gap-4 items-center">
               <input
                 type="number"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                className="border rounded p-2 w-32"
+                className="border border-gray-300 rounded p-2 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="Year"
                 min="2000"
                 max="2100"
@@ -337,7 +394,7 @@ const MonthlyTargetPage = () => {
               <select
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className="border rounded p-2 w-40"
+                className="border border-gray-300 rounded p-2 w-40 focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 {[...Array(12)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -347,23 +404,31 @@ const MonthlyTargetPage = () => {
               </select>
             </div>
 
-            <button
-              onClick={handleBulkSave}
-              disabled={loading || Object.keys(tempTargets).length === 0}
-              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700
-                disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
-            >
-              {loading ? "Saving All..." : "Save All Targets"}
-            </button>
+            <div className="flex gap-4">
+              {/* <button
+                onClick={handleSyncUserDetails}
+                disabled={loading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? "Syncing..." : "Sync User Details"}
+              </button> */}
+              <button
+                onClick={handleBulkSave}
+                disabled={loading || Object.keys(tempTargets).length === 0}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? "Saving All..." : "Save All Changes"}
+              </button>
+            </div>
           </div>
 
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <h3 className="text-lg font-medium mb-3">Bulk Import from Excel</h3>
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-inner">
+            <h3 className="text-lg font-medium mb-3">Bulk Import Targets from Excel</h3>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col md:flex-row gap-4 items-center">
                 <button
                   onClick={downloadDemoFile}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
                   Download Template
                 </button>
@@ -373,74 +438,68 @@ const MonthlyTargetPage = () => {
                     type="file"
                     accept=".xlsx, .xls, .csv"
                     onChange={handleFileUpload}
-                    className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-blue-50 file:text-blue-700
-                      hover:file:bg-blue-100"
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                 </div>
                 <button
                   onClick={handleBulkImport}
-                  disabled={!file || importLoading}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700
-                    disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
+                  disabled={!file || importLoading || loading}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                 >
-                  {importLoading ? "Processing..." : "Import Targets"}
+                  {importLoading ? "Importing..." : "Import File"}
                 </button>
               </div>
               <div className="text-sm text-gray-600">
-                <p className="font-medium">Instructions:</p>
+                <p className="font-medium mb-1">Import Instructions:</p>
                 <ol className="list-decimal pl-5 space-y-1">
-                  <li>Download the template file to get the correct format</li>
-                  <li>
-                    Fill in the "DP Target" column (TP will be calculated
-                    automatically)
-                  </li>
-                  <li>
-                    Do not modify the "User ID", "User Name", "User Number", or
-                    "User Zone" columns
-                  </li>
-                  <li>Upload the completed file</li>
-                  <li>Review the imported data and click "Save All Targets"</li>
+                  <li>Download the template to ensure correct format.</li>
+                  <li>Enter values only in the "DP Target" column (TP is auto-calculated).</li>
+                  <li>Do not alter "User ID", "User Name", "User Number", or "User Zone" columns.</li>
+                  <li>Upload the file to load data into the table.</li>
+                  <li>Review changes and use "Save All Changes" to persist.</li>
                 </ol>
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto border-collapse border border-gray-300">
+          {loading && (
+            <div className="mb-4 text-center text-purple-600 font-medium">
+              Loading data... Please wait.
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow">
+            <table className="w-full table-auto border-collapse">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="border p-3 text-left">User</th>
-                  <th className="border p-3 text-left">Outlet</th>
-                  <th className="border p-3 text-left">Number</th>
-                  <th className="border p-3 text-left">Zone</th>
-                  <th className="border p-3 text-center">Target (TP)</th>
-                  <th className="border p-3 text-center">Target (DP)</th>
-                  <th className="border p-3 text-center">Action</th>
+                  <th className="border-b p-3 text-left font-medium">User Name</th>
+                  <th className="border-b p-3 text-left font-medium">Outlet</th>
+                  <th className="border-b p-3 text-left font-medium">Number</th>
+                  <th className="border-b p-3 text-left font-medium">Zone</th>
+                  <th className="border-b p-3 text-center font-medium">TP Target</th>
+                  <th className="border-b p-3 text-center font-medium">DP Target</th>
+                  <th className="border-b p-3 text-center font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50">
-                    <td className="border p-3">{user.name}</td>
-                    <td className="border p-3">{user.outlet}</td>
-                    <td className="border p-3">{user.number}</td>
-                    <td className="border p-3">{user.zone}</td>
-                    <td className="border p-3 text-center">
+                  <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="border-b p-3">{user.name}</td>
+                    <td className="border-b p-3">{user.outlet}</td>
+                    <td className="border-b p-3">{user.number}</td>
+                    <td className="border-b p-3">{user.zone}</td>
+                    <td className="border-b p-3 text-center">
                       <input
-                        type="number"
-                        className="border p-2 rounded w-32 text-center"
+                        type="text" // Changed to text for disabled display
+                        className="border border-gray-300 p-2 rounded w-32 text-center bg-gray-100"
                         value={tempTargets[user._id]?.tp || ""}
                         disabled
                       />
                     </td>
-                    <td className="border p-3 text-center">
+                    <td className="border-b p-3 text-center">
                       <input
                         type="number"
-                        className="border p-2 rounded w-32 text-center"
+                        className="border border-gray-300 p-2 rounded w-32 text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
                         value={tempTargets[user._id]?.dp || ""}
                         onChange={(e) =>
                           handleTargetChange(user._id, e.target.value, "dp")
@@ -448,18 +507,18 @@ const MonthlyTargetPage = () => {
                         placeholder="Enter DP"
                       />
                     </td>
-                    <td className="border p-3 text-center">
+                    <td className="border-b p-3 text-center">
                       <button
-                        className={`px-4 py-2 rounded w-[100px] ${
+                        className={`px-4 py-2 rounded w-[100px] text-white transition-colors ${
                           targets[user._id]
                             ? "bg-blue-500 hover:bg-blue-600"
                             : "bg-green-500 hover:bg-green-600"
-                        } text-white`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                         onClick={() => handleUserTargetSaveOrUpdate(user)}
                         disabled={loading}
                       >
                         {loading
-                          ? "Saving..."
+                          ? "Processing..."
                           : targets[user._id]
                           ? "Update"
                           : "Save"}

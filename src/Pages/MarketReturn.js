@@ -18,30 +18,44 @@ export default function MarketReturn({ user, stock, getStockValue }) {
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
 
-  // Check if promo price is valid based on current date
   const isPromoValid = (product) => {
-    if (!product.promoStartDate || !product.promoEndDate) return false;
+    const priceLabel = user.pricelabel; // e.g., 'mt'
+    const promoDetails = product.promoPriceList?.[priceLabel];
 
-    const today = dayjs();
-    const startDate = dayjs(product.promoStartDate);
-    const endDate = dayjs(product.promoEndDate);
+    if (!promoDetails?.promoStartDate || !promoDetails?.promoEndDate)
+      return false;
+
+    const today = dayjs().startOf("day"); // Use start of day to avoid time issues
+    const startDate = dayjs(promoDetails.promoStartDate);
+    const endDate = dayjs(promoDetails.promoEndDate);
 
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
 
-  // Get the appropriate DP price based on promo validity
   const getCurrentTP = (product) => {
     const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
     const outletTP = product.priceList?.[priceLabel]?.tp;
 
-    return isPromoValid(product) ? product.promoTP : outletTP ?? product.tp;
+    if (
+      isPromoValid(product) &&
+      product.promoPriceList?.[priceLabel]?.promoTP
+    ) {
+      return product.promoPriceList[priceLabel].promoTP;
+    }
+    return outletTP ?? product.tp;
   };
 
   const getCurrentDP = (product) => {
     const priceLabel = user.pricelabel;
     const outletDP = product.priceList?.[priceLabel]?.dp;
 
-    return isPromoValid(product) ? product.promoDP : outletDP ?? product.dp;
+    if (
+      isPromoValid(product) &&
+      product.promoPriceList?.[priceLabel]?.promoDP
+    ) {
+      return product.promoPriceList[priceLabel].promoDP;
+    }
+    return outletDP ?? product.dp;
   };
 
   // Handle product search
