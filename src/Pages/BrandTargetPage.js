@@ -18,7 +18,9 @@ const BrandTargetPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false); // New state for dropdown
   const tableContainerRef = useRef(null);
+  const summaryButtonRef = useRef(null);
 
   // Mouse events for horizontal scrolling
   const handleMouseDown = (e) => {
@@ -43,6 +45,20 @@ const BrandTargetPage = () => {
     tableContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
+  // Handle clicking outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        summaryButtonRef.current &&
+        !summaryButtonRef.current.contains(event.target)
+      ) {
+        setIsSummaryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -65,11 +81,11 @@ const BrandTargetPage = () => {
       if (!year || !month) return;
 
       try {
+        setLoading(true);
         const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
           params: { year, month },
         });
 
-        // Transform targets into a more usable structure
         const targetsMap = {};
         res.data.forEach((userDoc) => {
           userDoc.targets.forEach((monthlyTarget) => {
@@ -91,6 +107,8 @@ const BrandTargetPage = () => {
       } catch (error) {
         console.error("Failed to fetch targets", error);
         toast.error("Failed to load targets");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -129,7 +147,6 @@ const BrandTargetPage = () => {
 
       toast.success("Targets saved successfully");
 
-      // Refresh targets
       const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
         params: { year, month },
       });
@@ -151,19 +168,23 @@ const BrandTargetPage = () => {
       });
 
       setTargets(updatedTargets);
+      setTempTargets(updatedTargets);
     } catch (error) {
       console.error("Failed to save targets", error);
-      toast.error("Error saving targets");
+      toast.error(error.response?.data?.message || "Error saving targets");
     } finally {
       setLoading(false);
     }
   };
 
   const saveAllTargets = async () => {
+    if (Object.keys(tempTargets).length === 0) {
+      return toast.error("No targets to save");
+    }
+
     setLoading(true);
 
     try {
-      // Prepare all user updates
       const updates = Object.entries(tempTargets)
         .filter(
           ([userID, targets]) => targets && Object.keys(targets).length > 0
@@ -184,11 +205,9 @@ const BrandTargetPage = () => {
           });
         });
 
-      // Execute all updates
       await Promise.all(updates);
       toast.success("All targets saved successfully");
 
-      // Refresh targets
       const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
         params: { year, month },
       });
@@ -210,9 +229,10 @@ const BrandTargetPage = () => {
       });
 
       setTargets(updatedTargets);
+      setTempTargets(updatedTargets);
     } catch (error) {
       console.error("Failed to save all targets", error);
-      toast.error("Error saving some targets");
+      toast.error(error.response?.data?.message || "Error saving some targets");
     } finally {
       setLoading(false);
     }
@@ -313,7 +333,36 @@ const BrandTargetPage = () => {
     const worksheet = XLSX.utils.json_to_sheet(demoData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Brand Targets");
-    XLSX.writeFile(workbook, "Brand_Targets_Template.xlsx");
+    XLSX.writeFile(workbook, `Brand_Targets_Template_${year}_${month}.xlsx`);
+  };
+
+  const calculateBrandTotals = () => {
+    const brandTotals = {};
+    let userCountWithTargets = 0;
+
+    brands.forEach((brand) => {
+      brandTotals[brand] = 0;
+    });
+
+    Object.entries(tempTargets).forEach(([userID, userTargets]) => {
+      let hasNonZeroTarget = false;
+      brands.forEach((brand) => {
+        const targetValue = parseFloat(userTargets[brand]) || 0;
+        brandTotals[brand] += targetValue;
+        if (targetValue > 0) {
+          hasNonZeroTarget = true;
+        }
+      });
+      if (hasNonZeroTarget) {
+        userCountWithTargets += 1;
+      }
+    });
+
+    Object.keys(brandTotals).forEach((brand) => {
+      brandTotals[brand] = brandTotals[brand].toFixed(2);
+    });
+
+    return { brandTotals, userCountWithTargets };
   };
 
   return (
@@ -326,6 +375,77 @@ const BrandTargetPage = () => {
               <h2 className="text-2xl font-semibold text-gray-800 mb-6">
                 Brand-wise Targets
               </h2>
+
+              {/* Summary Dropdown */}
+              <div className="relative mb-6">
+                <button
+                  ref={summaryButtonRef}
+                  onClick={() => setIsSummaryOpen(!isSummaryOpen)}
+                  className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-between transition-colors"
+                  aria-expanded={isSummaryOpen}
+                  aria-controls="summary-dropdown"
+                >
+                  <span className="flex items-center">
+                    <svg
+                      className="w-5 h-5 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
+                    Summary for {dayjs().month(month - 1).format("MMMM")} {year}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transform transition-transform ${
+                      isSummaryOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                {isSummaryOpen && (
+                  <div
+                    id="summary-dropdown"
+                    className="absolute z-10 mt-2 w-full md:w-96 bg-gray-50 rounded-lg shadow-lg p-4 border border-gray-200 transform transition-all duration-300 ease-in-out origin-top scale-y-0 data-[open=true]:scale-y-100"
+                    data-open={isSummaryOpen}
+                  >
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">
+                      Summary Details
+                    </h3>
+                    <div className="space-y-2">
+                      {brands.map((brand) => (
+                        <p
+                          key={brand}
+                          className="flex justify-between text-sm text-gray-700"
+                        >
+                          <span className="font-semibold">{brand} Total:</span>
+                          <span>{calculateBrandTotals().brandTotals[brand] || "0.00"}</span>
+                        </p>
+                      ))}
+                      <p className="flex justify-between text-sm text-gray-700 pt-2 border-t border-gray-200">
+                        <span className="font-semibold">Users with Targets:</span>
+                        <span>{calculateBrandTotals().userCountWithTargets}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Control Panel */}
               <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
@@ -459,7 +579,7 @@ const BrandTargetPage = () => {
                         !file || importLoading
                           ? "bg-gray-400 cursor-not-allowed"
                           : "bg-green-600 hover:bg-green-700"
-                      }`}
+                        }`}
                     >
                       {importLoading ? (
                         <>
@@ -506,8 +626,24 @@ const BrandTargetPage = () => {
                       )}
                     </button>
                   </div>
+                  <div className="text-sm text-gray-600 mt-4">
+                    <p className="font-medium mb-1">Import Instructions:</p>
+                    <ol className="list-decimal pl-5 space-y-1">
+                      <li>Download the template to ensure correct format.</li>
+                      <li>Enter target values for each brand column.</li>
+                      <li>Do not alter "User ID" or "User Name" columns.</li>
+                      <li>Upload the file to load data into the table.</li>
+                      <li>Review changes and use "Save All" to persist.</li>
+                    </ol>
+                  </div>
                 </div>
               </div>
+
+              {loading && (
+                <div className="mb-4 text-center text-blue-600 font-medium">
+                  Loading data... Please wait.
+                </div>
+              )}
 
               {/* Table Container */}
               <div

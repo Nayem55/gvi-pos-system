@@ -110,11 +110,10 @@ const MonthlyTargetPage = () => {
         await axios.put("http://175.29.181.245:5000/targets", targetData);
         toast.success("Target updated successfully");
       } else {
-        await axios.post("http://175.29.181.245:5000/targets", targetData); // Changed to send targetData directly for consistency
+        await axios.post("http://175.29.181.245:5000/targets", targetData);
         toast.success("Target created successfully");
       }
 
-      // Refresh targets
       const res = await axios.get("http://175.29.181.245:5000/targets", {
         params: { year, month },
       });
@@ -168,11 +167,10 @@ const MonthlyTargetPage = () => {
           dp: tempTargets[user._id].dp,
         }));
 
-      await axios.post("http://175.29.181.245:5000/targets/bulk", targetsToSave); // Changed to send array directly for simplicity
+      await axios.post("http://175.29.181.245:5000/targets/bulk", targetsToSave);
 
       toast.success(`Successfully saved ${targetsToSave.length} targets`);
 
-      // Refresh targets
       const res = await axios.get("http://175.29.181.245:5000/targets", {
         params: { year, month },
       });
@@ -196,7 +194,7 @@ const MonthlyTargetPage = () => {
       });
 
       setTargets(updatedTargetsMap);
-      setTempTargets(updatedTargetsMap); // Reset temp after save
+      setTempTargets(updatedTargetsMap);
     } catch (error) {
       console.error("Bulk save failed:", error);
       toast.error(error.response?.data?.message || "Bulk save failed");
@@ -204,42 +202,6 @@ const MonthlyTargetPage = () => {
       setLoading(false);
     }
   };
-
-  // const handleSyncUserDetails = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const res = await axios.put("http://175.29.181.245:5000/targets/bulk-update");
-  //     toast.success(`Synced user details for ${res.data.modifiedCount} records`);
-  //     // Refresh targets after sync
-  //     const fetchRes = await axios.get("http://175.29.181.245:5000/targets", {
-  //       params: { year, month },
-  //     });
-  //     const updatedTargetsMap = {};
-  //     fetchRes.data.forEach((targetEntry) => {
-  //       targetEntry.targets.forEach((target) => {
-  //         if (
-  //           target.year === parseInt(year) &&
-  //           target.month === parseInt(month)
-  //         ) {
-  //           updatedTargetsMap[targetEntry.userID] = {
-  //             dp: target.dp,
-  //             tp: (target.dp * 1.07).toFixed(2),
-  //             userName: targetEntry.userName,
-  //             userNumber: targetEntry.userNumber,
-  //             userZone: targetEntry.userZone,
-  //           };
-  //         }
-  //       });
-  //     });
-  //     setTargets(updatedTargetsMap);
-  //     setTempTargets(updatedTargetsMap);
-  //   } catch (error) {
-  //     console.error("Failed to sync user details:", error);
-  //     toast.error(error.response?.data?.message || "Failed to sync user details");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const handleFileUpload = (e) => {
     const uploadedFile = e.target.files[0];
@@ -347,15 +309,23 @@ const MonthlyTargetPage = () => {
   const calculateTotalTargets = () => {
     let totalDP = 0;
     let totalTP = 0;
+    let userCountWithTarget = 0;
 
     Object.values(tempTargets).forEach((target) => {
       const dp = parseFloat(target.dp) || 0;
       const tp = parseFloat(target.tp) || 0;
       totalDP += dp;
       totalTP += tp;
+      if (dp > 0) {
+        userCountWithTarget += 1;
+      }
     });
 
-    return { totalDP: totalDP.toFixed(2), totalTP: totalTP.toFixed(2) };
+    return {
+      totalDP: totalDP.toFixed(2),
+      totalTP: totalTP.toFixed(2),
+      userCountWithTarget,
+    };
   };
 
   return (
@@ -372,10 +342,16 @@ const MonthlyTargetPage = () => {
             </h3>
             <div className="flex gap-8">
               <p>
-                <span className="font-semibold">Total DP Target:</span> {calculateTotalTargets().totalDP}
+                <span className="font-semibold">Total DP Target:</span>{" "}
+                {calculateTotalTargets().totalDP}
               </p>
               <p>
-                <span className="font-semibold">Total TP Target:</span> {calculateTotalTargets().totalTP}
+                <span className="font-semibold">Total TP Target:</span>{" "}
+                {calculateTotalTargets().totalTP}
+              </p>
+              <p>
+                <span className="font-semibold">Users with Targets:</span>{" "}
+                {calculateTotalTargets().userCountWithTarget}
               </p>
             </div>
           </div>
@@ -405,13 +381,6 @@ const MonthlyTargetPage = () => {
             </div>
 
             <div className="flex gap-4">
-              {/* <button
-                onClick={handleSyncUserDetails}
-                disabled={loading}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? "Syncing..." : "Sync User Details"}
-              </button> */}
               <button
                 onClick={handleBulkSave}
                 disabled={loading || Object.keys(tempTargets).length === 0}
@@ -490,7 +459,7 @@ const MonthlyTargetPage = () => {
                     <td className="border-b p-3">{user.zone}</td>
                     <td className="border-b p-3 text-center">
                       <input
-                        type="text" // Changed to text for disabled display
+                        type="text"
                         className="border border-gray-300 p-2 rounded w-32 text-center bg-gray-100"
                         value={tempTargets[user._id]?.tp || ""}
                         disabled
