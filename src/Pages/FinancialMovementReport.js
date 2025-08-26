@@ -632,7 +632,7 @@ const FinancialMovementReport = () => {
         {!loading && reportData && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
-              <p className="text-sm text-gray-600">Opening Due</p>
+              <p className="text-sm text-gray-600">Opening Balance</p>
               <p className="text-2xl font-semibold text-purple-700">
                 {reportData.openingDue?.toFixed(2)}
               </p>
