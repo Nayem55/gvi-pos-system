@@ -77,8 +77,8 @@ export default function PrimaryRequest() {
       items: cart.map((item) => ({
         barcode: item.barcode,
         name: item.name,
-        dp: item.dp,
-        tp: item.tp,
+        dp: parseInt(item.dp),
+        tp: parseInt(item.tp),
         qty: item.quantity,
       })),
       status: "pending",
@@ -100,7 +100,7 @@ export default function PrimaryRequest() {
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalValue = cart.reduce(
-    (sum, item) => sum + item.quantity * item.dp,
+    (sum, item) => sum + item.quantity * parseInt(item.dp),
     0
   );
 
@@ -199,7 +199,7 @@ export default function PrimaryRequest() {
                         className="w-16 border rounded px-1 py-0.5 text-center"
                       />
                     </td>
-                    <td className="p-2 text-center">{item.dp.toFixed(2)}</td>
+                    <td className="p-2 text-center">{parseInt(item.dp)?.toFixed(2)}</td>
                     <td className="p-2 text-center">
                       <button
                         onClick={() => removeFromCart(item.barcode)}
