@@ -7,22 +7,26 @@ const TadaVoucher = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD")
-  );
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
 
   // Daily expense data structure
   const [dailyExpense, setDailyExpense] = useState({
     from: "",
     to: "",
-    hq: false,
-    exHq: false,
-    hqExHqAmount: "", // Combined amount field for HQ/Ex-HQ
-    transportType: "bus", // Default transport type
-    transportAmount: "",
-    hotelBill: "",
-    totalExpense: "",
+    hqExHq: { hq: 0, exHq: 0 },
+    transport: { bus: 0, cng: 0, train: 0, other: 0 },
+    hotelBill: 0,
+    totalExpense: 0,
+  });
+
+  // Checkbox states
+  const [hqExHqChecked, setHqExHqChecked] = useState({ hq: false, exHq: false });
+  const [transportChecked, setTransportChecked] = useState({
+    bus: false,
+    cng: false,
+    train: false,
+    other: false,
   });
 
   // Transport options
@@ -40,7 +44,7 @@ const TadaVoucher = () => {
     }
   }, [user, navigate]);
 
-  // Handle input changes
+  // Handle input changes for text fields
   const handleInputChange = (field, value) => {
     setDailyExpense((prev) => ({
       ...prev,
@@ -48,28 +52,68 @@ const TadaVoucher = () => {
     }));
   };
 
-  // Toggle checkbox values
-  const toggleCheckbox = (field) => {
+  // Handle checkbox toggle for HQ/Ex-HQ
+  const toggleHqExHq = (type) => {
+    setHqExHqChecked((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
     setDailyExpense((prev) => ({
       ...prev,
-      [field]: !prev[field],
-      // Reset amount when both are unchecked
-      hqExHqAmount:
-        (field === "hq" && !prev.exHq) || (field === "exHq" && !prev.hq)
-          ? ""
-          : prev.hqExHqAmount,
+      hqExHq: {
+        ...prev.hqExHq,
+        [type]: prev.hqExHq[type] && !hqExHqChecked[type] ? 0 : prev.hqExHq[type],
+      },
+    }));
+  };
+
+  // Handle amount change for HQ/Ex-HQ
+  const handleHqExHqAmountChange = (type, value) => {
+    setDailyExpense((prev) => ({
+      ...prev,
+      hqExHq: {
+        ...prev.hqExHq,
+        [type]: value === "" ? 0 : parseFloat(value) || 0,
+      },
+    }));
+  };
+
+  // Handle checkbox toggle for transport
+  const toggleTransport = (type) => {
+    setTransportChecked((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+    setDailyExpense((prev) => ({
+      ...prev,
+      transport: {
+        ...prev.transport,
+        [type]: prev.transport[type] && !transportChecked[type] ? 0 : prev.transport[type],
+      },
+    }));
+  };
+
+  // Handle amount change for transport
+  const handleTransportAmountChange = (type, value) => {
+    setDailyExpense((prev) => ({
+      ...prev,
+      transport: {
+        ...prev.transport,
+        [type]: value === "" ? 0 : parseFloat(value) || 0,
+      },
     }));
   };
 
   // Calculate total expense
   const calculateTotal = () => {
-    const transport = parseFloat(dailyExpense.transportAmount) || 0;
+    const transportTotal = Object.values(dailyExpense.transport)
+      .map((amount) => parseFloat(amount) || 0)
+      .reduce((sum, amount) => sum + amount, 0);
+    const hqExHqTotal = Object.values(dailyExpense.hqExHq)
+      .map((amount) => parseFloat(amount) || 0)
+      .reduce((sum, amount) => sum + amount, 0);
     const hotel = parseFloat(dailyExpense.hotelBill) || 0;
-    const hqExHq =
-      dailyExpense.hq || dailyExpense.exHq
-        ? parseFloat(dailyExpense.hqExHqAmount) || 0
-        : 0;
-    const total = transport + hotel + hqExHq;
+    const total = transportTotal + hqExHqTotal + hotel;
 
     setDailyExpense((prev) => ({
       ...prev,
@@ -86,14 +130,26 @@ const TadaVoucher = () => {
     // Calculate total before submission
     calculateTotal();
 
+    // Validation
     if (!dailyExpense.from || !dailyExpense.to) {
       toast.error("Please fill in visited places");
+      return;
+    }
+
+    const hasExpenses =
+      Object.values(dailyExpense.hqExHq).some((amount) => parseFloat(amount) > 0) ||
+      Object.values(dailyExpense.transport).some((amount) => parseFloat(amount) > 0) ||
+      parseFloat(dailyExpense.hotelBill) > 0;
+
+    if (!hasExpenses) {
+      toast.error("Please provide at least one expense amount (HQ/Ex-HQ, Transport, or Hotel)");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
+      // Prepare submission data
       const submissionData = {
         userId: user._id,
         name: user.name,
@@ -102,11 +158,20 @@ const TadaVoucher = () => {
         date: selectedDate,
         month: selectedMonth,
         dailyExpense: {
-          ...dailyExpense,
-          transport: {
-            [dailyExpense.transportType]: dailyExpense.transportAmount,
-            type: dailyExpense.transportType,
+          from: dailyExpense.from,
+          to: dailyExpense.to,
+          hqExHq: {
+            hq: parseFloat(dailyExpense.hqExHq.hq) || 0,
+            exHq: parseFloat(dailyExpense.hqExHq.exHq) || 0,
           },
+          transport: {
+            bus: parseFloat(dailyExpense.transport.bus) || 0,
+            cng: parseFloat(dailyExpense.transport.cng) || 0,
+            train: parseFloat(dailyExpense.transport.train) || 0,
+            other: parseFloat(dailyExpense.transport.other) || 0,
+          },
+          hotelBill: parseFloat(dailyExpense.hotelBill) || 0,
+          totalExpense: parseFloat(dailyExpense.totalExpense) || 0,
         },
       };
 
@@ -120,26 +185,26 @@ const TadaVoucher = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit TD/DA voucher");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to submit TD/DA voucher");
       }
 
       // Reset form after successful submission
       setDailyExpense({
         from: "",
         to: "",
-        hq: false,
-        exHq: false,
-        hqExHqAmount: "",
-        transportType: "bus",
-        transportAmount: "",
-        hotelBill: "",
-        totalExpense: "",
+        hqExHq: { hq: 0, exHq: 0 },
+        transport: { bus: 0, cng: 0, train: 0, other: 0 },
+        hotelBill: 0,
+        totalExpense: 0,
       });
+      setHqExHqChecked({ hq: false, exHq: false });
+      setTransportChecked({ bus: false, cng: false, train: false, other: false });
 
       toast.success("TD/DA voucher submitted successfully!");
     } catch (error) {
       console.error("Error submitting TD/DA voucher:", error);
-      toast.error("Failed to submit voucher. Please try again.");
+      toast.error(error.message || "Failed to submit voucher. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -169,6 +234,7 @@ const TadaVoucher = () => {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="flex-1 text-sm bg-white text-gray-800 border rounded p-2"
+              aria-label="Select date"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -189,6 +255,7 @@ const TadaVoucher = () => {
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="flex-1 text-sm bg-white text-gray-800 border rounded p-2"
+              aria-label="Select month"
             />
           </div>
         </div>
@@ -225,6 +292,7 @@ const TadaVoucher = () => {
                 placeholder="Starting location"
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 required
+                aria-label="Starting location"
               />
             </div>
             <div>
@@ -238,6 +306,7 @@ const TadaVoucher = () => {
                 placeholder="Destination"
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 required
+                aria-label="Destination"
               />
             </div>
           </div>
@@ -265,41 +334,55 @@ const TadaVoucher = () => {
               <label className="inline-flex items-center">
                 <input
                   type="checkbox"
-                  checked={dailyExpense.hq}
-                  onChange={() => toggleCheckbox("hq")}
+                  checked={hqExHqChecked.hq}
+                  onChange={() => toggleHqExHq("hq")}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  aria-label="HQ expense"
                 />
                 <span className="ml-2 text-sm text-gray-700">HQ</span>
               </label>
               <label className="inline-flex items-center">
                 <input
                   type="checkbox"
-                  checked={dailyExpense.exHq}
-                  onChange={() => toggleCheckbox("exHq")}
+                  checked={hqExHqChecked.exHq}
+                  onChange={() => toggleHqExHq("exHq")}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  aria-label="Ex-HQ expense"
                 />
                 <span className="ml-2 text-sm text-gray-700">Ex-HQ</span>
               </label>
             </div>
-            {(dailyExpense.hq || dailyExpense.exHq) && (
-              <div>
+            {hqExHqChecked.hq && (
+              <div className="transition-all duration-300">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {dailyExpense.hq && dailyExpense.exHq
-                    ? "HQ & Ex-HQ"
-                    : dailyExpense.hq
-                    ? "HQ"
-                    : "Ex-HQ"}{" "}
-                  Amount (৳)
+                  HQ Amount (৳)
                 </label>
                 <input
                   type="number"
-                  value={dailyExpense.hqExHqAmount}
-                  onChange={(e) =>
-                    handleInputChange("hqExHqAmount", e.target.value)
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  value={dailyExpense.hqExHq.hq === 0 ? "" : dailyExpense.hqExHq.hq}
+                  onChange={(e) => handleHqExHqAmountChange("hq", e.target.value)}
                   onBlur={calculateTotal}
-                  placeholder="Enter amount"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter HQ amount"
+                  min="0"
+                  aria-label="HQ amount"
+                />
+              </div>
+            )}
+            {hqExHqChecked.exHq && (
+              <div className="transition-all duration-300">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ex-HQ Amount (৳)
+                </label>
+                <input
+                  type="number"
+                  value={dailyExpense.hqExHq.exHq === 0 ? "" : dailyExpense.hqExHq.exHq}
+                  onChange={(e) => handleHqExHqAmountChange("exHq", e.target.value)}
+                  onBlur={calculateTotal}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter Ex-HQ amount"
+                  min="0"
+                  aria-label="Ex-HQ amount"
                 />
               </div>
             )}
@@ -320,39 +403,45 @@ const TadaVoucher = () => {
             </svg>
             Transport Expenses
           </h2>
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Transport Type
-              </label>
-              <select
-                value={dailyExpense.transportType}
-                onChange={(e) =>
-                  handleInputChange("transportType", e.target.value)
-                }
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                {transportOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-4">
+              {transportOptions.map((option) => (
+                <label key={option.value} className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={transportChecked[option.value]}
+                    onChange={() => toggleTransport(option.value)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    aria-label={`${option.label} transport`}
+                  />
+                  <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+                </label>
+              ))}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount (৳)
-              </label>
-              <input
-                type="number"
-                value={dailyExpense.transportAmount}
-                onChange={(e) =>
-                  handleInputChange("transportAmount", e.target.value)
-                }
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                onBlur={calculateTotal}
-                placeholder="Enter amount"
-              />
+            <div className="space-y-3">
+              {transportOptions.map(
+                (option) =>
+                  transportChecked[option.value] && (
+                    <div
+                      key={option.value}
+                      className="transition-all duration-300"
+                    >
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {option.label} Amount (৳)
+                      </label>
+                      <input
+                        type="number"
+                        value={dailyExpense.transport[option.value] === 0 ? "" : dailyExpense.transport[option.value]}
+                        onChange={(e) => handleTransportAmountChange(option.value, e.target.value)}
+                        onBlur={calculateTotal}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder={`Enter ${option.label} amount`}
+                        min="0"
+                        aria-label={`${option.label} amount`}
+                      />
+                    </div>
+                  )
+              )}
             </div>
           </div>
         </div>
@@ -381,11 +470,13 @@ const TadaVoucher = () => {
               </label>
               <input
                 type="number"
-                value={dailyExpense.hotelBill}
-                onChange={(e) => handleInputChange("hotelBill", e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                value={dailyExpense.hotelBill === 0 ? "" : dailyExpense.hotelBill}
+                onChange={(e) => handleInputChange("hotelBill", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                 onBlur={calculateTotal}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter amount"
+                min="0"
+                aria-label="Hotel bill amount"
               />
             </div>
             <div>
@@ -398,6 +489,7 @@ const TadaVoucher = () => {
                   value={dailyExpense.totalExpense || "0.00"}
                   readOnly
                   className="w-full p-2 border border-gray-300 rounded-md bg-gray-50 font-medium text-gray-700"
+                  aria-label="Total expense"
                 />
                 <span className="absolute right-3 top-2 text-gray-500">৳</span>
               </div>
