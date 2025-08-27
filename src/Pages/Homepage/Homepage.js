@@ -12,6 +12,7 @@ import AttendanceVoucher from "../CheckInOut";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import PrimaryRequest from "../PrimaryRequest";
+import toast from "react-hot-toast";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -19,19 +20,30 @@ export default function Home() {
   const [currentDue, setCurrentDue] = useState(0); // Total due
   const [target, setTarget] = useState(null); // Monthly target
   const [totalTP, setTotalTP] = useState(0); // Total TP for achievement calculation
+  const [dataLoading, setDataLoading] = useState(true); // Unified loading state
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const attendanceUser = JSON.parse(localStorage.getItem("attendance-user"));
   const [locationError, setLocationError] = useState("");
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
-  const [dataLoading, setDataLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && user.outlet) {
-      getStockValue(user.outlet);
-      fetchUserTargetAndAchievement();
+    if (!user || !user.outlet) {
+      navigate("/login");
+      return;
     }
-  }, [user]);
+    const fetchData = async () => {
+      try {
+        await Promise.all([getStockValue(user.outlet), fetchUserTargetAndAchievement()]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load data. Please try again.");
+      } finally {
+        setDataLoading(false); // Stop loading regardless of success or failure
+      }
+    };
+    fetchData();
+  }, [user, navigate]);
 
   const fetchUserTargetAndAchievement = async () => {
     try {
@@ -43,9 +55,8 @@ export default function Home() {
       const targetResponse = await axios.get("http://175.29.181.245:5000/targets", {
         params: { year, month, userID: user._id },
       });
-      const targetEntry = targetResponse.data.find(
-        (entry) => entry.userID === user._id
-      );
+      console.log("Target Response:", targetResponse.data);
+      const targetEntry = targetResponse.data.find((entry) => entry.userID === user._id);
       if (targetEntry) {
         const targetForMonth = targetEntry.targets.find(
           (t) => t.year === parseInt(year) && t.month === parseInt(month)
@@ -59,14 +70,13 @@ export default function Home() {
       const reportsResponse = await axios.get(
         `http://175.29.181.245:5000/sales-reports/${user._id}?month=${currentMonth}`
       );
+      console.log("Reports Response:", reportsResponse.data);
       const reports = reportsResponse.data;
-      const totalTPValue = reports.reduce(
-        (sum, report) => sum + (report.total_tp || 0),
-        0
-      );
+      const totalTPValue = reports.reduce((sum, report) => sum + (report.total_tp || 0), 0);
       setTotalTP(totalTPValue);
     } catch (error) {
       console.error("Error fetching target or achievement:", error);
+      toast.error("Failed to load target or achievement data.");
     }
   };
 
@@ -74,14 +84,10 @@ export default function Home() {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
-        axios.get(
-          `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
-        ),
-        axios.get(
-          `http://175.29.181.245:5000/current-due/${encodedOutletName}`
-        ),
+        axios.get(`http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`),
+        axios.get(`http://175.29.181.245:5000/current-due/${encodedOutletName}`),
       ]);
-
+      console.log("Stock Response:", stockResponse.data, "Due Response:", dueResponse.data);
       setCurrentDue(dueResponse.data.current_due);
       setStock({
         dp: stockResponse.data.totalCurrentDP,
@@ -89,6 +95,7 @@ export default function Home() {
       });
     } catch (error) {
       console.error("Error fetching stock data:", error);
+      toast.error("Failed to load stock data.");
     }
   };
 
@@ -122,6 +129,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "primary request" && (
@@ -133,6 +141,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "primary" && (
@@ -144,6 +153,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "secondary" && (
@@ -155,6 +165,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "officeReturn" && (
@@ -166,6 +177,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "marketReturn" && (
@@ -177,6 +189,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "payment" && (
@@ -188,6 +201,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "pos" && (
@@ -199,6 +213,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "tada" && (
@@ -210,6 +225,7 @@ export default function Home() {
           getStockValue={getStockValue}
           target={target}
           totalTP={totalTP}
+          dataLoading={dataLoading}
         />
       )}
       {selectedTab === "attendance" && <AttendanceVoucher />}

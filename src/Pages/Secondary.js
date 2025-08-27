@@ -13,6 +13,7 @@ export default function Secondary({
   getStockValue,
   target,
   totalTP,
+  dataLoading,
 }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
@@ -477,23 +478,77 @@ export default function Secondary({
             {/* Stock Card */}
             <div className="w-full sm:w-1/3 bg-blue-50 p-3 rounded-lg">
               <h3 className="text-sm font-semibold text-blue-800">Stock</h3>
-              <p className="text-xs text-gray-600">
-                DP: {stock.dp?.toFixed(2)}
-              </p>
-              <p className="text-xs text-gray-600">
-                TP: {stock.tp?.toFixed(2)}
-              </p>
+              {dataLoading ? (
+                <div className="flex justify-center items-center h-10">
+                  <svg
+                    className="animate-spin h-5 w-5 text-blue-800"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600">
+                    DP: {stock.dp?.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    TP: {stock.tp?.toFixed(2)}
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Target Card */}
             <div className="w-full sm:w-1/3 bg-green-50 p-3 rounded-lg">
               <h3 className="text-sm font-semibold text-green-800">Target</h3>
-              <p className="text-xs text-gray-600">
-                DP: {Number(target?.dp).toFixed(2) || "N/A"}
-              </p>
-              <p className="text-xs text-gray-600">
-                TP: {Number(target?.tp).toFixed(2) || "N/A"}
-              </p>
+              {dataLoading ? (
+                <div className="flex justify-center items-center h-10">
+                  <svg
+                    className="animate-spin h-5 w-5 text-green-800"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600">
+                    DP: {Number(target?.dp).toFixed(2) || "N/A"}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    TP: {Number(target?.tp).toFixed(2) || "N/A"}
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Achievement Card with Progress */}
@@ -501,25 +556,55 @@ export default function Secondary({
               <h3 className="text-sm font-semibold text-yellow-800">
                 Achievement
               </h3>
-              <p className="text-xs text-gray-600">
-                {totalTP?.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                }) || "0.00"}
-              </p>
-              {target && (
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                  <div
-                    className="bg-yellow-600 h-2 rounded-full"
-                    style={{
-                      width: `${Math.min((totalTP / target?.tp) * 100, 100)}%`,
-                    }}
-                  ></div>
+              {dataLoading ? (
+                <div className="flex justify-center items-center h-10">
+                  <svg
+                    className="animate-spin h-5 w-5 text-yellow-800"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
                 </div>
-              )}
-              {target && (
-                <p className="text-xs text-gray-600 mt-1">
-                  {((totalTP / target?.tp) * 100).toFixed(2)}%
-                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600">
+                    {totalTP?.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    }) || "0.00"}
+                  </p>
+                  {target && (
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                      <div
+                        className="bg-yellow-600 h-2 rounded-full"
+                        style={{
+                          width: `${Math.min(
+                            (totalTP / target?.tp) * 100,
+                            100
+                          )}%`,
+                        }}
+                      ></div>
+                    </div>
+                  )}
+                  {target && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      {((totalTP / target?.tp) * 100).toFixed(2)}%
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
