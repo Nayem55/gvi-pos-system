@@ -62,19 +62,7 @@ export default function PaymentVoucher({
     );
 
     try {
-      const dueResponse = await axios.put(
-        "http://175.29.181.245:5000/update-due",
-        {
-          outlet: user.outlet,
-          currentDue: currentDue - parseFloat(formData.amount),
-        }
-      );
-
-      if (!dueResponse.data.success) {
-        throw new Error("Failed to update due amount");
-      }
-
-      await axios.post("http://175.29.181.245:5000/money-transfer", {
+      await axios.post("http://175.29.181.245:5000/payment-request", {
         outlet: user.outlet,
         userId: user._id,
         SO: user.name,
@@ -88,9 +76,11 @@ export default function PaymentVoucher({
         date: formattedDateTime,
         createdBy: user.name,
         imageUrl,
+        remarks: formData.remarks,
+        status: "pending",
       });
 
-      toast.success("Payment voucher submitted successfully!");
+      toast.success("Payment request submitted successfully!");
       getStockValue(user.outlet);
       setFormData({
         amount: "",
@@ -99,8 +89,10 @@ export default function PaymentVoucher({
         remarks: "",
         date: new Date().toISOString().split("T")[0],
       });
+      setImageUrl("");
+      setImage(null);
     } catch (error) {
-      toast.error("Failed to submit payment");
+      toast.error("Failed to submit payment request");
       console.error("Error:", error);
     } finally {
       setLoading(false);

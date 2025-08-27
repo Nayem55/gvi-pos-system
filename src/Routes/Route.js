@@ -43,6 +43,7 @@ import AlterBrandsPage from "../Pages/AdminPanel/AlterBrandsPage";
 import CreateBrandPage from "../Pages/AdminPanel/CreateBrandPage";
 import CreatePriceLevelPage from "../Pages/AdminPanel/CreatePriceLevelPage";
 import AlterPriceLevelsPage from "../Pages/AdminPanel/AlterPriceLevelsPage";
+import PaymentRequests from "../Pages/AdminPanel/PaymentRequests";
 
 const router = createBrowserRouter([
   {
@@ -222,6 +223,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/alter-pricelevels",
         element: <AlterPriceLevelsPage />,
+      },
+      {
+        path: "/admin/payment-request",
+        element: <PaymentRequests />,
       },
     ],
   },

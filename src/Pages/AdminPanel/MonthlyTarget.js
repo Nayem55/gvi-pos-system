@@ -447,7 +447,7 @@ const MonthlyTargetPage = () => {
                   <th className="border-b p-3 text-left font-medium">Zone</th>
                   <th className="border-b p-3 text-center font-medium">TP Target</th>
                   <th className="border-b p-3 text-center font-medium">DP Target</th>
-                  <th className="border-b p-3 text-center font-medium">Actions</th>
+                  {/* <th className="border-b p-3 text-center font-medium">Actions</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -476,7 +476,7 @@ const MonthlyTargetPage = () => {
                         placeholder="Enter DP"
                       />
                     </td>
-                    <td className="border-b p-3 text-center">
+                    {/* <td className="border-b p-3 text-center">
                       <button
                         className={`px-4 py-2 rounded w-[100px] text-white transition-colors ${
                           targets[user._id]
@@ -492,7 +492,7 @@ const MonthlyTargetPage = () => {
                           ? "Update"
                           : "Save"}
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>

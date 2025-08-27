@@ -6,12 +6,16 @@ import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
-export default function Secondary({ user, stock, setStock, getStockValue }) {
+export default function Secondary({
+  user,
+  stock,
+  setStock,
+  getStockValue,
+  target,
+  totalTP,
+}) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
-  // const [cart, setCart] = useState(
-  //   () => JSON.parse(localStorage.getItem("cart")) || []
-  // );
   const [cart, setCart] = useState([]);
   const [route, setRoute] = useState("");
   const [menu, setMenu] = useState("");
@@ -31,18 +35,14 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
     }
   }, [user]);
 
-  // useEffect(() => {
-  //   localStorage.setItem("cart", JSON.stringify(cart));
-  // }, [cart]);
-
   const isPromoValid = (product) => {
-    const priceLabel = user.pricelabel; // e.g., 'mt'
+    const priceLabel = user.pricelabel;
     const promoDetails = product.promoPriceList?.[priceLabel];
 
     if (!promoDetails?.promoStartDate || !promoDetails?.promoEndDate)
       return false;
 
-    const today = dayjs().startOf("day"); // Use start of day to avoid time issues
+    const today = dayjs().startOf("day");
     const startDate = dayjs(promoDetails.promoStartDate);
     const endDate = dayjs(promoDetails.promoEndDate);
 
@@ -50,7 +50,7 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
   };
 
   const getCurrentTP = (product) => {
-    const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
+    const priceLabel = user.pricelabel;
     const outletTP = product.priceList?.[priceLabel]?.tp;
 
     if (
@@ -264,7 +264,6 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
 
       setCart([]);
-      // localStorage.removeItem("cart");
       toast.success("Sales report submitted");
       getStockValue(user.outlet);
     } catch (error) {
@@ -458,20 +457,73 @@ export default function Secondary({ user, stock, setStock, getStockValue }) {
 
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
-      {/* Date & Outlet Stock */}
-      <div className="flex justify-between bg-white p-4 shadow rounded-lg mb-4 items-center">
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="text-sm font-semibold border rounded p-1"
-        />
-        {user && user.outlet && (
-          <span className="text-sm font-semibold">
-            <p>Stock (DP): {stock.dp?.toFixed(2)}</p>
-            <p>Stock (TP): {stock.tp?.toFixed(2)}</p>
-          </span>
-        )}
+      {/* Enhanced Info Section */}
+      <div className="bg-white p-4 rounded-lg shadow-md mb-4 font-bold">
+        <div className="flex flex-col gap-4">
+          {/* Date Selector */}
+          <div className="w-full sm:w-auto">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="w-full flex justify-between gap-4">
+            {/* Stock Card */}
+            <div className="w-full sm:w-1/3 bg-blue-50 p-3 rounded-lg">
+              <h3 className="text-sm font-semibold text-blue-800">Stock</h3>
+              <p className="text-xs text-gray-600">
+                DP: {stock.dp?.toFixed(2)}
+              </p>
+              <p className="text-xs text-gray-600">
+                TP: {stock.tp?.toFixed(2)}
+              </p>
+            </div>
+
+            {/* Target Card */}
+            <div className="w-full sm:w-1/3 bg-green-50 p-3 rounded-lg">
+              <h3 className="text-sm font-semibold text-green-800">Target</h3>
+              <p className="text-xs text-gray-600">
+                DP: {Number(target?.dp).toFixed(2) || "N/A"}
+              </p>
+              <p className="text-xs text-gray-600">
+                TP: {Number(target?.tp).toFixed(2) || "N/A"}
+              </p>
+            </div>
+
+            {/* Achievement Card with Progress */}
+            <div className="w-full sm:w-1/3 bg-yellow-50 p-3 rounded-lg">
+              <h3 className="text-sm font-semibold text-yellow-800">
+                Achievement
+              </h3>
+              <p className="text-xs text-gray-600">
+                {totalTP?.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                }) || "0.00"}
+              </p>
+              {target && (
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                  <div
+                    className="bg-yellow-600 h-2 rounded-full"
+                    style={{
+                      width: `${Math.min((totalTP / target?.tp) * 100, 100)}%`,
+                    }}
+                  ></div>
+                </div>
+              )}
+              {target && (
+                <p className="text-xs text-gray-600 mt-1">
+                  {((totalTP / target?.tp) * 100).toFixed(2)}%
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Import/Export Controls */}

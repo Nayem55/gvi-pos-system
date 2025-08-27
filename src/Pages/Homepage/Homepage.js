@@ -15,8 +15,10 @@ import PrimaryRequest from "../PrimaryRequest";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
-  const [stock, setStock] = useState(0); // Total stock
+  const [stock, setStock] = useState({ dp: 0, tp: 0 }); // Total stock with dp and tp
   const [currentDue, setCurrentDue] = useState(0); // Total due
+  const [target, setTarget] = useState(null); // Monthly target
+  const [totalTP, setTotalTP] = useState(0); // Total TP for achievement calculation
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const attendanceUser = JSON.parse(localStorage.getItem("attendance-user"));
   const [locationError, setLocationError] = useState("");
@@ -27,75 +29,46 @@ export default function Home() {
   useEffect(() => {
     if (user && user.outlet) {
       getStockValue(user.outlet);
+      fetchUserTargetAndAchievement();
     }
   }, [user]);
 
-  // const fetchUserData = useCallback(async () => {
-  //   if (!attendanceUser) return;
+  const fetchUserTargetAndAchievement = async () => {
+    try {
+      const currentMonth = dayjs().format("YYYY-MM");
+      const year = currentMonth.split("-")[0];
+      const month = currentMonth.split("-")[1];
 
-  //   try {
-  //     setDataLoading(true);
-  //     const response = await axios.get(
-  //       `https://attendance-app-server-blue.vercel.app/getUser/${attendanceUser?._id}`
-  //     );
-  //     localStorage.setItem("attendance-user", JSON.stringify(response.data));
-  //   } catch (error) {
-  //     console.error("Error fetching user data:", error);
-  //   } finally {
-  //     setDataLoading(false);
-  //   }
-  // }, [attendanceUser]);
+      // Fetch target
+      const targetResponse = await axios.get("http://175.29.181.245:5000/targets", {
+        params: { year, month, userID: user._id },
+      });
+      const targetEntry = targetResponse.data.find(
+        (entry) => entry.userID === user._id
+      );
+      if (targetEntry) {
+        const targetForMonth = targetEntry.targets.find(
+          (t) => t.year === parseInt(year) && t.month === parseInt(month)
+        );
+        if (targetForMonth) {
+          setTarget(targetForMonth);
+        }
+      }
 
-  // const fetchUserLocation = async () => {
-  //   return new Promise((resolve, reject) => {
-  //     if (!navigator.geolocation) {
-  //       const error = "Geolocation is not supported by your browser.";
-  //       setLocationError(error);
-  //       reject(error);
-  //       return;
-  //     }
-
-  //     navigator.geolocation.getCurrentPosition(
-  //       (position) => {
-  //         const { latitude, longitude } = position.coords;
-  //         setIsLocationEnabled(true);
-  //         resolve({ latitude, longitude });
-  //       },
-  //       (error) => {
-  //         let errorMessage = "An unknown error occurred.";
-  //         switch (error.code) {
-  //           case error.PERMISSION_DENIED:
-  //             errorMessage =
-  //               "Location access denied. Please allow location permissions.";
-  //             break;
-  //           case error.POSITION_UNAVAILABLE:
-  //             errorMessage = "Location information is unavailable.";
-  //             break;
-  //           case error.TIMEOUT:
-  //             errorMessage = "Request timed out. Please try again.";
-  //             break;
-  //         }
-  //         setLocationError(errorMessage);
-  //         setIsLocationEnabled(false);
-  //         reject(errorMessage);
-  //       },
-  //       {
-  //         enableHighAccuracy: true,
-  //         timeout: 10000,
-  //         maximumAge: 0,
-  //       }
-  //     );
-  //   });
-  // };
-
-  useEffect(() => {
-    if (!attendanceUser) {
-      navigate("/login");
-    } else {
-      // fetchUserData();
-      // fetchUserLocation().catch(() => {});
+      // Fetch sales reports for the current month to calculate achievement
+      const reportsResponse = await axios.get(
+        `http://175.29.181.245:5000/sales-reports/${user._id}?month=${currentMonth}`
+      );
+      const reports = reportsResponse.data;
+      const totalTPValue = reports.reduce(
+        (sum, report) => sum + (report.total_tp || 0),
+        0
+      );
+      setTotalTP(totalTPValue);
+    } catch (error) {
+      console.error("Error fetching target or achievement:", error);
     }
-  }, [attendanceUser, navigate]);
+  };
 
   const getStockValue = async (outletName) => {
     try {
@@ -147,6 +120,8 @@ export default function Home() {
           currentDue={currentDue}
           setStock={setStock}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "primary request" && (
@@ -156,6 +131,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "primary" && (
@@ -165,6 +142,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "secondary" && (
@@ -174,6 +153,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "officeReturn" && (
@@ -183,6 +164,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "marketReturn" && (
@@ -192,6 +175,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "payment" && (
@@ -201,6 +186,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "pos" && (
@@ -210,6 +197,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "tada" && (
@@ -219,6 +208,8 @@ export default function Home() {
           setStock={setStock}
           currentDue={currentDue}
           getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
         />
       )}
       {selectedTab === "attendance" && <AttendanceVoucher />}
