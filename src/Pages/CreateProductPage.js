@@ -195,7 +195,9 @@ const CreateProductPage = () => {
   };
   const fetchPriceLevels = async () => {
     try {
-      const response = await axios.get("http://175.29.181.245:5000/api/pricelevels");
+      const response = await axios.get(
+        "http://175.29.181.245:5000/api/pricelevels"
+      );
       // Extract just the 'name' values from each object
       const namesArray = response.data.map((level) => level.name);
       setPriceLevels(namesArray);

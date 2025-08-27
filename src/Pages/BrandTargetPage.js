@@ -400,7 +400,11 @@ const BrandTargetPage = () => {
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                       />
                     </svg>
-                    Summary for {dayjs().month(month - 1).format("MMMM")} {year}
+                    Summary for{" "}
+                    {dayjs()
+                      .month(month - 1)
+                      .format("MMMM")}{" "}
+                    {year}
                   </span>
                   <svg
                     className={`w-4 h-4 transform transition-transform ${
@@ -435,12 +439,19 @@ const BrandTargetPage = () => {
                           className="flex justify-between text-sm text-gray-700"
                         >
                           <span className="font-semibold">{brand} Total:</span>
-                          <span>{calculateBrandTotals().brandTotals[brand] || "0.00"}</span>
+                          <span>
+                            {calculateBrandTotals().brandTotals[brand] ||
+                              "0.00"}
+                          </span>
                         </p>
                       ))}
                       <p className="flex justify-between text-sm text-gray-700 pt-2 border-t border-gray-200">
-                        <span className="font-semibold">Users with Targets:</span>
-                        <span>{calculateBrandTotals().userCountWithTargets}</span>
+                        <span className="font-semibold">
+                          Users with Targets:
+                        </span>
+                        <span>
+                          {calculateBrandTotals().userCountWithTargets}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -579,7 +590,7 @@ const BrandTargetPage = () => {
                         !file || importLoading
                           ? "bg-gray-400 cursor-not-allowed"
                           : "bg-green-600 hover:bg-green-700"
-                        }`}
+                      }`}
                     >
                       {importLoading ? (
                         <>

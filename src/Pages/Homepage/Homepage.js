@@ -34,7 +34,10 @@ export default function Home() {
     }
     const fetchData = async () => {
       try {
-        await Promise.all([getStockValue(user.outlet), fetchUserTargetAndAchievement()]);
+        await Promise.all([
+          getStockValue(user.outlet),
+          fetchUserTargetAndAchievement(),
+        ]);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load data. Please try again.");
@@ -52,11 +55,16 @@ export default function Home() {
       const month = currentMonth.split("-")[1];
 
       // Fetch target
-      const targetResponse = await axios.get("http://175.29.181.245:5000/targets", {
-        params: { year, month, userID: user._id },
-      });
+      const targetResponse = await axios.get(
+        "http://175.29.181.245:5000/targets",
+        {
+          params: { year, month, userID: user._id },
+        }
+      );
       console.log("Target Response:", targetResponse.data);
-      const targetEntry = targetResponse.data.find((entry) => entry.userID === user._id);
+      const targetEntry = targetResponse.data.find(
+        (entry) => entry.userID === user._id
+      );
       if (targetEntry) {
         const targetForMonth = targetEntry.targets.find(
           (t) => t.year === parseInt(year) && t.month === parseInt(month)
@@ -72,7 +80,10 @@ export default function Home() {
       );
       console.log("Reports Response:", reportsResponse.data);
       const reports = reportsResponse.data;
-      const totalTPValue = reports.reduce((sum, report) => sum + (report.total_tp || 0), 0);
+      const totalTPValue = reports.reduce(
+        (sum, report) => sum + (report.total_tp || 0),
+        0
+      );
       setTotalTP(totalTPValue);
     } catch (error) {
       console.error("Error fetching target or achievement:", error);
@@ -84,10 +95,19 @@ export default function Home() {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
-        axios.get(`http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`),
-        axios.get(`http://175.29.181.245:5000/current-due/${encodedOutletName}`),
+        axios.get(
+          `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
+        ),
+        axios.get(
+          `http://175.29.181.245:5000/current-due/${encodedOutletName}`
+        ),
       ]);
-      console.log("Stock Response:", stockResponse.data, "Due Response:", dueResponse.data);
+      console.log(
+        "Stock Response:",
+        stockResponse.data,
+        "Due Response:",
+        dueResponse.data
+      );
       setCurrentDue(dueResponse.data.current_due);
       setStock({
         dp: stockResponse.data.totalCurrentDP,

@@ -21,7 +21,9 @@ const TDDAdminPanel = () => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get("http://175.29.181.245:5000/tdda/users");
+        const response = await axios.get(
+          "http://175.29.181.245:5000/tdda/users"
+        );
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -43,12 +45,15 @@ const TDDAdminPanel = () => {
 
     try {
       setIsGenerating(true);
-      const response = await axios.get("http://175.29.181.245:5000/tdda/admin-report", {
-        params: {
-          userId: selectedUser,
-          month: selectedMonth,
-        },
-      });
+      const response = await axios.get(
+        "http://175.29.181.245:5000/tdda/admin-report",
+        {
+          params: {
+            userId: selectedUser,
+            month: selectedMonth,
+          },
+        }
+      );
 
       // Fix summary.totalExpense if malformed
       const fixedData = response.data;
@@ -56,16 +61,19 @@ const TDDAdminPanel = () => {
         !fixedData.summary.totalExpense ||
         isNaN(parseFloat(fixedData.summary.totalExpense))
       ) {
-        fixedData.summary.totalExpense = fixedData.dailyExpenses.reduce((sum, day) => {
-          const hqExHqTotal = Object.values(day.hqExHq || {})
-            .map((amount) => parseFloat(amount) || 0)
-            .reduce((s, a) => s + a, 0);
-          const transportTotal = Object.values(day.transport || {})
-            .map((amount) => parseFloat(amount) || 0)
-            .reduce((s, a) => s + a, 0);
-          const hotelBill = parseFloat(day.hotelBill) || 0;
-          return sum + hqExHqTotal + transportTotal + hotelBill;
-        }, 0);
+        fixedData.summary.totalExpense = fixedData.dailyExpenses.reduce(
+          (sum, day) => {
+            const hqExHqTotal = Object.values(day.hqExHq || {})
+              .map((amount) => parseFloat(amount) || 0)
+              .reduce((s, a) => s + a, 0);
+            const transportTotal = Object.values(day.transport || {})
+              .map((amount) => parseFloat(amount) || 0)
+              .reduce((s, a) => s + a, 0);
+            const hotelBill = parseFloat(day.hotelBill) || 0;
+            return sum + hqExHqTotal + transportTotal + hotelBill;
+          },
+          0
+        );
       }
 
       setReportData(fixedData);
@@ -131,8 +139,12 @@ const TDDAdminPanel = () => {
           day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
           day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
           day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
-          day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-",
-          day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-",
+          day.transport?.train
+            ? parseFloat(day.transport.train).toFixed(2)
+            : "-",
+          day.transport?.other
+            ? parseFloat(day.transport.other).toFixed(2)
+            : "-",
           day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
           day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
         ]),
@@ -298,7 +310,10 @@ const TDDAdminPanel = () => {
       XLSX.utils.book_append_sheet(wb, ws, "TDDA Report");
 
       // Generate file name
-      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(/\s+/g, "_")}_${reportData.userInfo.month}.xlsx`;
+      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
+        /\s+/g,
+        "_"
+      )}_${reportData.userInfo.month}.xlsx`;
 
       // Export the workbook
       XLSX.writeFile(wb, fileName);
@@ -323,9 +338,14 @@ const TDDAdminPanel = () => {
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(68, 114, 196);
-      doc.text("Employee TD/DA Report", doc.internal.pageSize.getWidth() / 2, 15, {
-        align: "center",
-      });
+      doc.text(
+        "Employee TD/DA Report",
+        doc.internal.pageSize.getWidth() / 2,
+        15,
+        {
+          align: "center",
+        }
+      );
 
       // Employee Info Row
       doc.setFontSize(12);
@@ -373,8 +393,12 @@ const TDDAdminPanel = () => {
           day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
           day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
           day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
-          day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-",
-          day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-",
+          day.transport?.train
+            ? parseFloat(day.transport.train).toFixed(2)
+            : "-",
+          day.transport?.other
+            ? parseFloat(day.transport.other).toFixed(2)
+            : "-",
           day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
           day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
         ]),
@@ -413,14 +437,23 @@ const TDDAdminPanel = () => {
       const finalY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`Total Working Days: ${reportData.summary.totalWorkingDays}`, 10, finalY);
       doc.text(
-        `Total Expense: ${parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}`,
+        `Total Working Days: ${reportData.summary.totalWorkingDays}`,
+        10,
+        finalY
+      );
+      doc.text(
+        `Total Expense: ${parseFloat(
+          reportData.summary.totalExpense || 0
+        ).toFixed(2)}`,
         90,
         finalY
       );
 
-      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(/\s+/g, "_")}_${reportData.userInfo.month}.pdf`;
+      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
+        /\s+/g,
+        "_"
+      )}_${reportData.userInfo.month}.pdf`;
 
       doc.save(fileName);
       toast.success("PDF report downloaded successfully");
@@ -482,7 +515,9 @@ const TDDAdminPanel = () => {
                   onClick={generateReport}
                   disabled={isGenerating || !selectedUser}
                   className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
-                    isGenerating || !selectedUser ? "opacity-50 cursor-not-allowed" : ""
+                    isGenerating || !selectedUser
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
                   }`}
                 >
                   {isGenerating ? (
@@ -527,11 +562,15 @@ const TDDAdminPanel = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Employee Name</p>
-                    <p className="font-medium text-gray-900">{reportData.userInfo.name}</p>
+                    <p className="font-medium text-gray-900">
+                      {reportData.userInfo.name}
+                    </p>
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Designation</p>
-                    <p className="font-medium text-gray-900">{reportData.userInfo.designation}</p>
+                    <p className="font-medium text-gray-900">
+                      {reportData.userInfo.designation}
+                    </p>
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Month</p>
@@ -541,12 +580,16 @@ const TDDAdminPanel = () => {
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Total Working Days</p>
-                    <p className="font-medium text-gray-900">{reportData.summary.totalWorkingDays}</p>
+                    <p className="font-medium text-gray-900">
+                      {reportData.summary.totalWorkingDays}
+                    </p>
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-600">Total Expense</p>
                     <p className="font-medium text-gray-900">
-                      {parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}
+                      {parseFloat(reportData.summary.totalExpense || 0).toFixed(
+                        2
+                      )}
                     </p>
                   </div>
                 </div>
@@ -590,7 +633,11 @@ const TDDAdminPanel = () => {
 
                 {exportDropdownOpen && (
                   <div className="absolute top-12 right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <div className="py-1" role="menu" aria-orientation="vertical">
+                    <div
+                      className="py-1"
+                      role="menu"
+                      aria-orientation="vertical"
+                    >
                       <button
                         onClick={() => {
                           exportToExcel();
@@ -655,34 +702,58 @@ const TDDAdminPanel = () => {
                     {reportData.dailyExpenses.map((day, index) => (
                       <tr
                         key={index}
-                        className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100`}
+                        className={`${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        } hover:bg-gray-100`}
                       >
-                        <td className="p-3 border-b border-gray-200">{day.date}</td>
-                        <td className="p-3 border-b border-gray-200">{day.from}</td>
-                        <td className="p-3 border-b border-gray-200">{day.to}</td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.hqExHq?.hq ? parseFloat(day.hqExHq.hq).toFixed(2) : "-"}
+                          {day.date}
                         </td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-"}
+                          {day.from}
                         </td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-"}
+                          {day.to}
                         </td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-"}
+                          {day.hqExHq?.hq
+                            ? parseFloat(day.hqExHq.hq).toFixed(2)
+                            : "-"}
                         </td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-"}
+                          {day.hqExHq?.exHq
+                            ? parseFloat(day.hqExHq.exHq).toFixed(2)
+                            : "-"}
                         </td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-"}
+                          {day.transport?.bus
+                            ? parseFloat(day.transport.bus).toFixed(2)
+                            : "-"}
                         </td>
                         <td className="p-3 border-b border-gray-200">
-                          {day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-"}
+                          {day.transport?.cng
+                            ? parseFloat(day.transport.cng).toFixed(2)
+                            : "-"}
+                        </td>
+                        <td className="p-3 border-b border-gray-200">
+                          {day.transport?.train
+                            ? parseFloat(day.transport.train).toFixed(2)
+                            : "-"}
+                        </td>
+                        <td className="p-3 border-b border-gray-200">
+                          {day.transport?.other
+                            ? parseFloat(day.transport.other).toFixed(2)
+                            : "-"}
+                        </td>
+                        <td className="p-3 border-b border-gray-200">
+                          {day.hotelBill
+                            ? parseFloat(day.hotelBill).toFixed(2)
+                            : "-"}
                         </td>
                         <td className="p-3 border-b border-gray-200 font-semibold">
-                          {day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-"}
+                          {day.totalExpense
+                            ? parseFloat(day.totalExpense).toFixed(2)
+                            : "-"}
                         </td>
                       </tr>
                     ))}

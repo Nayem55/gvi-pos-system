@@ -199,7 +199,9 @@ export default function PrimaryRequest() {
                         className="w-16 border rounded px-1 py-0.5 text-center"
                       />
                     </td>
-                    <td className="p-2 text-center">{parseInt(item.dp)?.toFixed(2)}</td>
+                    <td className="p-2 text-center">
+                      {parseInt(item.dp)?.toFixed(2)}
+                    </td>
                     <td className="p-2 text-center">
                       <button
                         onClick={() => removeFromCart(item.barcode)}

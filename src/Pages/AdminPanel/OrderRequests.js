@@ -105,7 +105,10 @@ export default function OrderRequests() {
             );
             salesMap[item.barcode] = data.totalQuantity || 0;
           } catch (err) {
-            console.error(`Error fetching sales for barcode ${item.barcode}:`, err);
+            console.error(
+              `Error fetching sales for barcode ${item.barcode}:`,
+              err
+            );
             salesMap[item.barcode] = 0;
           }
         })

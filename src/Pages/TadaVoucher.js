@@ -7,7 +7,9 @@ const TadaVoucher = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD")
+  );
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
 
   // Daily expense data structure
@@ -21,7 +23,10 @@ const TadaVoucher = () => {
   });
 
   // Checkbox states
-  const [hqExHqChecked, setHqExHqChecked] = useState({ hq: false, exHq: false });
+  const [hqExHqChecked, setHqExHqChecked] = useState({
+    hq: false,
+    exHq: false,
+  });
   const [transportChecked, setTransportChecked] = useState({
     bus: false,
     cng: false,
@@ -62,7 +67,8 @@ const TadaVoucher = () => {
       ...prev,
       hqExHq: {
         ...prev.hqExHq,
-        [type]: prev.hqExHq[type] && !hqExHqChecked[type] ? 0 : prev.hqExHq[type],
+        [type]:
+          prev.hqExHq[type] && !hqExHqChecked[type] ? 0 : prev.hqExHq[type],
       },
     }));
   };
@@ -88,7 +94,10 @@ const TadaVoucher = () => {
       ...prev,
       transport: {
         ...prev.transport,
-        [type]: prev.transport[type] && !transportChecked[type] ? 0 : prev.transport[type],
+        [type]:
+          prev.transport[type] && !transportChecked[type]
+            ? 0
+            : prev.transport[type],
       },
     }));
   };
@@ -137,12 +146,18 @@ const TadaVoucher = () => {
     }
 
     const hasExpenses =
-      Object.values(dailyExpense.hqExHq).some((amount) => parseFloat(amount) > 0) ||
-      Object.values(dailyExpense.transport).some((amount) => parseFloat(amount) > 0) ||
+      Object.values(dailyExpense.hqExHq).some(
+        (amount) => parseFloat(amount) > 0
+      ) ||
+      Object.values(dailyExpense.transport).some(
+        (amount) => parseFloat(amount) > 0
+      ) ||
       parseFloat(dailyExpense.hotelBill) > 0;
 
     if (!hasExpenses) {
-      toast.error("Please provide at least one expense amount (HQ/Ex-HQ, Transport, or Hotel)");
+      toast.error(
+        "Please provide at least one expense amount (HQ/Ex-HQ, Transport, or Hotel)"
+      );
       return;
     }
 
@@ -199,12 +214,19 @@ const TadaVoucher = () => {
         totalExpense: 0,
       });
       setHqExHqChecked({ hq: false, exHq: false });
-      setTransportChecked({ bus: false, cng: false, train: false, other: false });
+      setTransportChecked({
+        bus: false,
+        cng: false,
+        train: false,
+        other: false,
+      });
 
       toast.success("TD/DA voucher submitted successfully!");
     } catch (error) {
       console.error("Error submitting TD/DA voucher:", error);
-      toast.error(error.message || "Failed to submit voucher. Please try again.");
+      toast.error(
+        error.message || "Failed to submit voucher. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -359,8 +381,12 @@ const TadaVoucher = () => {
                 </label>
                 <input
                   type="number"
-                  value={dailyExpense.hqExHq.hq === 0 ? "" : dailyExpense.hqExHq.hq}
-                  onChange={(e) => handleHqExHqAmountChange("hq", e.target.value)}
+                  value={
+                    dailyExpense.hqExHq.hq === 0 ? "" : dailyExpense.hqExHq.hq
+                  }
+                  onChange={(e) =>
+                    handleHqExHqAmountChange("hq", e.target.value)
+                  }
                   onBlur={calculateTotal}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter HQ amount"
@@ -376,8 +402,14 @@ const TadaVoucher = () => {
                 </label>
                 <input
                   type="number"
-                  value={dailyExpense.hqExHq.exHq === 0 ? "" : dailyExpense.hqExHq.exHq}
-                  onChange={(e) => handleHqExHqAmountChange("exHq", e.target.value)}
+                  value={
+                    dailyExpense.hqExHq.exHq === 0
+                      ? ""
+                      : dailyExpense.hqExHq.exHq
+                  }
+                  onChange={(e) =>
+                    handleHqExHqAmountChange("exHq", e.target.value)
+                  }
                   onBlur={calculateTotal}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter Ex-HQ amount"
@@ -414,7 +446,9 @@ const TadaVoucher = () => {
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     aria-label={`${option.label} transport`}
                   />
-                  <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+                  <span className="ml-2 text-sm text-gray-700">
+                    {option.label}
+                  </span>
                 </label>
               ))}
             </div>
@@ -431,8 +465,17 @@ const TadaVoucher = () => {
                       </label>
                       <input
                         type="number"
-                        value={dailyExpense.transport[option.value] === 0 ? "" : dailyExpense.transport[option.value]}
-                        onChange={(e) => handleTransportAmountChange(option.value, e.target.value)}
+                        value={
+                          dailyExpense.transport[option.value] === 0
+                            ? ""
+                            : dailyExpense.transport[option.value]
+                        }
+                        onChange={(e) =>
+                          handleTransportAmountChange(
+                            option.value,
+                            e.target.value
+                          )
+                        }
                         onBlur={calculateTotal}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         placeholder={`Enter ${option.label} amount`}
@@ -470,8 +513,15 @@ const TadaVoucher = () => {
               </label>
               <input
                 type="number"
-                value={dailyExpense.hotelBill === 0 ? "" : dailyExpense.hotelBill}
-                onChange={(e) => handleInputChange("hotelBill", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                value={
+                  dailyExpense.hotelBill === 0 ? "" : dailyExpense.hotelBill
+                }
+                onChange={(e) =>
+                  handleInputChange(
+                    "hotelBill",
+                    e.target.value === "" ? 0 : parseFloat(e.target.value)
+                  )
+                }
                 onBlur={calculateTotal}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter amount"

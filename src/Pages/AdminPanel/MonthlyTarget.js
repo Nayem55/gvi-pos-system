@@ -139,7 +139,10 @@ const MonthlyTargetPage = () => {
       setTargets(updatedTargetsMap);
       setTempTargets(updatedTargetsMap);
     } catch (error) {
-      console.error("Failed to save or update target", error.response?.data || error);
+      console.error(
+        "Failed to save or update target",
+        error.response?.data || error
+      );
       toast.error(error.response?.data?.message || "Error saving target");
     } finally {
       setLoading(false);
@@ -167,7 +170,10 @@ const MonthlyTargetPage = () => {
           dp: tempTargets[user._id].dp,
         }));
 
-      await axios.post("http://175.29.181.245:5000/targets/bulk", targetsToSave);
+      await axios.post(
+        "http://175.29.181.245:5000/targets/bulk",
+        targetsToSave
+      );
 
       toast.success(`Successfully saved ${targetsToSave.length} targets`);
 
@@ -253,7 +259,9 @@ const MonthlyTargetPage = () => {
       const processedCount = processExcelData(data);
 
       if (processedCount > 0) {
-        toast.success(`Imported and processed ${processedCount} targets. Review and save.`);
+        toast.success(
+          `Imported and processed ${processedCount} targets. Review and save.`
+        );
       } else {
         toast.error("No valid targets found in the file");
       }
@@ -333,12 +341,18 @@ const MonthlyTargetPage = () => {
       <AdminSidebar />
       <div className="p-6 bg-gray-100 min-h-screen flex-1">
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto">
-          <h2 className="text-2xl font-semibold mb-6">Monthly Target Management</h2>
+          <h2 className="text-2xl font-semibold mb-6">
+            Monthly Target Management
+          </h2>
 
           {/* Total Targets Display */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
             <h3 className="text-lg font-medium mb-2">
-              Summary for {dayjs().month(month - 1).format("MMMM")} {year}
+              Summary for{" "}
+              {dayjs()
+                .month(month - 1)
+                .format("MMMM")}{" "}
+              {year}
             </h3>
             <div className="flex gap-8">
               <p>
@@ -392,7 +406,9 @@ const MonthlyTargetPage = () => {
           </div>
 
           <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-inner">
-            <h3 className="text-lg font-medium mb-3">Bulk Import Targets from Excel</h3>
+            <h3 className="text-lg font-medium mb-3">
+              Bulk Import Targets from Excel
+            </h3>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col md:flex-row gap-4 items-center">
                 <button
@@ -422,8 +438,14 @@ const MonthlyTargetPage = () => {
                 <p className="font-medium mb-1">Import Instructions:</p>
                 <ol className="list-decimal pl-5 space-y-1">
                   <li>Download the template to ensure correct format.</li>
-                  <li>Enter values only in the "DP Target" column (TP is auto-calculated).</li>
-                  <li>Do not alter "User ID", "User Name", "User Number", or "User Zone" columns.</li>
+                  <li>
+                    Enter values only in the "DP Target" column (TP is
+                    auto-calculated).
+                  </li>
+                  <li>
+                    Do not alter "User ID", "User Name", "User Number", or "User
+                    Zone" columns.
+                  </li>
                   <li>Upload the file to load data into the table.</li>
                   <li>Review changes and use "Save All Changes" to persist.</li>
                 </ol>
@@ -441,18 +463,27 @@ const MonthlyTargetPage = () => {
             <table className="w-full table-auto border-collapse">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="border-b p-3 text-left font-medium">User Name</th>
+                  <th className="border-b p-3 text-left font-medium">
+                    User Name
+                  </th>
                   <th className="border-b p-3 text-left font-medium">Outlet</th>
                   <th className="border-b p-3 text-left font-medium">Number</th>
                   <th className="border-b p-3 text-left font-medium">Zone</th>
-                  <th className="border-b p-3 text-center font-medium">TP Target</th>
-                  <th className="border-b p-3 text-center font-medium">DP Target</th>
+                  <th className="border-b p-3 text-center font-medium">
+                    TP Target
+                  </th>
+                  <th className="border-b p-3 text-center font-medium">
+                    DP Target
+                  </th>
                   {/* <th className="border-b p-3 text-center font-medium">Actions</th> */}
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={user._id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="border-b p-3">{user.name}</td>
                     <td className="border-b p-3">{user.outlet}</td>
                     <td className="border-b p-3">{user.number}</td>

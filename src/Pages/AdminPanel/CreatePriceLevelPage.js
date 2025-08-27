@@ -30,28 +30,31 @@ const CreatePriceLevelPage = () => {
 
     try {
       setLoading(true);
-      
+
       // Step 1: Create the new price level
       await axios.post(
         "http://175.29.181.245:5000/api/pricelevels",
         newPriceLevel
       );
-      
+
       toast.success("Price level created successfully");
-      
+
       // Step 2: Update all products with the new price level
       try {
         toast.loading("Adding price level to all products...");
-        await axios.put("http://175.29.181.245:5000/update-products-with-new-pricelevel", {
-          priceLevelName: newPriceLevel.name
-        });
+        await axios.put(
+          "http://175.29.181.245:5000/update-products-with-new-pricelevel",
+          {
+            priceLevelName: newPriceLevel.name,
+          }
+        );
         toast.dismiss();
         toast.success(`Added ${newPriceLevel.displayName} to all products`);
       } catch (updateError) {
         console.error("Error updating products:", updateError);
         toast.error("Price level created but failed to update all products");
       }
-      
+
       navigate("/admin/alter-pricelevels");
     } catch (error) {
       console.error("Error creating price level:", error);

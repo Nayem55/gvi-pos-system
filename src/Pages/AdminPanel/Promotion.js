@@ -70,7 +70,11 @@ export default function PromotionalPage() {
         let baseFree = 0;
         let basePercentage = product.promoPercentage || 0;
 
-        if (baseType === "quantity" && product.promoPlan && product.promoPlan !== "None") {
+        if (
+          baseType === "quantity" &&
+          product.promoPlan &&
+          product.promoPlan !== "None"
+        ) {
           const [p, f] = product.promoPlan.split("+").map(Number);
           basePaid = p;
           baseFree = f;
@@ -98,7 +102,11 @@ export default function PromotionalPage() {
             let outletFree = 0;
             let outletPercentage = promo.promoPercentage || 0;
 
-            if (outletType === "quantity" && promo.promoPlan && promo.promoPlan !== "None") {
+            if (
+              outletType === "quantity" &&
+              promo.promoPlan &&
+              promo.promoPlan !== "None"
+            ) {
               const [p, f] = promo.promoPlan.split("+").map(Number);
               outletPaid = p;
               outletFree = f;
@@ -167,7 +175,11 @@ export default function PromotionalPage() {
   };
 
   const calculatePromotionalPrice = (original, promotion) => {
-    if (!promotion || (!promotion.paid && !promotion.free && !promotion.percentage)) return original;
+    if (
+      !promotion ||
+      (!promotion.paid && !promotion.free && !promotion.percentage)
+    )
+      return original;
 
     if (promotion.type === "percentage") {
       return (original * (1 - (promotion.percentage || 0) / 100)).toFixed(2);
@@ -177,7 +189,7 @@ export default function PromotionalPage() {
       const paid = promotion.paid || 0;
       const total = paid + (promotion.free || 0);
       if (paid === 0 || total === 0) return original;
-      return (original * paid / total).toFixed(2);
+      return ((original * paid) / total).toFixed(2);
     }
 
     return original;
@@ -206,7 +218,8 @@ export default function PromotionalPage() {
         basePromo.type === "quantity" && basePromo.paid > 0
           ? `${basePromo.paid}+${basePromo.free || 0}`
           : "None",
-      promoPercentage: basePromo.type === "percentage" ? basePromo.percentage || 0 : 0,
+      promoPercentage:
+        basePromo.type === "percentage" ? basePromo.percentage || 0 : 0,
       promoDP: calculatePromotionalPrice(product.dp, basePromo),
       promoTP: calculatePromotionalPrice(product.tp, basePromo),
       promoStartDate: basePromo.startDate || null,
@@ -228,7 +241,8 @@ export default function PromotionalPage() {
           promo.type === "quantity" && promo.paid > 0
             ? `${promo.paid}+${promo.free || 0}`
             : "None",
-        promoPercentage: promo.type === "percentage" ? promo.percentage || 0 : 0,
+        promoPercentage:
+          promo.type === "percentage" ? promo.percentage || 0 : 0,
         promoDP: calculatePromotionalPrice(product.priceList[level].dp, promo),
         promoTP: calculatePromotionalPrice(product.priceList[level].tp, promo),
         promoStartDate: promo.startDate || null,
@@ -376,7 +390,9 @@ export default function PromotionalPage() {
         // Parse outlet promotions
         const outletPromoColumns = {};
         Object.keys(row).forEach((key) => {
-          const match = key.match(/^(.+) (Promo Type|Paid Quantity|Free Quantity|Percentage|Start Date|End Date)$/);
+          const match = key.match(
+            /^(.+) (Promo Type|Paid Quantity|Free Quantity|Percentage|Start Date|End Date)$/
+          );
           if (match) {
             const outlet = match[1];
             const field = match[2].replace(/ /g, "");
@@ -416,8 +432,14 @@ export default function PromotionalPage() {
                 ? `${outletPaid}+${outletFree}`
                 : "None",
             promoPercentage: outletType === "percentage" ? outletPercentage : 0,
-            promoDP: calculatePromotionalPrice(product.priceList[outlet].dp, outletPromotion),
-            promoTP: calculatePromotionalPrice(product.priceList[outlet].tp, outletPromotion),
+            promoDP: calculatePromotionalPrice(
+              product.priceList[outlet].dp,
+              outletPromotion
+            ),
+            promoTP: calculatePromotionalPrice(
+              product.priceList[outlet].tp,
+              outletPromotion
+            ),
             promoStartDate: outletStartDate || null,
             promoEndDate: outletEndDate || null,
           };
@@ -452,10 +474,9 @@ export default function PromotionalPage() {
     }
 
     if (errors.length > 0) {
-      toast.error(
-        `Errors in ${errors.length} rows: ${errors.join(", ")}`,
-        { duration: 8000 }
-      );
+      toast.error(`Errors in ${errors.length} rows: ${errors.join(", ")}`, {
+        duration: 8000,
+      });
     }
 
     return { successCount, errorCount };
@@ -497,7 +518,9 @@ export default function PromotionalPage() {
     const allOutlets = new Set();
     allProducts.forEach((product) => {
       if (product.priceList) {
-        Object.keys(product.priceList).forEach((outlet) => allOutlets.add(outlet));
+        Object.keys(product.priceList).forEach((outlet) =>
+          allOutlets.add(outlet)
+        );
       }
     });
 
@@ -684,18 +707,19 @@ export default function PromotionalPage() {
                         className="border-b hover:bg-gray-50 transition duration-200"
                       >
                         <td className="p-3 text-center">
-                          {product.priceList && Object.keys(product.priceList).length > 0 && (
-                            <button
-                              onClick={() => togglePromoList(product._id)}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              {expandedPromos[product._id] ? (
-                                <ChevronUp size={18} />
-                              ) : (
-                                <ChevronDown size={18} />
-                              )}
-                            </button>
-                          )}
+                          {product.priceList &&
+                            Object.keys(product.priceList).length > 0 && (
+                              <button
+                                onClick={() => togglePromoList(product._id)}
+                                className="text-gray-500 hover:text-gray-700"
+                              >
+                                {expandedPromos[product._id] ? (
+                                  <ChevronUp size={18} />
+                                ) : (
+                                  <ChevronDown size={18} />
+                                )}
+                              </button>
+                            )}
                         </td>
                         <td className="p-3 font-medium text-gray-800">
                           {product.name}
@@ -835,145 +859,169 @@ export default function PromotionalPage() {
                                 Outlet Specific Promotions
                               </h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {Object.entries(product.priceList).map(([outlet, prices]) => {
-                                  const outletPromo = promotions[outlet] || {
-                                    type: "quantity",
-                                    paid: 0,
-                                    free: 0,
-                                    percentage: 0,
-                                    startDate: "",
-                                    endDate: "",
-                                  };
-                                  return (
-                                    <div
-                                      key={outlet}
-                                      className="border p-3 rounded bg-white"
-                                    >
-                                      <h5 className="font-medium capitalize mb-2">
-                                        {outlet}
-                                      </h5>
-                                      <div className="space-y-2">
-                                        <div>
-                                          <label className="text-xs text-gray-500 block">
-                                            Promo Type
-                                          </label>
-                                          <select
-                                            value={outletPromo.type}
-                                            onChange={(e) =>
-                                              handlePromotionChange(
-                                                product._id,
-                                                outlet,
-                                                "type",
-                                                e.target.value
-                                              )
-                                            }
-                                            className="w-full border rounded px-2 py-1 text-sm"
-                                          >
-                                            <option value="quantity">Quantity</option>
-                                            <option value="percentage">Percentage</option>
-                                          </select>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs text-gray-500 block">
-                                            Promotion
-                                          </label>
-                                          {outletPromo.type === "quantity" ? (
-                                            <div className="flex space-x-1">
+                                {Object.entries(product.priceList).map(
+                                  ([outlet, prices]) => {
+                                    const outletPromo = promotions[outlet] || {
+                                      type: "quantity",
+                                      paid: 0,
+                                      free: 0,
+                                      percentage: 0,
+                                      startDate: "",
+                                      endDate: "",
+                                    };
+                                    return (
+                                      <div
+                                        key={outlet}
+                                        className="border p-3 rounded bg-white"
+                                      >
+                                        <h5 className="font-medium capitalize mb-2">
+                                          {outlet}
+                                        </h5>
+                                        <div className="space-y-2">
+                                          <div>
+                                            <label className="text-xs text-gray-500 block">
+                                              Promo Type
+                                            </label>
+                                            <select
+                                              value={outletPromo.type}
+                                              onChange={(e) =>
+                                                handlePromotionChange(
+                                                  product._id,
+                                                  outlet,
+                                                  "type",
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full border rounded px-2 py-1 text-sm"
+                                            >
+                                              <option value="quantity">
+                                                Quantity
+                                              </option>
+                                              <option value="percentage">
+                                                Percentage
+                                              </option>
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label className="text-xs text-gray-500 block">
+                                              Promotion
+                                            </label>
+                                            {outletPromo.type === "quantity" ? (
+                                              <div className="flex space-x-1">
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  value={outletPromo.paid || ""}
+                                                  onChange={(e) =>
+                                                    handlePromotionChange(
+                                                      product._id,
+                                                      outlet,
+                                                      "paid",
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  className="w-1/2 text-center border rounded"
+                                                />
+                                                <span className="self-center">
+                                                  +
+                                                </span>
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  value={outletPromo.free || ""}
+                                                  onChange={(e) =>
+                                                    handlePromotionChange(
+                                                      product._id,
+                                                      outlet,
+                                                      "free",
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  className="w-1/2 text-center border rounded"
+                                                />
+                                              </div>
+                                            ) : (
                                               <input
                                                 type="number"
                                                 min="0"
-                                                value={outletPromo.paid || ""}
+                                                max="100"
+                                                value={
+                                                  outletPromo.percentage || ""
+                                                }
                                                 onChange={(e) =>
                                                   handlePromotionChange(
                                                     product._id,
                                                     outlet,
-                                                    "paid",
+                                                    "percentage",
                                                     e.target.value
                                                   )
                                                 }
-                                                className="w-1/2 text-center border rounded"
+                                                className="w-full text-center border rounded"
+                                                placeholder="%"
                                               />
-                                              <span className="self-center">+</span>
+                                            )}
+                                          </div>
+                                          <div>
+                                            <label className="text-xs text-gray-500 block">
+                                              Promo DP / TP
+                                            </label>
+                                            <div className="flex justify-between text-sm">
+                                              <span>
+                                                {calculatePromotionalPrice(
+                                                  prices.dp,
+                                                  outletPromo
+                                                )}
+                                              </span>
+                                              <span>
+                                                {calculatePromotionalPrice(
+                                                  prices.tp,
+                                                  outletPromo
+                                                )}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <label className="text-xs text-gray-500 block">
+                                              Validity
+                                            </label>
+                                            <div className="space-y-1">
                                               <input
-                                                type="number"
-                                                min="0"
-                                                value={outletPromo.free || ""}
+                                                type="date"
+                                                value={
+                                                  outletPromo.startDate || ""
+                                                }
                                                 onChange={(e) =>
                                                   handlePromotionChange(
                                                     product._id,
                                                     outlet,
-                                                    "free",
+                                                    "startDate",
                                                     e.target.value
                                                   )
                                                 }
-                                                className="w-1/2 text-center border rounded"
+                                                className="w-full text-sm p-1 border rounded"
+                                              />
+                                              <input
+                                                type="date"
+                                                value={
+                                                  outletPromo.endDate || ""
+                                                }
+                                                onChange={(e) =>
+                                                  handlePromotionChange(
+                                                    product._id,
+                                                    outlet,
+                                                    "endDate",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full text-sm p-1 border rounded"
                                               />
                                             </div>
-                                          ) : (
-                                            <input
-                                              type="number"
-                                              min="0"
-                                              max="100"
-                                              value={outletPromo.percentage || ""}
-                                              onChange={(e) =>
-                                                handlePromotionChange(
-                                                  product._id,
-                                                  outlet,
-                                                  "percentage",
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full text-center border rounded"
-                                              placeholder="%"
-                                            />
-                                          )}
-                                        </div>
-                                        <div>
-                                          <label className="text-xs text-gray-500 block">
-                                            Promo DP / TP
-                                          </label>
-                                          <div className="flex justify-between text-sm">
-                                            <span>{calculatePromotionalPrice(prices.dp, outletPromo)}</span>
-                                            <span>{calculatePromotionalPrice(prices.tp, outletPromo)}</span>
-                                          </div>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs text-gray-500 block">
-                                            Validity
-                                          </label>
-                                          <div className="space-y-1">
-                                            <input
-                                              type="date"
-                                              value={outletPromo.startDate || ""}
-                                              onChange={(e) =>
-                                                handlePromotionChange(
-                                                  product._id,
-                                                  outlet,
-                                                  "startDate",
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full text-sm p-1 border rounded"
-                                            />
-                                            <input
-                                              type="date"
-                                              value={outletPromo.endDate || ""}
-                                              onChange={(e) =>
-                                                handlePromotionChange(
-                                                  product._id,
-                                                  outlet,
-                                                  "endDate",
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full text-sm p-1 border rounded"
-                                            />
                                           </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  }
+                                )}
                               </div>
                             </div>
                           </td>

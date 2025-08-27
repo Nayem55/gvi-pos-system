@@ -411,8 +411,8 @@ const AlterProductsPage = () => {
     } finally {
       setImportLoading(false);
       setImportModalOpen(false);
-      setImportPreview([])
-      fetchProducts(); 
+      setImportPreview([]);
+      fetchProducts();
     }
   };
 

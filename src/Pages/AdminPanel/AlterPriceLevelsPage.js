@@ -36,21 +36,29 @@ const AlterPriceLevelsPage = () => {
   }, []);
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}"? This will remove it from all products.`)) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${name}"? This will remove it from all products.`
+      )
+    )
+      return;
 
     try {
       setDeletingId(id);
-      
+
       // First delete from price levels
       await axios.delete(`http://175.29.181.245:5000/api/pricelevels/${name}`);
-      
+
       // Then remove from all products
       toast.loading(`Removing ${name} from all products...`);
-      await axios.put("http://175.29.181.245:5000/remove-pricelevel-from-products", {
-        priceLevelName: name
-      });
+      await axios.put(
+        "http://175.29.181.245:5000/remove-pricelevel-from-products",
+        {
+          priceLevelName: name,
+        }
+      );
       toast.dismiss();
-      
+
       setPriceLevels((prev) => prev.filter((pl) => pl._id !== id));
       toast.success("Price level deleted from all products successfully");
     } catch (error) {
@@ -92,7 +100,7 @@ const AlterPriceLevelsPage = () => {
 
     try {
       setEditLoading(true);
-      
+
       // First update the price level itself
       await axios.put(
         `http://175.29.181.245:5000/api/pricelevels/${editForm.originalName}`,
@@ -105,21 +113,26 @@ const AlterPriceLevelsPage = () => {
       // If the name changed, update all products
       if (editForm.name !== editForm.originalName) {
         toast.loading(`Updating price level name in all products...`);
-        await axios.put("http://175.29.181.245:5000/update-pricelevel-in-products", {
-          oldName: editForm.originalName,
-          newName: editForm.name,
-          newDisplayName: editForm.displayName
-        });
+        await axios.put(
+          "http://175.29.181.245:5000/update-pricelevel-in-products",
+          {
+            oldName: editForm.originalName,
+            newName: editForm.name,
+            newDisplayName: editForm.displayName,
+          }
+        );
         toast.dismiss();
       }
 
       setPriceLevels((prev) =>
         prev.map((pl) =>
-          pl._id === id ? { 
-            ...pl, 
-            name: editForm.name,
-            displayName: editForm.displayName 
-          } : pl
+          pl._id === id
+            ? {
+                ...pl,
+                name: editForm.name,
+                displayName: editForm.displayName,
+              }
+            : pl
         )
       );
 
@@ -243,7 +256,9 @@ const AlterPriceLevelsPage = () => {
                               <Edit3 size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(level._id, level.name)}
+                              onClick={() =>
+                                handleDelete(level._id, level.name)
+                              }
                               disabled={deletingId === level._id}
                               className="text-red-600 hover:text-red-900 disabled:text-gray-400 p-1"
                               title="Delete"
