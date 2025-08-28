@@ -25,7 +25,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
-import { BsCashCoin, BsShop } from "react-icons/bs";
+import { BsCash, BsCashCoin, BsShop } from "react-icons/bs";
 import { FaTrademark } from "react-icons/fa";
 
 const AdminSidebar = () => {
@@ -104,6 +104,11 @@ const AdminSidebar = () => {
       name: "Order Requests",
       path: "/admin/order-requests",
       icon: <ListOrderedIcon size={20} />,
+    },
+    {
+      name: "Payment Requests",
+      path: "/admin/payment-request",
+      icon: <BsCash size={20} />,
     },
   ];
 
