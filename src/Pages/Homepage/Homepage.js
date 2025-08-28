@@ -28,7 +28,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user || !user.outlet) {
+    if (!user) {
       navigate("/login");
       return;
     }
