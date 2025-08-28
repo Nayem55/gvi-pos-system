@@ -417,6 +417,7 @@ export default function Primary({
             date: formattedDateTime,
             asm: user.asm,
             rsm: user.rsm,
+            som: user.som,
             zone: user.zone,
             user: user.name,
             userID: user._id,

@@ -416,6 +416,7 @@ export default function OpeningStock({
             date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
             asm: user.asm,
             rsm: user.rsm,
+            som: user.som,
             zone: user.zone,
             user: user.name,
             userID: user._id,

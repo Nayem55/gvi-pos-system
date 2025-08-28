@@ -362,6 +362,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           type: "market return",
           asm: user.asm,
           rsm: user.rsm,
+          som: user.som,
           zone: user.zone,
           quantity: item.marketReturn,
           date: formattedDateTime,
