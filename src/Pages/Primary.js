@@ -39,7 +39,6 @@ export default function Primary({
 
     return today.isAfter(startDate) && today.isBefore(endDate);
   };
-
   const getCurrentTP = (product) => {
     const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
     const outletTP = product.priceList?.[priceLabel]?.tp;

@@ -6,6 +6,7 @@ import Primary from "../Primary";
 import Secondary from "../Secondary";
 import OfficeReturn from "../OfficeReturn";
 import MarketReturn from "../MarketReturn";
+import toast from "react-hot-toast";
 
 const ManageStock = () => {
   const [users, setUsers] = useState([]);
@@ -15,6 +16,7 @@ const ManageStock = () => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]); // State for all products
   const [productsLoading, setProductsLoading] = useState(false);
+  const [currentDue, setCurrentDue] = useState(0); // Total due
 
   useEffect(() => {
     fetchUsers();
@@ -57,16 +59,28 @@ const ManageStock = () => {
   const getStockValue = async (outletName) => {
     try {
       const encodedOutletName = encodeURIComponent(outletName);
-      const response = await axios.get(
-        `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
+      const [stockResponse, dueResponse] = await Promise.all([
+        axios.get(
+          `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
+        ),
+        axios.get(
+          `http://175.29.181.245:5000/current-due/${encodedOutletName}`
+        ),
+      ]);
+      console.log(
+        "Stock Response:",
+        stockResponse.data,
+        "Due Response:",
+        dueResponse.data
       );
-
+      setCurrentDue(dueResponse.data.current_due);
       setStock({
-        dp: response.data.totalCurrentDP,
-        tp: response.data.totalCurrentTP,
+        dp: stockResponse.data.totalCurrentDP,
+        tp: stockResponse.data.totalCurrentTP,
       });
     } catch (error) {
       console.error("Error fetching stock data:", error);
+      toast.error("Failed to load stock data.");
     }
   };
 
@@ -94,7 +108,8 @@ const ManageStock = () => {
       stock: stock,
       setStock: setStock,
       getStockValue: getStockValue,
-      allProducts: products, // Pass all products to each component
+      allProducts: products, 
+      currentDue:currentDue
     };
 
     switch (selectedTab) {
