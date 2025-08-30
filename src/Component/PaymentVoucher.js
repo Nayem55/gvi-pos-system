@@ -24,7 +24,7 @@ export default function PaymentVoucher({
   const [imageUrl, setImageUrl] = useState("");
   const CLOUDINARY_URL =
     "https://api.cloudinary.com/v1_1/dodxop7lz/image/upload";
-  const UPLOAD_PRESET = "ebay-memo";
+  const UPLOAD_PRESET = "Warehouse";
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0];

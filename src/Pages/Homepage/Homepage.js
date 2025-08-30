@@ -127,12 +127,12 @@ export default function Home() {
           onChange={(e) => setSelectedTab(e.target.value)}
           className="p-2 border rounded-lg w-[100%]"
         >
-          <option value="opening">Opening Stock</option>
+          {/* <option value="opening">Opening Stock</option> */}
           <option value="primary request">Primary Request</option>
-          <option value="primary">Primary</option>
+          {/* <option value="primary">Primary</option> */}
           <option value="secondary">Secondary</option>
-          <option value="pos">POS</option>
-          <option value="officeReturn">Office Return</option>
+          {/* <option value="pos">POS</option> */}
+          {/* <option value="officeReturn">Office Return</option> */}
           <option value="marketReturn">Market Return</option>
           <option value="payment">Payment</option>
           <option value="tada">TA/DA</option>

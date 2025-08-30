@@ -163,16 +163,15 @@ export default function Secondary({
     setSearchResults([]);
   };
 
-  const updateQuantity = (id, change) => {
+  const updateQuantity = (id, value) => {
+    const newQuantity = parseInt(value) || 1;
     setCart(
       cart.map((item) =>
         item._id === id
           ? {
               ...item,
-              pcs: Math.max(1, Math.min(item.pcs + change, item.stock)),
-              total:
-                Math.max(1, Math.min(item.pcs + change, item.stock)) *
-                item.editableTP,
+              pcs: Math.max(1, Math.min(newQuantity, item.stock)),
+              total: Math.max(1, Math.min(newQuantity, item.stock)) * item.editableTP,
             }
           : item
       )
@@ -622,7 +621,9 @@ export default function Secondary({
         <input
           id="import-file"
           type="file"
-          accept=".xlsx, .xls, .csv"
+          accept=".xlsx,
+
+ .xls, .csv"
           onChange={handleFileUpload}
           className="hidden"
         />
@@ -660,6 +661,7 @@ export default function Secondary({
           type="number"
           placeholder="Enter memo count"
           className="w-[50%] py-1 px-2 rounded my-2 border border-gray-200"
+
         />
       </div>
 
@@ -723,21 +725,14 @@ export default function Secondary({
                   </td>
 
                   <td className="p-2 text-center">
-                    <div className="flex flex-col-reverse justify-center items-center gap-1">
-                      <button
-                        onClick={() => updateQuantity(item._id, -1)}
-                        className="bg-gray-900 text-white text-xs rounded h-5 w-5"
-                      >
-                        -
-                      </button>
-                      <span className="text-sm">{item.pcs}</span>
-                      <button
-                        onClick={() => updateQuantity(item._id, 1)}
-                        className="bg-[#F16F24] text-white text-xs rounded h-5 w-5"
-                      >
-                        +
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      value={item.pcs}
+                      onChange={(e) => updateQuantity(item._id, e.target.value)}
+                      min="1"
+                      max={item.stock}
+                      className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[60px]"
+                    />
                   </td>
 
                   <td className="p-1 text-center">
@@ -805,7 +800,7 @@ export default function Secondary({
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px]tonne h-[40px]"
         >
           {isSubmitting ? (
             <svg

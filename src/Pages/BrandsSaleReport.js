@@ -143,7 +143,7 @@ const BrandWiseSalesReport = () => {
       const enhancedOutletData = outletSales.map((outlet) => {
         const userTargets = targetsData[outlet._id.userID] || {};
         const target = userTargets[brand] || 0;
-        const achievement = target > 0 ? (outlet.total_tp / target) * 100 : 0;
+        const achievement = target > 0 ? (outlet.total_quantity / target) * 100 : 0;
 
         return {
           ...outlet,
@@ -173,7 +173,7 @@ const BrandWiseSalesReport = () => {
         0
       );
       const totalAchievement =
-        totalTarget > 0 ? (totalTP / totalTarget) * 100 : 0;
+        totalTarget > 0 ? (totalQuantity / totalTarget) * 100 : 0;
 
       setModalSummary({
         totalQuantity,
@@ -213,7 +213,7 @@ const BrandWiseSalesReport = () => {
   const handleExportToExcel = () => {
     const exportData = salesData.map((brand) => ({
       Brand: brand._id,
-      "Total PCS": brand.total_quantity,
+      "Total Pcs": brand.total_quantity,
       "Total TP": brand.total_tp.toFixed(2),
       "Total MRP": brand.total_mrp.toFixed(2),
     }));
@@ -221,7 +221,7 @@ const BrandWiseSalesReport = () => {
     // Add summary row
     exportData.push({
       Brand: "TOTAL",
-      "Total PCS": summary.totalQuantity,
+      "Total Pcs": summary.totalQuantity,
       "Total TP": summary.totalTP.toFixed(2),
       "Total MRP": summary.totalMRP.toFixed(2),
     });
@@ -233,7 +233,7 @@ const BrandWiseSalesReport = () => {
     // Auto-size columns
     const wscols = [
       { wch: 30 }, // Brand
-      { wch: 10 }, // PCS
+      { wch: 10 }, // Pcs
       { wch: 15 }, // TP
       { wch: 15 }, // MRP
     ];
@@ -259,10 +259,10 @@ const BrandWiseSalesReport = () => {
         Brand: selectedBrand,
         SO: outlet._id.so,
         Outlet: outlet._id.outlet,
-        "PCS Sold": outlet.total_quantity,
+        "Pcs Sold": outlet.total_quantity,
         "Total TP": outlet.total_tp.toFixed(2),
         "Total MRP": outlet.total_mrp.toFixed(2),
-        Target: outlet.target.toFixed(2),
+        Target: outlet.target,
         "Achievement %": outlet.achievement.toFixed(2),
       }));
 
@@ -270,7 +270,7 @@ const BrandWiseSalesReport = () => {
       exportData.push({
         Brand: `${selectedBrand} - TOTAL`,
         Outlet: "",
-        "PCS Sold": modalSummary.totalQuantity,
+        "Pcs Sold": modalSummary.totalQuantity,
         "Total TP": modalSummary.totalTP.toFixed(2),
         "Total MRP": modalSummary.totalMRP.toFixed(2),
         Target: modalSummary.totalTarget.toFixed(2),
@@ -344,7 +344,7 @@ const BrandWiseSalesReport = () => {
             <div className="bg-green-100 p-4 rounded-lg flex items-center gap-3">
               <ShoppingCart size={28} className="text-green-500" />
               <div>
-                <p className="text-gray-600 text-sm">Total PCS Sold</p>
+                <p className="text-gray-600 text-sm">Total Pcs Sold</p>
                 <h3 className="text-lg font-bold">{summary.totalQuantity}</h3>
               </div>
             </div>
@@ -429,7 +429,7 @@ const BrandWiseSalesReport = () => {
                 <thead>
                   <tr className="bg-gray-200">
                     <th className="border p-2 text-left">Brand</th>
-                    <th className="border p-2 text-center">PCS</th>
+                    <th className="border p-2 text-center">Pcs</th>
                     <th className="border p-2 text-center">Total TP</th>
                     <th className="border p-2 text-center">Total MRP</th>
                     <th className="border p-2 text-center">View Details</th>
@@ -515,7 +515,7 @@ const BrandWiseSalesReport = () => {
                   <div className="bg-green-100 p-3 rounded-lg flex items-center gap-3">
                     <ShoppingCart size={20} className="text-green-500" />
                     <div>
-                      <p className="text-gray-600 text-xs">Total PCS Sold</p>
+                      <p className="text-gray-600 text-xs">Total Pcs Sold</p>
                       <h3 className="text-md font-bold">
                         {modalSummary.totalQuantity}
                       </h3>
@@ -535,7 +535,7 @@ const BrandWiseSalesReport = () => {
                     <div>
                       <p className="text-gray-600 text-xs">Total Target</p>
                       <h3 className="text-md font-bold">
-                        {modalSummary.totalTarget.toFixed(2)}
+                        {modalSummary.totalTarget}
                       </h3>
                     </div>
                   </div>
@@ -576,7 +576,7 @@ const BrandWiseSalesReport = () => {
                           <tr className="bg-gray-200">
                             <th className="border p-2 text-left">SO</th>
                             <th className="border p-2 text-left">Outlet</th>
-                            <th className="border p-2 text-center">PCS Sold</th>
+                            <th className="border p-2 text-center">Pcs Sold</th>
                             <th className="border p-2 text-center">Total TP</th>
                             <th className="border p-2 text-center">Target</th>
                             <th className="border p-2 text-center">
@@ -601,7 +601,7 @@ const BrandWiseSalesReport = () => {
                                 {outlet.total_tp.toFixed(2)}
                               </td>
                               <td className="border p-2 text-center">
-                                {outlet.target.toFixed(2)}
+                                {outlet.target}
                               </td>
                               <td className="border p-2 text-center">
                                 <span
