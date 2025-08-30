@@ -165,6 +165,7 @@ export default function PaymentVoucher({
               <option value="">Select Bank</option>
               <option value="city_bank">City Bank</option>
               <option value="brac_bank">BRAC Bank</option>
+              <option value="dbbl">DBBL</option>
             </select>
           </div>
         )}
