@@ -146,8 +146,16 @@ const AdminHomePage = () => {
   };
 
   const calculateAchievement = (sales, target) => {
-    if (!target || target === 0) return 0;
-    return Math.round((sales / target) * 100);
+    // Convert to numbers if they're strings
+    const salesNum = typeof sales === "string" ? parseFloat(sales) : sales;
+    const targetNum = typeof target === "string" ? parseFloat(target) : target;
+
+    // Check if target is valid and not zero
+    if (!targetNum || targetNum === 0 || isNaN(targetNum)) return 0;
+
+    // Calculate percentage and round to 2 decimal places
+    const percentage = (salesNum / targetNum) * 100;
+    return Math.round(percentage * 100) / 100; // Round to 2 decimal places
   };
 
   const renderDataCard = (title, target, sales, icon, color) => {

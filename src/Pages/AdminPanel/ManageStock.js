@@ -80,7 +80,7 @@ const ManageStock = () => {
       });
     } catch (error) {
       console.error("Error fetching stock data:", error);
-      toast.error("Failed to load stock data.");
+      // toast.error("Failed to load stock data.");
     }
   };
 

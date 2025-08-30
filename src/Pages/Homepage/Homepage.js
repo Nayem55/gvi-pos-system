@@ -61,7 +61,6 @@ export default function Home() {
           params: { year, month, userID: user._id },
         }
       );
-      console.log("Target Response:", targetResponse.data);
       const targetEntry = targetResponse.data.find(
         (entry) => entry.userID === user._id
       );
@@ -78,7 +77,6 @@ export default function Home() {
       const reportsResponse = await axios.get(
         `http://175.29.181.245:5000/sales-reports/${user._id}?month=${currentMonth}`
       );
-      console.log("Reports Response:", reportsResponse.data);
       const reports = reportsResponse.data;
       const totalTPValue = reports.reduce(
         (sum, report) => sum + (report.total_tp || 0),
@@ -102,12 +100,6 @@ export default function Home() {
           `http://175.29.181.245:5000/current-due/${encodedOutletName}`
         ),
       ]);
-      console.log(
-        "Stock Response:",
-        stockResponse.data,
-        "Due Response:",
-        dueResponse.data
-      );
       setCurrentDue(dueResponse.data.current_due);
       setStock({
         dp: stockResponse.data.totalCurrentDP,
@@ -115,7 +107,7 @@ export default function Home() {
       });
     } catch (error) {
       console.error("Error fetching stock data:", error);
-      toast.error("Failed to load stock data.");
+      // toast.error("Failed to load stock data.");
     }
   };
 
