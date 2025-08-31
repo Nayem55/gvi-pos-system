@@ -20,6 +20,7 @@ const Accounts = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null); // For modal image
 
   // Fetch area options based on selected type
   useEffect(() => {
@@ -145,6 +146,7 @@ const Accounts = () => {
       `Financial_Report_${selectedArea}_${dateRange.start}.xlsx`
     );
   };
+
   // Updated exportToPDF function with proper debit/credit categorization
   const exportToPDF = () => {
     if (!reportData) return;
@@ -362,88 +364,59 @@ const Accounts = () => {
     doc.save(`Ledger_${selectedArea}_${dayjs().format("YYYYMMDD")}.pdf`);
   };
 
-  // const exportToPDF = () => {
-  //   if (!reportData) return;
+  // Function to open image in modal
+  const openImageModal = (imageUrl) => {
+    setSelectedImage(imageUrl);
+  };
 
-  //   const doc = new jsPDF({
-  //     orientation: "portrait",
-  //     unit: "mm",
-  //   });
-
-  //   doc.setFontSize(14);
-  //   doc.text(
-  //     `${selectedType === "outlet" ? "Outlet" : selectedType}: ${
-  //       selectedArea || ""
-  //     }`,
-  //     14,
-  //     15
-  //   );
-  //   doc.text(
-  //     `Period: ${dayjs(dateRange.start).format("DD-MM-YY")} to ${dayjs(
-  //       dateRange.end
-  //     ).format("DD-MM-YY")}`,
-  //     14,
-  //     22
-  //   );
-
-  //   // Summary table
-  //   autoTable(doc, {
-  //     startY: 30,
-  //     head: [["Item", "Amount"]],
-  //     body: [
-  //       ["Opening Due", reportData.openingDue.toFixed(2)],
-  //       ["Primary Added", reportData.primary.toFixed(2)],
-  //       ["Payments", reportData.payment.toFixed(2)],
-  //       ["Office Returns", reportData.officeReturn.toFixed(2)],
-  //       ["Closing Due", reportData.closingDue.toFixed(2)],
-  //     ],
-  //     theme: "grid",
-  //     headStyles: {
-  //       fillColor: [41, 128, 185],
-  //       textColor: 255,
-  //     },
-  //   });
-
-  //   // Transactions table
-  //   if (reportData.transactions && reportData.transactions.length > 0) {
-  //     doc.text("Transaction Details", 14, doc.lastAutoTable.finalY + 10);
-
-  //     autoTable(doc, {
-  //       startY: doc.lastAutoTable.finalY + 15,
-  //       head: [["Date", "Type", "Amount", "Created By", "Remarks"]],
-  //       body: reportData.transactions.map((txn) => [
-  //         dayjs(txn.date).format("DD-MM-YY"),
-  //         txn.type,
-  //         txn.amount.toFixed(2),
-  //         txn.createdBy,
-  //         txn.remarks || "",
-  //       ]),
-  //       styles: { fontSize: 8 },
-  //       columnStyles: {
-  //         0: { cellWidth: 20 },
-  //         1: { cellWidth: 20 },
-  //         2: { cellWidth: 20 },
-  //         3: { cellWidth: 30 },
-  //         4: { cellWidth: "auto" },
-  //       },
-  //     });
-  //   }
-
-  //   doc.save(
-  //     `Financial_Report_${selectedArea || "all"}_${dayjs().format(
-  //       "YYYYMMDD"
-  //     )}.pdf`
-  //   );
-  // };
+  // Function to close modal
+  const closeImageModal = () => {
+    setSelectedImage(null);
+  };
 
   return (
     <div className="flex">
+      {/* Image Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <button
+              className="absolute top-2 right-2 text-white bg-red-600 rounded-full p-1 z-10"
+              onClick={closeImageModal}
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="max-w-full max-h-screen object-contain"
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl sm:text-3xl font-bold text-gray-800">
             Accounts
           </h2>
-          <div className="relative">
+          {/* <div className="relative">
             <button
               onClick={() => setExportDropdown(!exportDropdown)}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
@@ -489,7 +462,7 @@ const Accounts = () => {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Filters */}
@@ -612,8 +585,15 @@ const Accounts = () => {
                           : txn.paymentMode}
                       </td>
                       <td className="border p-2 ">{txn.amount?.toFixed(2)}</td>
-                      <td className="border p-2 ">
-                        <img alt="" src={txn.imageUrl} />
+                      <td className="border p-2 w-[40px]">
+                        {txn.imageUrl && (
+                          <img
+                            alt="Transaction"
+                            src={txn.imageUrl}
+                            className="cursor-pointer h-10 w-10 object-cover"
+                            onClick={() => openImageModal(txn.imageUrl)}
+                          />
+                        )}
                       </td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
