@@ -3,12 +3,15 @@ import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   FiSearch,
   FiDownload,
   FiCalendar,
   FiCheckCircle,
   FiClock,
+  FiChevronDown,
 } from "react-icons/fi";
 
 /* ─────────────────────────── axios helper ─────────────────────────── */
@@ -34,6 +37,10 @@ export default function OrderRequests() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [pastSales, setPastSales] = useState({});
   const [loadingPast, setLoadingPast] = useState(false);
+  const [modalExportDropdownOpen, setModalExportDropdownOpen] = useState(false);
+
+  /* export dropdown */
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   /* ─────────── fetch ─────────── */
   const fetchRequests = useCallback(async () => {
@@ -71,6 +78,20 @@ export default function OrderRequests() {
     );
   }, [search, requests]);
 
+  // Calculate total quantity for main table
+  const totalQuantity = useMemo(() => {
+    return filtered.reduce((total, req) => {
+      return total + req.items.reduce((sum, item) => sum + item.qty, 0);
+    }, 0);
+  }, [filtered]);
+
+  // Calculate total quantity for selected request in modal
+  const modalTotalQuantity = useMemo(() => {
+    return selectedRequest
+      ? selectedRequest.items.reduce((sum, item) => sum + item.qty, 0)
+      : 0;
+  }, [selectedRequest]);
+
   /* ─────────── mark complete ─────────── */
   const markCompleted = async (id) => {
     if (!window.confirm("Mark this request as completed?")) return;
@@ -96,7 +117,6 @@ export default function OrderRequests() {
     setPastSales({});
     try {
       const salesMap = {};
-      // Fetch past sales for each product barcode
       await Promise.all(
         req.items.map(async (item) => {
           try {
@@ -121,7 +141,7 @@ export default function OrderRequests() {
     }
   };
 
-  /* ─────────── excel export ─────────── */
+  /* ─────────── excel export (main) ─────────── */
   const exportToExcel = () => {
     const rows = filtered.flatMap((req) =>
       req.items.map((it) => ({
@@ -132,16 +152,112 @@ export default function OrderRequests() {
         Zone: req.zone,
         Barcode: it.barcode,
         Product: it.name,
-        Quantity: it.quantity,
+        Quantity: it.qty,
       }))
     );
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const ws = XLSX.utils.json_to_sheet([
+      ...rows,
+      {}, // Empty row for separation
+      { Date: "Total Quantity:", Quantity: totalQuantity },
+    ]);
     XLSX.utils.book_append_sheet(wb, ws, "PrimaryRequests");
     XLSX.writeFile(
       wb,
       `Primary_Requests_${selectedMonth}_${statusFilter || "all"}.xlsx`
     );
+    setExportDropdownOpen(false);
+  };
+
+  /* ─────────── pdf export (main) ─────────── */
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text(`Order Requests - ${selectedMonth}`, 14, 15);
+    
+    doc.setFontSize(10);
+    doc.text(`Total Requests: ${filtered.length}`, 14, 25);
+    doc.text(`Total Quantity: ${totalQuantity}`, 14, 30);
+    
+    const tableData = filtered.flatMap((req) =>
+      req.items.map((it) => [
+        dayjs(req.date).format("DD MMM YYYY"),
+        req.name,
+        req.outlet,
+        req.zone,
+        it.barcode,
+        it.name,
+        it.qty.toString(),
+        req.status
+      ])
+    );
+    
+    autoTable(doc, {
+      startY: 35,
+      head: [['Date', 'Name', 'Outlet', 'Zone', 'Barcode', 'Product', 'Qty', 'Status']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] },
+      margin: { top: 35 },
+    });
+    
+    doc.save(`Order_Requests_${selectedMonth}_${statusFilter || "all"}.pdf`);
+    setExportDropdownOpen(false);
+  };
+
+  /* ─────────── modal excel export ─────────── */
+  const exportModalToExcel = () => {
+    if (!selectedRequest) return;
+    const rows = selectedRequest.items.map((it) => ({
+      Barcode: it.barcode,
+      Product: it.name,
+      "Requested Qty": it.qty,
+      "Last 3 Months Sold": pastSales[it.barcode] || 0,
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([
+      ...rows,
+      {}, // Empty row for separation
+      { Barcode: "Total Quantity:", "Requested Qty": modalTotalQuantity },
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws, "OrderDetails");
+    XLSX.writeFile(
+      wb,
+      `Order_Details_${selectedRequest.name}_${dayjs(selectedRequest.date).format("YYYY-MM-DD")}.xlsx`
+    );
+    setModalExportDropdownOpen(false);
+  };
+
+  /* ─────────── modal pdf export ─────────── */
+  const exportModalToPDF = () => {
+    if (!selectedRequest) return;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text(`Order Details - ${selectedRequest.name}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Date: ${dayjs(selectedRequest.date).format("DD MMM YYYY")}`, 14, 22);
+    doc.text(`Total Quantity: ${modalTotalQuantity}`, 14, 27);
+    
+    const tableData = selectedRequest.items.map((it) => [
+      it.barcode,
+      it.name,
+      it.qty.toString(),
+      (pastSales[it.barcode] || 0).toString(),
+    ]);
+    
+    autoTable(doc, {
+      startY: 35,
+      head: [['Barcode', 'Product', 'Requested Qty', 'Last 3 Months Sold']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] },
+      margin: { top: 35 },
+    });
+    
+    doc.save(`Order_Details_${selectedRequest.name}_${dayjs(selectedRequest.date).format("YYYY-MM-DD")}.pdf`);
+    setModalExportDropdownOpen(false);
   };
 
   /* ─────────── render ─────────── */
@@ -159,14 +275,40 @@ export default function OrderRequests() {
             </p>
           </div>
 
-          <button
-            onClick={exportToExcel}
-            className="mt-4 md:mt-0 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors"
-            disabled={filtered.length === 0}
-          >
-            <FiDownload className="text-lg" />
-            <span>Export to Excel</span>
-          </button>
+          <div className="mt-4 md:mt-0 flex items-center gap-2">
+            <div className="bg-indigo-100 text-indigo-800 px-3 py-2 rounded-lg mr-2">
+              <span className="font-semibold">Total Qty: {totalQuantity}</span>
+            </div>
+            
+            <div className="relative">
+              <button
+                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors"
+                disabled={filtered.length === 0}
+              >
+                <FiDownload className="text-lg" />
+                <span>Export</span>
+                <FiChevronDown />
+              </button>
+              
+              {exportDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                  <button
+                    onClick={exportToExcel}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={exportToPDF}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Export to PDF
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -391,12 +533,46 @@ export default function OrderRequests() {
 
       {/* Modal */}
       {isModalOpen && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              Order Details - {selectedRequest.name} -{" "}
-              {dayjs(selectedRequest.date).format("DD MMM YYYY")}
-            </h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold">
+                  Order Details - {selectedRequest.name} -{" "}
+                  {dayjs(selectedRequest.date).format("DD MMM YYYY")}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Total Quantity: {modalTotalQuantity}
+                </p>
+              </div>
+              <div className="mt-4 md:mt-0 relative">
+                <button
+                  onClick={() => setModalExportDropdownOpen(!modalExportDropdownOpen)}
+                  className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors"
+                >
+                  <FiDownload className="text-lg" />
+                  <span>Export</span>
+                  <FiChevronDown />
+                </button>
+                {modalExportDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                    <button
+                      onClick={exportModalToExcel}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Export to Excel
+                    </button>
+                    <button
+                      onClick={exportModalToPDF}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Export to PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            
             {loadingPast ? (
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
@@ -441,7 +617,7 @@ export default function OrderRequests() {
                 </table>
               </div>
             )}
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"

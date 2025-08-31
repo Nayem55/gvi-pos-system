@@ -1,9 +1,3 @@
-// New frontend component: PaymentRequests.jsx
-// Assume this is placed in a separate file and imported/used in your app routes.
-// This component lists payment requests and allows confirmation/rejection.
-// Added filters for date range and status.
-// Assuming AdminSidebar component is available for import.
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -22,6 +16,8 @@ export default function PaymentRequests({ user }) {
     dayjs().endOf("month").format("YYYY-MM-DD")
   );
   const [selectedStatus, setSelectedStatus] = useState("pending");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -78,6 +74,16 @@ export default function PaymentRequests({ user }) {
     } finally {
       setActionLoading((prev) => ({ ...prev, [id]: null }));
     }
+  };
+
+  const openImageModal = (imageUrl) => {
+    setSelectedImageUrl(imageUrl);
+    setIsImageModalOpen(true);
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setSelectedImageUrl(null);
   };
 
   if (loading) {
@@ -159,7 +165,8 @@ export default function PaymentRequests({ user }) {
                       <img
                         src={req.imageUrl}
                         alt="Proof"
-                        className="h-16 w-16 object-cover rounded"
+                        className="h-16 w-16 object-cover rounded cursor-pointer"
+                        onClick={() => openImageModal(req.imageUrl)}
                       />
                     ) : (
                       "No Image"
@@ -199,6 +206,25 @@ export default function PaymentRequests({ user }) {
           </table>
         )}
       </div>
+
+      {/* Image Modal */}
+      {isImageModalOpen && selectedImageUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+          <div className="relative w-full h-full flex items-center justify-center">
+            <img
+              src={selectedImageUrl}
+              alt="Payment Proof"
+              className="max-w-full max-h-full object-contain"
+            />
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

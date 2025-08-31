@@ -5,7 +5,7 @@ import Header from "../Component/Header";
 
 const Main = () => {
   const { pathname } = useLocation();
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("pos-user"));
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -13,7 +13,7 @@ const Main = () => {
 
   return (
     <div>
-      <Header/>
+      {user && <Header/>}
       <Outlet></Outlet>
       {/* {pathname.includes("/admin") || <BottomBar />} */}
     </div>

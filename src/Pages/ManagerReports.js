@@ -456,10 +456,10 @@ const ManagerReports = () => {
   };
 
   return (
-    <div className="flex sm:p-10">
-      <div className="p-4 w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Dealer Sales Reports</h2>
+    <div className="flex sm:px-32 p-4">
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+          <h2 className="text-xl sm:text-2xl font-bold">Dealer Sales Reports</h2>
           <button
             onClick={exportToExcel}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
@@ -476,7 +476,7 @@ const ManagerReports = () => {
         )}
 
         {/* Summary Section */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Active SOs</h3>
             <p className="text-xl font-bold">{summaryData.totalSOs}</p>
@@ -496,88 +496,50 @@ const ManagerReports = () => {
         </div>
 
         {/* Filters Section */}
-        <div className="mb-4 flex flex-wrap gap-4 items-end">
+        <div className="mb-4 flex flex-col sm:flex-row flex-wrap gap-4 items-start sm:items-end">
           {/* Date Filters */}
-          <div>
-            <label className="font-medium">Select Month:</label>
+          <div className="w-full sm:w-auto">
+            <label className="font-medium block mb-1">Select Month:</label>
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="border rounded p-2 ml-2"
+              className="border rounded p-2 w-full"
               disabled={startDate && endDate}
             />
           </div>
-          <div>
-            <label className="font-medium">Start Date:</label>
+          <div className="w-full sm:w-auto">
+            <label className="font-medium block mb-1">Start Date:</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="border rounded p-2 ml-2"
+              className="border rounded p-2 w-full"
             />
           </div>
-          <div>
-            <label className="font-medium">End Date:</label>
+          <div className="w-full sm:w-auto">
+            <label className="font-medium block mb-1">End Date:</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="border rounded p-2 ml-2"
+              className="border rounded p-2 w-full"
             />
           </div>
 
-          {/* Role Filter */}
-          {/* <div>
-            <label className="font-medium">Role:</label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="border rounded p-2 ml-2"
-            >
-              <option value="">All Roles</option>
-              <option value="SO">Sales Officer</option>
-              <option value="ASM">ASM</option>
-              <option value="RSM">RSM</option>
-              <option value="SOM">SOM</option>
-            </select>
-          </div> */}
-
           {/* Zone Filter */}
-          <div>
-            <label className="font-medium">Zone:</label>
+          <div className="w-full sm:w-auto">
+            <label className="font-medium block mb-1">Zone:</label>
             <select
               value={selectedZone}
               onChange={(e) => setSelectedZone(e.target.value)}
-              className="border rounded p-2 ml-2"
+              className="border rounded p-2 w-full"
             >
             {
                 filteredZone.map(zone=><option value={zone}>{zone}</option>)
             }
             </select>
           </div>
-
-          {/* Belt Filter */}
-          {/* <div>
-            <label className="font-medium">Belt:</label>
-            <select
-              value={selectedBelt}
-              onChange={(e) => setSelectedBelt(e.target.value)}
-              className="border rounded p-2 ml-2"
-            >
-              <option value="">All Belts</option>
-              <option value="Belt-1">Belt-1 (ZONE-01)</option>
-              <option value="Belt-3">Belt-3 (ZONE-03)</option>
-            </select>
-          </div> */}
-
-          {/* <button
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            onClick={handleResetFilters}
-            disabled={isLoading}
-          >
-            Reset Filters
-          </button> */}
         </div>
 
         {/* Results Table */}
@@ -598,92 +560,94 @@ const ManagerReports = () => {
                 <h3 className="text-lg font-bold bg-gray-200 p-2 sticky top-0 z-10">
                   {beltGroup.belt}
                 </h3>
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="p-2">User</th>
-                      <th className="p-2">Outlet</th>
-                      <th className="p-2">Zone</th>
-                      <th className="p-2">Role</th>
-                      <th className="p-2">Target (TP)</th>
-                      <th className="p-2">Sales (TP)</th>
-                      <th className="p-2">Achievement</th>
-                      <th className="p-2">Sales Count</th>
-                      <th className="p-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {beltGroup.reports.map((report, index) => (
-                      <tr
-                        key={`${beltIndex}-${index}`}
-                        className={`border hover:bg-gray-50 ${
-                          report.isManager ? "bg-blue-50" : ""
-                        }`}
-                      >
-                        <td className="border p-2">
-                          {report.name}
-                          {report.isManager && (
-                            <span className="ml-2 text-xs text-blue-600">
-                              ({report.role})
-                            </span>
-                          )}
-                        </td>
-                        <td className="border p-2">{report.outlet || "-"}</td>
-                        <td className="border p-2">{report.zone}</td>
-                        <td className="border p-2">{report.role}</td>
-                        <td className="border p-2">{report.target}</td>
-                        <td className="border p-2">
-                          {report.totalTP.toFixed(2)}
-                        </td>
-                        <td className="border p-2">
-                          <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
-                                report.achievement >= 100
-                                  ? "bg-green-500"
-                                  : report.achievement >= 70
-                                  ? "bg-blue-500"
-                                  : report.achievement >= 40
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                              }`}
-                              style={{
-                                width: `${Math.min(100, report.achievement)}%`,
-                                transition: "width 0.5s ease-in-out",
-                              }}
-                            ></div>
-                            {report.target > 0 && (
-                              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
-                                {report.achievement.toFixed(1)}%
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse min-w-[800px]">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="p-2">User</th>
+                        <th className="p-2">Outlet</th>
+                        <th className="p-2">Zone</th>
+                        <th className="p-2">Role</th>
+                        <th className="p-2">Target (TP)</th>
+                        <th className="p-2">Sales (TP)</th>
+                        <th className="p-2">Achievement</th>
+                        {/* <th className="p-2">Sales Count</th>
+                        <th className="p-2">Action</th> */}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {beltGroup.reports.map((report, index) => (
+                        <tr
+                          key={`${beltIndex}-${index}`}
+                          className={`border hover:bg-gray-50 ${
+                            report.isManager ? "bg-blue-50" : ""
+                          }`}
+                        >
+                          <td className="border p-2">
+                            {report.name}
+                            {report.isManager && (
+                              <span className="ml-2 text-xs text-blue-600">
+                                ({report.role})
                               </span>
                             )}
-                          </div>
-                        </td>
-                        <td className="border p-2 text-center">
-                          {report.salesCount}
-                        </td>
-                        <td className="border p-2">
-                          {!report.isManager && (
-                            <button
-                              className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
-                              onClick={() =>
-                                navigate(
-                                  `/sales-report/daily/${report.userId}?${
-                                    startDate && endDate
-                                      ? `startDate=${startDate}&endDate=${endDate}`
-                                      : `month=${selectedMonth}`
-                                  }`
-                                )
-                              }
-                            >
-                              Details
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </td>
+                          <td className="border p-2">{report.outlet || "-"}</td>
+                          <td className="border p-2">{report.zone}</td>
+                          <td className="border p-2">{report.role}</td>
+                          <td className="border p-2">{report.target}</td>
+                          <td className="border p-2">
+                            {report.totalTP.toFixed(2)}
+                          </td>
+                          <td className="border p-2">
+                            <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`absolute inset-0 flex items-center justify-center h-full rounded-full ${
+                                  report.achievement >= 100
+                                    ? "bg-green-500"
+                                    : report.achievement >= 70
+                                    ? "bg-blue-500"
+                                    : report.achievement >= 40
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, report.achievement)}%`,
+                                  transition: "width 0.5s ease-in-out",
+                                }}
+                              ></div>
+                              {report.target > 0 && (
+                                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white font-bold">
+                                  {report.achievement.toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          {/* <td className="border p-2 text-center">
+                            {report.salesCount}
+                          </td> */}
+                          {/* <td className="border p-2">
+                            {!report.isManager && (
+                              <button
+                                className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm"
+                                onClick={() =>
+                                  navigate(
+                                    `/sales-report/daily/${report.userId}?${
+                                      startDate && endDate
+                                        ? `startDate=${startDate}&endDate=${endDate}`
+                                        : `month=${selectedMonth}`
+                                    }`
+                                  )
+                                }
+                              >
+                                Details
+                              </button>
+                            )}
+                          </td> */}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
           </div>
