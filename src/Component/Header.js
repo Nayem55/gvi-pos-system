@@ -149,7 +149,17 @@ const Header = () => {
             </svg>
             <p className="font-bold">Accounts</p>
           </Link>
-          {user?.role !== "MR" && (
+          {user?.role !== "SO" && (
+            <Link
+              to={"/manager-report"}
+              className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"
+              onClick={toggleSidebar}
+            >
+              <img className="w-[32px]" alt="" src={admin} />
+              <p className="font-bold">Dealer Sale Reports</p>
+            </Link>
+          )}
+          {user?.role !== "SO" && (
             <Link
               to={"/admin"}
               className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"

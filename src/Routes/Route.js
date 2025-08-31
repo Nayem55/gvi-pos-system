@@ -44,6 +44,7 @@ import CreateBrandPage from "../Pages/AdminPanel/CreateBrandPage";
 import CreatePriceLevelPage from "../Pages/AdminPanel/CreatePriceLevelPage";
 import AlterPriceLevelsPage from "../Pages/AdminPanel/AlterPriceLevelsPage";
 import PaymentRequests from "../Pages/AdminPanel/PaymentRequests";
+import ManagerReports from "../Pages/ManagerReports";
 
 const router = createBrowserRouter([
   {
@@ -98,6 +99,10 @@ const router = createBrowserRouter([
       {
         path: "/manage-stock",
         element: <ManageUserStock />,
+      },
+      {
+        path: "/manager-report",
+        element: <ManagerReports />,
       },
       {
         path: "admin/tada",
