@@ -8,7 +8,7 @@ const CreateUserPage = () => {
   // Static mapping of zones to RSMs and SOMs
   const zoneMappings = {
     "ZONE-01": {
-      rsm: "MD. AL-AMIN",
+      rsm: "MD. AL-AMIN ",
       som: "MD. NAZMUS SAKIB",
     },
     "ZONE-03": {
