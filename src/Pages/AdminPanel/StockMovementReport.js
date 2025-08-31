@@ -11,6 +11,7 @@ const StockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const [selectedOutlet, setSelectedOutlet] = useState(user.outlet || "");
   const [exportDropdown, setExportDropdown] = useState(false);
+  const [outlets, setOutlets] = useState([]);
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
     end: dayjs().endOf("month").format("YYYY-MM-DD"),
@@ -19,126 +20,9 @@ const StockMovementReport = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
-  const outlets = [
-    "Madina Trade International: New Market",
-    "Shamima Akter: New Market",
-    "Sheikh Enterprise: Mirpur",
-    "Rafi Rafsan Trade International: Mirpur",
-    "Aminur Enterprise: Mirpur",
-    "Mamun Trade Int.: Mohammadpur",
-    "Alok Trade Express: Mohammadpur",
-    "S.R Enterprise: Savar",
-    "Bismillah Enterprise: Manikgonj",
-    "Bismillah Enterprise: Manikgonj 2",
-    "Tasnim Enterprise: Uttara",
-    "Tasnim Enterprise: Uttara 2",
-    "Rayhan Enterprise: Uttara",
-    "Turin General Store: Tongi",
-    "Babul Enterprise: Tongi",
-    "M.S Enterprise: Gazipur",
-    "Fahad Enterprise: Gazipur",
-    "Juthi Enterprise: Mawna",
-    "S.A Enterprise: Mymensingh",
-    "Orko Shop: Sherpur",
-    "M Enterprise: Tangail",
-    "Sumaiya & Suraiya Ent.: Netrokona",
-    "SH Enterprise: Jamalpur",
-    "Shahanaz Cosmetics: Kishorgonj",
-    "RS Enterprise: Ghatail",
-    "Brothers Enterprise: Rajshahi",
-    "Sabbir Cosmetics: Chapainababgonj",
-    "Sadiq Sabir Cosmetics: Bogura",
-    "Sajeeb Store: Neogeon",
-    "Mawantha Traders: Natore",
-    "Sanaullah Trading Agency: Pabna",
-    "Saad & Sinha: Sirajgonj",
-    "Tiha Enterprise: Joypurhaat",
-    "Arafat Traders: Sirajgonj",
-    "Latif Store: Sirajgonj",
-    "Islam Distribution : Rajshahi-CLOSED",
-    "Apurbo Store: Neogeon",
-    "Alam General Store: Rangpur",
-    "Owais Enterprise: Rangpur",
-    "Nishat Enterprise: Dinajpur",
-    "Shatabdi Enterprise: Syedpur",
-    "R.B Enterprise: Kurigram",
-    "Sadia Enterprise: Lalmonirhaat",
-    "Sohel Traders: Thakurgeon",
-    "Bhattacharjo Strore: Thakurgoan",
-    "Manik Enterprise: Gaibanda",
-    "Parul Cosmetics: Gobindogonj",
-    "Ruchita Cosmetics: Khulna",
-    "Bhai Bhai Enterprise : Khulna",
-    "Akhi Asma Biponi and Stationary: Jenaidah",
-    "Tahsin Enterprise: Satkhira",
-    "Makeup House: Kushtia",
-    "Jannat Store: Jessore",
-    "Tangil Traders: Meherpur",
-    "Food Park & Coffee House: Chuadanga",
-    "Chetona The Leather House: Jessore",
-    "Mondol Traders: Rajbari",
-    "R.M Traders: Dumoria, Khulna",
-    "Rahman Cosmetics: Norail",
-    "Biswas Store: Magura",
-    "Betikrom Fasion: Kushtia",
-    "Faruk Traders: Gulshan",
-    "Harun Enterprise: Gulshan",
-    "Ishika Enterprise: Fakirapool",
-    "Nuraj Traders: Gulistan",
-    "Tania Enterprise: Jatrabari",
-    "Rahman Enterprise: Khilgaon",
-    "Dream Traders: Keranigonj",
-    "Tamim Enterprise: Narayangonj",
-    "Muslim Enterprise: Sonargaon",
-    "Jannat Traders: Munshigonj",
-    "Maa Enterprise: Joypara Dohar",
-    "Maa Varieties Store: Narayangonj#02",
-    "Majharul Enterprise: Norshindi",
-    "Bismillah Enterprise: Norshindi",
-    "Usha Enterprise: Barisal",
-    "Baba Mayer Dua Traders: Madaripur",
-    "Raj Enterprise: Gopalgonj",
-    "Jannati Enterprise : Bagerhat",
-    "Mollah Distribution Point: Faridpur",
-    "Giashuddin Ent: Shariatpur",
-    "Maa Enterprise: Pirojpur",
-    "Ashraf Store: Barguna",
-    "Brothers International: Faridpur",
-    "Sonali Store: Bhola",
-    "Choiti Enterprise: Barisal",
-    "Sabit Enterprise: Patuakhali",
-    "S M Enterprise : Shibchar",
-    "A.C Enterprise: Comilla",
-    "Rajlaxmi Vandar: Maijdee, Noakhali",
-    "Jamal Traders: Noakhali",
-    "Tijarah United: Feni",
-    "Tamim Enterprise : Chandpur",
-    "Macca Enterprise: Laxsham",
-    "Taqwa Enterprise: Laxipur",
-    "Anowar & Ayan Sanitary House: Gauripur",
-    "Prottasha Enterprise: Feni",
-    "Rofik Enterprise: Laxsham",
-    "Sazin Enterprise: Bancharampur",
-    "Aban Fashion & Accessories: Sylhet",
-    "MS Lalu Accessories: B-Baria",
-    "Al Korim Trading & Distribution: Hobigonj",
-    "Tuhi Store: Sylhet",
-    "Tinni Enterprise: Moulvi Bazar, Sylhet",
-    "Maa General Store: Muradfpur",
-    "Priti Enterprise: Pahar Toli",
-    "Bilash Biponi: Rangamati",
-    "Bismilla Traders: Bondorthila",
-    "Maa Babar Doa Enterprise: Khagrachori",
-    "S.S Distribution: Cox's Bazar",
-    "Rashid Enterprise: Reazuddin Bazar, Ctg",
-    "Tafseer Enterprise: Reazuddin Bazar, Ctg",
-    "Rahman Enterprise: Chittagong",
-    "Riyad Enterprise: Shitakundo",
-    "M.J Enterprise: Hathazari",
-    "Rokeya Enterprise: Reazuddin Bazar",
-    "N Huda & Sons: Reazuddin Bazar",
-    "K.S Traders: Chittagong",
-  ];
+  useEffect(() => {
+    fetchOutlets();
+  }, []);
 
   useEffect(() => {
     if (selectedOutlet && dateRange.start && dateRange.end) {
@@ -201,6 +85,10 @@ const StockMovementReport = () => {
     } finally {
       setLoading(false);
     }
+  };
+  const fetchOutlets = async () => {
+    const response = await axios.get("http://175.29.181.245:5000/get-outlets");
+    setOutlets(response.data);
   };
 
   const handleFilterClick = () => {
@@ -594,7 +482,7 @@ const StockMovementReport = () => {
               className="px-4 py-2 border rounded-md shadow-sm"
             >
               <option value="">Select Outlet</option>
-              {outlets.map((outlet, index) => (
+              {outlets?.map((outlet, index) => (
                 <option key={index} value={outlet}>
                   {outlet}
                 </option>
