@@ -164,14 +164,14 @@ export default function Secondary({
   };
 
   const updateQuantity = (id, value) => {
-    const newQuantity = parseInt(value) || 1;
+    const newQuantity = parseInt(value) || 0;
     setCart(
       cart.map((item) =>
         item._id === id
           ? {
               ...item,
-              pcs: Math.max(1, Math.min(newQuantity, item.stock)),
-              total: Math.max(1, Math.min(newQuantity, item.stock)) * item.editableTP,
+              pcs: Math.max(0, Math.min(newQuantity, item.stock)),
+              total: Math.max(0, Math.min(newQuantity, item.stock)) * item.editableTP,
             }
           : item
       )
@@ -729,7 +729,6 @@ export default function Secondary({
                       type="number"
                       value={item.pcs}
                       onChange={(e) => updateQuantity(item._id, e.target.value)}
-                      min="1"
                       max={item.stock}
                       className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[60px]"
                     />

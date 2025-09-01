@@ -47,13 +47,13 @@ const CreateUserPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [dropdownData, setDropdownData] = useState({
-    roles: ["SO", "ASM", "RSM", "SOM"],
+    roles: ["SO", "ASM", "RSM", "SOM","super admin"],
     pricelabel: [], // Changed from hardcoded to empty array
     groups: [],
     zones: ["ZONE-01", "ZONE-03"],
     outlets: [],
     asms: [],
-    rsms: ["MD. AL-AMIN", "MD JANANGIR ALAM"],
+    rsms: ["MD. AL-AMIN ", "MD JANANGIR ALAM"],
     soms: ["MD. NAZMUS SAKIB", "ASADUL HOQUE RIPON"],
     nidTypes: ["NID", "BC"],
     bloodGroups: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],

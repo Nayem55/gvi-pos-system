@@ -46,7 +46,7 @@ export default function Home() {
       }
     };
     fetchData();
-  }, [user, navigate]);
+  }, []);
 
   const fetchUserTargetAndAchievement = async () => {
     try {
