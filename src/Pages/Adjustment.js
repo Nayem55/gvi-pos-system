@@ -87,7 +87,7 @@ export default function AdjustmentVoucher({
         type: "adjustment",
         date: formattedDateTime,
         createdBy: user.name,
-        paymentMode: formData.paymentMode,
+        paymentMode: "Adjustment",
         bank: formData.bank || "",
         imageUrl,
         remarks: formData.remarks,
@@ -155,9 +155,7 @@ export default function AdjustmentVoucher({
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded"
           >
-            <option value="cash">Cash</option>
-            <option value="bank">Bank Transfer</option>
-            <option value="cheque">Cheque</option>
+            <option value="adjustment">Adjustment</option>
           </select>
         </div>
 
@@ -181,7 +179,7 @@ export default function AdjustmentVoucher({
           </div>
         )}
 
-        <div className="mb-4">
+        {/* <div className="mb-4">
           <label className="block text-sm font-medium mb-1">
             Upload Proof Image
           </label>
@@ -223,7 +221,7 @@ export default function AdjustmentVoucher({
               className="mt-2 h-24 rounded border object-cover"
             />
           ) : null}
-        </div>
+        </div> */}
 
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Remarks</label>
