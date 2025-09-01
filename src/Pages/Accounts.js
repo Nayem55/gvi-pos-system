@@ -116,14 +116,15 @@ const Accounts = () => {
         ).format("DD-MM-YY")}`,
       ],
       [],
-      ["Opening Due", reportData.openingDue.toFixed(2)],
-      ["Primary Added", reportData.primary.toFixed(2)],
-      ["Payments", reportData.payment.toFixed(2)],
-      ["Office Returns", reportData.officeReturn.toFixed(2)],
-      ["Closing Due", reportData.closingDue.toFixed(2)],
+      ["Opening Due", reportData.openingDue?.toFixed(2)],
+      ["Primary Added", reportData.primary?.toFixed(2)],
+      ["Adjustments", reportData.adjustment?.toFixed(2)],
+      ["Payments", reportData.payment?.toFixed(2)],
+      ["Office Returns", reportData.officeReturn?.toFixed(2)],
+      ["Closing Due", reportData.closingDue?.toFixed(2)],
       [],
       ["Transaction Details"],
-      ["Date", "Type", "Amount", "Created By", "Remarks"],
+      ["Date", "Type", "Amount", "Created By", "Payment Mode", "Bank", "Remarks"],
     ];
 
     if (reportData.transactions) {
@@ -131,8 +132,10 @@ const Accounts = () => {
         excelData.push([
           dayjs(txn.date).format("DD-MM-YY"),
           txn.type,
-          txn.amount.toFixed(2),
+          txn.amount?.toFixed(2),
           txn.createdBy,
+          txn.paymentMode || "",
+          txn.bank || "",
           txn.remarks || "",
         ]);
       });
@@ -147,10 +150,8 @@ const Accounts = () => {
     );
   };
 
-  // Updated exportToPDF function with proper debit/credit categorization
   const exportToPDF = () => {
     if (!reportData) return;
-    console.log(reportData);
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm" });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -160,24 +161,24 @@ const Accounts = () => {
     doc.setFont("times", "normal");
     doc.setFontSize(12);
 
-    // === HEADER: Dealer and Date ===
+    // === HEADER ===
     doc.text(
-      `Dealer  : ${reportData.transactions[0].outlet.replace("_", " ")}`,
+      `Dealer: ${reportData.transactions[0]?.outlet.replace("_", " ") || ""}`,
       marginX + 2,
       y
     );
     doc.text(
-      `Proprietor  : ${reportData.transactions[0].SO.replace("_", " ")}`,
+      `Proprietor: ${reportData.transactions[0]?.SO.replace("_", " ") || ""}`,
       marginX + 2,
       y + 10
     );
     doc.text(
-      `Printed Date : ${dayjs().format("D-MMM-YY")}`,
+      `Printed Date: ${dayjs().format("D-MMM-YY")}`,
       pageWidth - marginX - 2,
       y,
       { align: "right" }
     );
-    doc.text(`Printed By : ${user.name}`, pageWidth - marginX - 2, y + 10, {
+    doc.text(`Printed By: ${user.name}`, pageWidth - marginX - 2, y + 10, {
       align: "right",
     });
     y += 25;
@@ -214,7 +215,6 @@ const Accounts = () => {
       });
       y += 4; // extra space *between* paragraphs only
     });
-
     y += 10;
 
     // === TRANSACTION DATA SPLIT ===
@@ -231,7 +231,7 @@ const Accounts = () => {
 
     reportData.transactions.forEach((txn) => {
       const type = txn.type.toLowerCase();
-      if (["primary"].includes(type)) {
+      if (["primary", "adjustment"].includes(type)) {
         debit.push({ date: txn.date, type: txn.type, amount: txn.amount });
       } else if (
         [
@@ -253,7 +253,7 @@ const Accounts = () => {
     const verticalDividerX = pageWidth / 2;
     const colWidths = { date: 24, particulars: 42, amount: 25 };
 
-    // === TABLE HEADER BOX ===
+    // === TABLE HEADER ===
     const headerBoxY = y;
     const rowHeight = 8;
     doc.setDrawColor(0);
@@ -315,7 +315,7 @@ const Accounts = () => {
       y += 6;
     }
 
-    // === VERTICAL DIVIDER (SNAPPED) ===
+    // === VERTICAL DIVIDER ===
     doc.setDrawColor(180);
     doc.line(verticalDividerX, headerBoxY - 6, verticalDividerX, y);
 
@@ -323,7 +323,7 @@ const Accounts = () => {
     doc.line(marginX, y, pageWidth - marginX, y);
     y += 6;
 
-    // === TOTALS SECTION ===
+    // === TOTALS ===
     doc.setFont("times", "bold");
     doc.text("TOTAL", colLeftX + colWidths.date + colGap, y);
     doc.text(
@@ -416,7 +416,7 @@ const Accounts = () => {
           <h2 className="text-xl sm:text-3xl font-bold text-gray-800">
             Accounts
           </h2>
-          {/* <div className="relative">
+          <div className="relative">
             <button
               onClick={() => setExportDropdown(!exportDropdown)}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
@@ -462,7 +462,7 @@ const Accounts = () => {
                 </div>
               </div>
             )}
-          </div> */}
+          </div>
         </div>
 
         {/* Filters */}
@@ -508,7 +508,7 @@ const Accounts = () => {
 
         {/* Summary Cards */}
         {!loading && reportData && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Balance</p>
               <p className="text-2xl font-semibold text-purple-700">
@@ -519,6 +519,12 @@ const Accounts = () => {
               <p className="text-sm text-gray-600">Primary Added</p>
               <p className="text-2xl font-semibold text-blue-700">
                 {reportData.primary?.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white border-l-4 border-orange-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Adjustments</p>
+              <p className="text-2xl font-semibold text-orange-700">
+                {reportData.adjustment?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
@@ -584,7 +590,7 @@ const Accounts = () => {
                           ? `Bank (${txn.bank.replace("_", " ") || "N/A"})`
                           : txn.paymentMode}
                       </td>
-                      <td className="border p-2 ">{txn.amount?.toFixed(2)}</td>
+                      <td className="border p-2">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2 w-[40px]">
                         {txn.imageUrl && (
                           <img

@@ -10,7 +10,6 @@ const TadaVoucher = () => {
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format("YYYY-MM-DD")
   );
-  const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
 
   // Daily expense data structure
   const [dailyExpense, setDailyExpense] = useState({
@@ -171,7 +170,7 @@ const TadaVoucher = () => {
         designation: user.role,
         area: user.zone,
         date: selectedDate,
-        month: selectedMonth,
+        month: dayjs(selectedDate).format("YYYY-MM"),
         dailyExpense: {
           from: dailyExpense.from,
           to: dailyExpense.to,
@@ -257,27 +256,6 @@ const TadaVoucher = () => {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="flex-1 text-sm bg-white text-gray-800 border rounded p-2"
               aria-label="Select date"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="flex-1 text-sm bg-white text-gray-800 border rounded p-2"
-              aria-label="Select month"
             />
           </div>
         </div>

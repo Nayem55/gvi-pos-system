@@ -128,6 +128,7 @@ const FinancialMovementReport = () => {
       [],
       ["Opening Due", reportData.openingDue?.toFixed(2)],
       ["Primary Added", reportData.primary?.toFixed(2)],
+      ["Adjustments", reportData.adjustment?.toFixed(2)],
       ["Payments", reportData.payment?.toFixed(2)],
       ["Office Returns", reportData.officeReturn?.toFixed(2)],
       ["Closing Due", reportData.closingDue?.toFixed(2)],
@@ -177,7 +178,7 @@ const FinancialMovementReport = () => {
       y
     );
     doc.text(
-      `Proprietor : ${reportData.transactions[0].SO}`,
+      `Proprietor : ${reportData.transactions[0]?.SO || ""}`,
       marginX + 2,
       y + 10
     );
@@ -240,7 +241,7 @@ const FinancialMovementReport = () => {
 
     reportData.transactions.forEach((txn) => {
       const type = txn.type.toLowerCase();
-      if (["primary"].includes(type)) {
+      if (["primary", "adjustment"].includes(type)) {
         debit.push({ date: txn.date, type: txn.type, amount: txn.amount });
       } else if (
         [
@@ -520,7 +521,7 @@ const FinancialMovementReport = () => {
 
         {/* Summary Cards */}
         {!loading && reportData && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Balance</p>
               <p className="text-2xl font-semibold text-purple-700">
@@ -531,6 +532,12 @@ const FinancialMovementReport = () => {
               <p className="text-sm text-gray-600">Primary Added</p>
               <p className="text-2xl font-semibold text-blue-700">
                 {reportData.primary?.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white border-l-4 border-orange-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Adjustments</p>
+              <p className="text-2xl font-semibold text-orange-700">
+                {reportData.adjustment?.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
@@ -589,7 +596,7 @@ const FinancialMovementReport = () => {
                       <td className="border p-2 capitalize">
                         {txn.type.replace("_", " ")}
                       </td>
-                      <td className="border p-2 ">{txn.amount?.toFixed(2)}</td>
+                      <td className="border p-2">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
                     </tr>

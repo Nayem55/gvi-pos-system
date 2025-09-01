@@ -7,6 +7,7 @@ import Secondary from "../Secondary";
 import OfficeReturn from "../OfficeReturn";
 import MarketReturn from "../MarketReturn";
 import toast from "react-hot-toast";
+import AdjustmentVoucher from "../Adjustment";
 
 const ManageStock = () => {
   const [users, setUsers] = useState([]);
@@ -123,6 +124,8 @@ const ManageStock = () => {
         return <OfficeReturn {...commonProps} />;
       case "marketReturn":
         return <MarketReturn {...commonProps} />;
+      case "adjust":
+        return <AdjustmentVoucher {...commonProps} />;
       default:
         return null;
     }
@@ -181,6 +184,7 @@ const ManageStock = () => {
                     <option value="secondary">Secondary</option>
                     <option value="officeReturn">Office Return</option>
                     <option value="marketReturn">Market Return</option>
+                    <option value="adjust">Due Adjustment</option>
                   </select>
                 </div>
               </>
