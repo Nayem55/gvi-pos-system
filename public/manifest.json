@@ -1,6 +1,6 @@
 {
-  "short_name": "AMD",
-  "name": "AMD Attendance",
+  "short_name": "POS",
+  "name": "POS APP",
   "icons": [
     {
       "src": "favicon.ico",
@@ -22,5 +22,5 @@
   "display": "standalone",
   "theme_color": "#000000",
   "background_color": "#ffffff",
-  "id": "amd_attendance"
+  "id": "pos_app"
 }

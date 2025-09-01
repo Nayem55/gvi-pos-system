@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import logo from "../Images/RL Logo.png";
+import logo from "../Images/Logo.png";
 import application from "../Images/Application2.png";
 import admin from "../Images/admin-panel.png";
 import dashboard from "../Images/dashboard.png";
@@ -19,7 +19,7 @@ const Header = () => {
       {/* Header */}
       <div className="flex top-0 justify-between items-center p-4 bg-[#ffffff] shadow-md">
         <Link to="/">
-          <img className={`w-[130px]`} src={logo} alt="Logo" />
+          <img className={`w-[90px] sm:w-[110px]`} src={logo} alt="Logo" />
         </Link>
         <div className="flex items-center gap-4">
           <button
