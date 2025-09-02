@@ -26,43 +26,63 @@ export default function Primary({
 
   const isAdminPanel = !!allProducts;
 
-  const isPromoValid = (product) => {
-    const priceLabel = user.pricelabel; // e.g., 'mt'
-    const promoDetails = product.promoPriceList?.[priceLabel];
-
-    if (!promoDetails?.promoStartDate || !promoDetails?.promoEndDate)
-      return false;
-
-    const today = dayjs().startOf("day"); // Use start of day to avoid time issues
-    const startDate = dayjs(promoDetails.promoStartDate);
-    const endDate = dayjs(promoDetails.promoEndDate);
-
-    return today.isAfter(startDate) && today.isBefore(endDate);
-  };
-  const getCurrentTP = (product) => {
-    const priceLabel = user.pricelabel; // e.g., 'mt', 'agora', 'shwapno'
-    const outletTP = product.priceList?.[priceLabel]?.tp;
-
-    if (
-      isPromoValid(product) &&
-      product.promoPriceList?.[priceLabel]?.promoTP
-    ) {
-      return product.promoPriceList[priceLabel].promoTP;
+  const isPromoValid = (product, priceLabel) => {
+    if (priceLabel) {
+      const promoDetails = product.promoPriceList?.[priceLabel];
+      if (!promoDetails?.promoStartDate || !promoDetails?.promoEndDate) {
+        return false;
+      }
+      const today = dayjs().startOf("day");
+      const startDate = dayjs(promoDetails.promoStartDate);
+      const endDate = dayjs(promoDetails.promoEndDate);
+      return today.isAfter(startDate) && today.isBefore(endDate);
+    } else {
+      if (!product.promoStartDate || !product.promoEndDate) {
+        return false;
+      }
+      const today = dayjs().startOf("day");
+      const startDate = dayjs(product.promoStartDate);
+      const endDate = dayjs(product.promoEndDate);
+      return today.isAfter(startDate) && today.isBefore(endDate);
     }
-    return outletTP ?? product.tp;
+  };
+
+  const getCurrentTP = (product) => {
+    const priceLabel = user.pricelabel;
+    if (priceLabel) {
+      const outletTP = product.priceList?.[priceLabel]?.tp;
+      if (
+        isPromoValid(product, priceLabel) &&
+        product.promoPriceList?.[priceLabel]?.promoTP
+      ) {
+        return product.promoPriceList[priceLabel].promoTP;
+      }
+      return outletTP ?? product.tp;
+    } else {
+      if (isPromoValid(product, priceLabel) && product.promoTP) {
+        return product.promoTP;
+      }
+      return product.tp;
+    }
   };
 
   const getCurrentDP = (product) => {
     const priceLabel = user.pricelabel;
-    const outletDP = product.priceList?.[priceLabel]?.dp;
-
-    if (
-      isPromoValid(product) &&
-      product.promoPriceList?.[priceLabel]?.promoDP
-    ) {
-      return product.promoPriceList[priceLabel].promoDP;
+    if (priceLabel) {
+      const outletDP = product.priceList?.[priceLabel]?.dp;
+      if (
+        isPromoValid(product, priceLabel) &&
+        product.promoPriceList?.[priceLabel]?.promoDP
+      ) {
+        return product.promoPriceList[priceLabel].promoDP;
+      }
+      return outletDP ?? product.dp;
+    } else {
+      if (isPromoValid(product, priceLabel) && product.promoDP) {
+        return product.promoDP;
+      }
+      return product.dp;
     }
-    return outletDP ?? product.dp;
   };
 
   const handleSearch = async (query) => {
