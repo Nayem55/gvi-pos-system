@@ -47,10 +47,23 @@ const CreateUserPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [dropdownData, setDropdownData] = useState({
-    roles: ["SO", "ASM", "RSM", "SOM","super admin"],
+    roles: ["SO", "ASM", "RSM", "SOM", "super admin"],
     pricelabel: [], // Changed from hardcoded to empty array
     groups: [],
-    zones: ["ZONE-01", "ZONE-03"],
+    zones: [
+      "DHAKA-01-ZONE-01",
+      "DHAKA-02-ZONE-03",
+      "DHAKA-03-ZONE-03",
+      "KHULNA-ZONE-01",
+      "COMILLA-ZONE-03",
+      "CHITTAGONG-ZONE-03",
+      "RANGPUR-ZONE-01",
+      "BARISAL-ZONE-03",
+      "BOGURA-ZONE-01",
+      "MYMENSINGH-ZONE-01",
+      "ZONE-01",
+      "ZONE-03",
+    ],
     outlets: [],
     asms: [],
     rsms: ["MD. AL-AMIN ", "MD JANANGIR ALAM"],
@@ -91,12 +104,26 @@ const CreateUserPage = () => {
 
   // Update RSM and SOM when zone changes
   useEffect(() => {
-    if (newUser.zone && zoneMappings[newUser.zone]) {
-      setNewUser((prev) => ({
-        ...prev,
-        rsm: zoneMappings[newUser.zone].rsm,
-        som: zoneMappings[newUser.zone].som,
-      }));
+    if (newUser.zone) {
+      if (newUser.zone.includes("ZONE-01")) {
+        setNewUser((prev) => ({
+          ...prev,
+          rsm: zoneMappings["ZONE-01"].rsm,
+          som: zoneMappings["ZONE-01"].som,
+        }));
+      } else if (newUser.zone.includes("ZONE-03")) {
+        setNewUser((prev) => ({
+          ...prev,
+          rsm: zoneMappings["ZONE-03"].rsm,
+          som: zoneMappings["ZONE-03"].som,
+        }));
+      } else {
+        setNewUser((prev) => ({
+          ...prev,
+          rsm: "",
+          som: "",
+        }));
+      }
     } else {
       setNewUser((prev) => ({
         ...prev,
