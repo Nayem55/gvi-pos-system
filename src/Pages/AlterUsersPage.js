@@ -1,18 +1,43 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Pencil, X, Check, ChevronDown, Calendar, Loader } from "lucide-react";
+import { Pencil, X, ChevronDown, Calendar, Loader } from "lucide-react";
 import toast from "react-hot-toast";
 import AdminSidebar from "../Component/AdminSidebar";
 
 const AlterUsersPage = () => {
+  // Static mapping of zones to RSMs and SOMs
+  const zoneMappings = {
+    "ZONE-01": {
+      rsm: "MD. AL-AMIN ",
+      som: "MD. NAZMUS SAKIB",
+    },
+    "ZONE-03": {
+      rsm: "MD JANANGIR ALAM",
+      som: "ASADUL HOQUE RIPON",
+    },
+  };
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [dropdownData, setDropdownData] = useState({
-    roles: ["SO", "ASM", "RSM", "SOM"],
+    roles: ["SO", "ASM", "RSM", "SOM", "super admin"],
     pricelabel: [],
     groups: [],
-    zones: [],
+    zones: [
+      "DHAKA-01-ZONE-01",
+      "DHAKA-02-ZONE-03",
+      "DHAKA-03-ZONE-03",
+      "KHULNA-ZONE-01",
+      "COMILLA-ZONE-03",
+      "CHITTAGONG-ZONE-03",
+      "RANGPUR-ZONE-01",
+      "BARISAL-ZONE-03",
+      "BOGURA-ZONE-01",
+      "MYMENSINGH-ZONE-01",
+      "ZONE-01",
+      "ZONE-03",
+    ],
     outlets: [],
     asms: [],
     rsms: [],
@@ -30,6 +55,7 @@ const AlterUsersPage = () => {
     ],
   });
 
+  // Fetch users
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -42,6 +68,8 @@ const AlterUsersPage = () => {
       setLoading(false);
     }
   };
+
+  // Fetch price levels
   const fetchPriceLevels = async () => {
     try {
       const response = await axios.get(
@@ -55,14 +83,15 @@ const AlterUsersPage = () => {
     }
   };
 
+  // Fetch dropdown data
   const fetchDropdownData = async () => {
     try {
       const groups = await axios.get(
         "http://175.29.181.245:5000/get-user-field-values?field=group"
       );
-      const zones = await axios.get(
-        "http://175.29.181.245:5000/get-user-field-values?field=zone"
-      );
+      // const zones = await axios.get(
+      //   "http://175.29.181.245:5000/get-user-field-values?field=zone"
+      // );
       const outlets = await axios.get("http://175.29.181.245:5000/get-outlets");
       const asms = await axios.get(
         "http://175.29.181.245:5000/get-user-field-values?field=asm"
@@ -73,21 +102,68 @@ const AlterUsersPage = () => {
       const soms = await axios.get(
         "http://175.29.181.245:5000/get-user-field-values?field=som"
       );
-      await fetchPriceLevels(); // Add this line
+      await fetchPriceLevels();
+
+      // Ensure SOM options include values from zoneMappings
+      const uniqueSoms = [
+        ...new Set([
+          ...soms.data,
+          zoneMappings["ZONE-01"].som,
+          zoneMappings["ZONE-03"].som,
+        ]),
+      ];
+      const uniqueRsms = [
+        ...new Set([
+          ...rsms.data,
+          zoneMappings["ZONE-01"].rsm,
+          zoneMappings["ZONE-03"].rsm,
+        ]),
+      ];
 
       setDropdownData((prev) => ({
         ...prev,
         groups: groups.data,
-        zones: zones.data,
+        // zones: zones.data,
         outlets: outlets.data,
         asms: asms.data,
-        rsms: rsms.data,
-        soms: soms.data,
+        rsms: uniqueRsms,
+        soms: uniqueSoms,
       }));
     } catch (error) {
       console.error("Error fetching dropdown data:", error);
     }
   };
+
+  // Auto-update RSM and SOM when zone changes or when editingUser is set
+  useEffect(() => {
+    if (editingUser && editingUser.zone) {
+      if (editingUser.zone.includes("ZONE-01")) {
+        setEditingUser((prev) => ({
+          ...prev,
+          rsm: zoneMappings["ZONE-01"].rsm,
+          som: zoneMappings["ZONE-01"].som,
+        }));
+      } else if (editingUser.zone.includes("ZONE-03")) {
+        setEditingUser((prev) => ({
+          ...prev,
+          rsm: zoneMappings["ZONE-03"].rsm,
+          som: zoneMappings["ZONE-03"].som,
+        }));
+      } else {
+        setEditingUser((prev) => ({
+          ...prev,
+          rsm: "",
+          som: "",
+        }));
+      }
+    } else if (editingUser) {
+      setEditingUser((prev) => ({
+        ...prev,
+        rsm: "",
+        som: "",
+      }));
+    }
+  }, [editingUser?.zone]);
 
   useEffect(() => {
     fetchUsers();
@@ -117,7 +193,7 @@ const AlterUsersPage = () => {
   };
 
   // Helper component for dropdown fields
-  const DropdownField = ({ label, field, options }) => (
+  const DropdownField = ({ label, field, options, disabled = false }) => (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-1">
         {label}
@@ -126,7 +202,10 @@ const AlterUsersPage = () => {
         <select
           value={editingUser[field] || ""}
           onChange={(e) => handleInputChange(e, field)}
-          className="w-full p-2 border rounded-md bg-white text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className={`w-full p-2 border rounded-md ${
+            disabled ? "bg-gray-100" : "bg-white"
+          } text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+          disabled={disabled}
         >
           <option value="">Select {label}</option>
           {options.map((option) => (
@@ -183,7 +262,7 @@ const AlterUsersPage = () => {
                     <th className="p-3 border-b font-medium">Password</th>
                     <th className="p-3 border-b font-medium">Role</th>
                     <th className="p-3 border-b font-medium">Outlet</th>
-                    <th className="p-3 border-b font-medium">Status</th>
+                    <th className="p-3 border-b font-medium">Zone</th>
                     <th className="p-3 border-b font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -195,11 +274,7 @@ const AlterUsersPage = () => {
                       <td className="p-3 border-b">{user.password}</td>
                       <td className="p-3 border-b">{user.role}</td>
                       <td className="p-3 border-b">{user.outlet || "-"}</td>
-                      <td className="p-3 border-b">
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                          Active
-                        </span>
-                      </td>
+                      <td className="p-3 border-b">{user.zone || "-"}</td>
                       <td className="p-3 border-b">
                         <button
                           onClick={() => setEditingUser(user)}
@@ -319,12 +394,14 @@ const AlterUsersPage = () => {
                   label="RSM"
                   field="rsm"
                   options={dropdownData.rsms}
+                  disabled={true}
                 />
 
                 <DropdownField
                   label="SOM"
                   field="som"
                   options={dropdownData.soms}
+                  disabled={true}
                 />
               </div>
 
