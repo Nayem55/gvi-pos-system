@@ -416,7 +416,7 @@ const Accounts = () => {
           <h2 className="text-xl sm:text-3xl font-bold text-gray-800">
             Accounts
           </h2>
-          <div className="relative">
+          {/* <div className="relative">
             <button
               onClick={() => setExportDropdown(!exportDropdown)}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
@@ -462,7 +462,7 @@ const Accounts = () => {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Filters */}

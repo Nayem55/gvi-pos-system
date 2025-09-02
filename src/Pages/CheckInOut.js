@@ -47,7 +47,7 @@ export default function AttendanceVoucher() {
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (e) {
-        toast.error("Camera access denied");
+        // toast.error("Camera access denied");
       }
     })();
   }, []);

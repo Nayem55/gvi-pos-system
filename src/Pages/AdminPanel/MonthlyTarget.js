@@ -314,6 +314,22 @@ const MonthlyTargetPage = () => {
     XLSX.writeFile(workbook, `Monthly_Targets_Template_${year}_${month}.xlsx`);
   };
 
+  const handleExportTargets = () => {
+    const exportData = users.map((user) => ({
+      "User ID": user._id,
+      "User Name": user.name,
+      "User Number": user.number,
+      "User Zone": user.zone,
+      "DP Target": tempTargets[user._id]?.dp || "",
+      "TP Target (Auto Calculated)": tempTargets[user._id]?.tp || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Targets");
+    XLSX.writeFile(workbook, `Monthly_Targets_${year}_${month}.xlsx`);
+  };
+
   const calculateTotalTargets = () => {
     let totalDP = 0;
     let totalTP = 0;
@@ -407,7 +423,7 @@ const MonthlyTargetPage = () => {
 
           <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-inner">
             <h3 className="text-lg font-medium mb-3">
-              Bulk Import Targets from Excel
+              Bulk Import/Export Targets
             </h3>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -416,6 +432,12 @@ const MonthlyTargetPage = () => {
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
                   Download Template
+                </button>
+                <button
+                  onClick={handleExportTargets}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                >
+                  Export Targets
                 </button>
                 <div className="flex-1 w-full">
                   <input
@@ -435,7 +457,7 @@ const MonthlyTargetPage = () => {
                 </button>
               </div>
               <div className="text-sm text-gray-600">
-                <p className="font-medium mb-1">Import Instructions:</p>
+                <p className="font-medium mb-1">Import/Export Instructions:</p>
                 <ol className="list-decimal pl-5 space-y-1">
                   <li>Download the template to ensure correct format.</li>
                   <li>
@@ -448,6 +470,7 @@ const MonthlyTargetPage = () => {
                   </li>
                   <li>Upload the file to load data into the table.</li>
                   <li>Review changes and use "Save All Changes" to persist.</li>
+                  <li>Use "Export Targets" to download current targets for the selected month.</li>
                 </ol>
               </div>
             </div>
@@ -475,7 +498,6 @@ const MonthlyTargetPage = () => {
                   <th className="border-b p-3 text-center font-medium">
                     DP Target
                   </th>
-                  {/* <th className="border-b p-3 text-center font-medium">Actions</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -507,23 +529,6 @@ const MonthlyTargetPage = () => {
                         placeholder="Enter DP"
                       />
                     </td>
-                    {/* <td className="border-b p-3 text-center">
-                      <button
-                        className={`px-4 py-2 rounded w-[100px] text-white transition-colors ${
-                          targets[user._id]
-                            ? "bg-blue-500 hover:bg-blue-600"
-                            : "bg-green-500 hover:bg-green-600"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        onClick={() => handleUserTargetSaveOrUpdate(user)}
-                        disabled={loading}
-                      >
-                        {loading
-                          ? "Processing..."
-                          : targets[user._id]
-                          ? "Update"
-                          : "Save"}
-                      </button>
-                    </td> */}
                   </tr>
                 ))}
               </tbody>
