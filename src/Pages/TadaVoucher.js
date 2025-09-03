@@ -198,9 +198,10 @@ const TadaVoucher = () => {
         body: JSON.stringify(submissionData),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to submit TD/DA voucher");
+        throw new Error(responseData.error || "Failed to submit TD/DA voucher");
       }
 
       // Reset form after successful submission
