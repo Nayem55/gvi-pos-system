@@ -345,16 +345,16 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     if (cart.length === 0) return;
 
     // Validate all market return quantities
-    const hasInvalid = cart.some(
-      (item) => item.marketReturn <= 0 || item.marketReturn > item.openingStock
-    );
+    // const hasInvalid = cart.some(
+    //   (item) => item.marketReturn <= 0 || item.marketReturn > item.openingStock
+    // );
 
-    if (hasInvalid) {
-      toast.error(
-        "All items must have valid return quantity (greater than 0 and not exceeding current stock)"
-      );
-      return;
-    }
+    // if (hasInvalid) {
+    //   toast.error(
+    //     "All items must have valid return quantity (greater than 0 and not exceeding current stock)"
+    //   );
+    //   return;
+    // }
 
     setIsSubmitting(true);
 

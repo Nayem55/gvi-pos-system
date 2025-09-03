@@ -28,19 +28,17 @@ const StockMovementReport = () => {
     if (selectedOutlet && dateRange.start && dateRange.end) {
       fetchReportData();
     }
-  }, []);
+  }, [selectedOutlet, dateRange.start, dateRange.end]);
 
   const fetchReportData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Validate dates
       if (!dateRange.start || !dateRange.end) {
         throw new Error("Please select both start and end dates");
       }
 
-      // Format dates properly
       const params = {
         outlet: selectedOutlet,
         startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
@@ -62,7 +60,6 @@ const StockMovementReport = () => {
             (item.marketReturn && item.marketReturn !== 0)
           );
         });
-        // Sort the data alphabetically by productName
         const sortedData = [...filteredData].sort((a, b) =>
           a.productName.localeCompare(b.productName)
         );
@@ -77,8 +74,6 @@ const StockMovementReport = () => {
         errorMessage =
           error.response.data?.message ||
           `Server error: ${error.response.status}`;
-      } else if (error.request) {
-        // Request was made but no response
       }
       setError(errorMessage);
       setReportData([]);
@@ -86,6 +81,7 @@ const StockMovementReport = () => {
       setLoading(false);
     }
   };
+
   const fetchOutlets = async () => {
     const response = await axios.get("http://175.29.181.245:5000/get-outlets");
     setOutlets(response.data);
@@ -96,14 +92,13 @@ const StockMovementReport = () => {
   };
 
   const exportToExcel = () => {
-    // Sort data alphabetically for export
     const sortedData = [...reportData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
     );
-    // Prepare Excel data
     const excelData = [
       [
         `Distributor Name: ${selectedOutlet}`,
+        "",
         "",
         "",
         "",
@@ -117,8 +112,7 @@ const StockMovementReport = () => {
           dayjs(dateRange.end).format("DD-MM-YY")
         }`,
       ],
-      ["", "", "", "", "", "", "", "", ""],
-      // ["Name Of Sales Person:", "", "", "", "", "", "", "", "Area:"],
+      ["", "", "", "", "", "", "", "", "", ""],
       [
         "Sl",
         "Products Name",
@@ -132,12 +126,16 @@ const StockMovementReport = () => {
         "",
         "Secondary",
         "",
+        "Actual Secondary",
+        "",
         "Closing Stock",
         "",
       ],
       [
         "",
         "",
+        "Qty",
+        "Value",
         "Qty",
         "Value",
         "Qty",
@@ -164,6 +162,8 @@ const StockMovementReport = () => {
         item.officeReturnValueDP?.toFixed(2),
         item.secondary,
         item.secondaryValueDP?.toFixed(2),
+        item.secondary - item.marketReturn,
+        (item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2),
         item.openingStock +
           item.primary +
           item.marketReturn -
@@ -179,27 +179,21 @@ const StockMovementReport = () => {
       ]),
     ];
 
-    // Create workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-    // Merge header cells
     ws["!merges"] = [
-      // Merge distributor name
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
-      // Merge month
-      { s: { r: 0, c: 8 }, e: { r: 0, c: 13 } },
-      // Merge sales person
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
-      // Merge area
-      { s: { r: 1, c: 8 }, e: { r: 1, c: 13 } },
-      // Merge headers
-      { s: { r: 2, c: 2 }, e: { r: 2, c: 3 } }, // Opening Stock
-      { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } }, // Primary
-      { s: { r: 2, c: 6 }, e: { r: 2, c: 7 } }, // Market Return
-      { s: { r: 2, c: 8 }, e: { r: 2, c: 9 } }, // Office Return
-      { s: { r: 2, c: 10 }, e: { r: 2, c: 11 } }, // Secondary
-      { s: { r: 2, c: 12 }, e: { r: 2, c: 13 } }, // Closing Stock
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+      { s: { r: 0, c: 9 }, e: { r: 0, c: 15 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
+      { s: { r: 1, c: 9 }, e: { r: 1, c: 15 } },
+      { s: { r: 2, c: 2 }, e: { r: 2, c: 3 } },
+      { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } },
+      { s: { r: 2, c: 6 }, e: { r: 2, c: 7 } },
+      { s: { r: 2, c: 8 }, e: { r: 2, c: 9 } },
+      { s: { r: 2, c: 10 }, e: { r: 2, c: 11 } },
+      { s: { r: 2, c: 12 }, e: { r: 2, c: 13 } },
+      { s: { r: 2, c: 14 }, e: { r: 2, c: 15 } },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
@@ -210,21 +204,17 @@ const StockMovementReport = () => {
   };
 
   const exportToPDF = () => {
-    // Sort data alphabetically for export
     const sortedData = [...reportData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
     );
     try {
-      // Initialize PDF in landscape mode
       const doc = new jsPDF({
         orientation: "landscape",
         unit: "mm",
       });
 
-      // Add distributor and sales person info at the top
       doc.setFontSize(12);
       doc.text(`Distributor Name: ${selectedOutlet || ""}`, 14, 15);
-      // Add month and area info at the top right
       const pageWidth = doc.internal.pageSize.getWidth();
       doc.text(
         `Period: ${
@@ -236,7 +226,6 @@ const StockMovementReport = () => {
         15
       );
 
-      // Prepare table data - match Excel structure exactly
       const headers = [
         [
           "Sl",
@@ -251,12 +240,16 @@ const StockMovementReport = () => {
           "",
           "Secondary",
           "",
+          "Actual Secondary",
+          "",
           "Closing Stock",
           "",
         ],
         [
           "",
           "",
+          "Qty",
+          "Value",
           "Qty",
           "Value",
           "Qty",
@@ -285,6 +278,8 @@ const StockMovementReport = () => {
         item.officeReturnValueDP?.toFixed(2) || "0.00",
         item.secondary || 0,
         item.secondaryValueDP?.toFixed(2) || "0.00",
+        item.secondary - item.marketReturn || 0,
+        (item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2) || "0.00",
         item.openingStock +
           item.primary +
           item.marketReturn -
@@ -299,7 +294,6 @@ const StockMovementReport = () => {
         )?.toFixed(2) || "0.00",
       ]);
 
-      // Add totals row if needed
       if (totals) {
         data.push([
           "",
@@ -314,22 +308,13 @@ const StockMovementReport = () => {
           totals.officeReturnValue?.toFixed(2) || "0.00",
           totals.secondaryQty || 0,
           totals.secondaryValue?.toFixed(2) || "0.00",
-          totals.openingQty +
-            totals.primaryQty +
-            totals.marketReturnQty -
-            totals.secondaryQty -
-            totals.officeReturnQty || 0,
-          (
-            totals.openingValue +
-            totals.primaryValue +
-            totals.marketReturnValue -
-            totals.secondaryValue -
-            totals.officeReturnValue
-          ).toFixed(2) || "0.00",
+          totals.actualSecondaryQty || 0,
+          totals.actualSecondaryValue?.toFixed(2) || "0.00",
+          totals.closingQty || 0,
+          totals.closingValue?.toFixed(2) || "0.00",
         ]);
       }
 
-      // Generate the table
       autoTable(doc, {
         head: headers,
         body: data,
@@ -342,26 +327,24 @@ const StockMovementReport = () => {
           halign: "center",
         },
         columnStyles: {
-          0: { cellWidth: 8, halign: "center" }, // SL column
-          1: { cellWidth: 30, halign: "left" }, // Product column
-          // Other columns will auto-size
+          0: { cellWidth: 8, halign: "center" },
+          1: { cellWidth: 30, halign: "left" },
         },
         headStyles: {
           fillColor: [41, 128, 185],
           textColor: 255,
           fontStyle: "bold",
         },
-        // Merge header cells to match Excel layout
         didParseCell: function (data) {
           if (data.section === "head" && data.row.index === 0) {
-            // Merge cells in the first header row
             if (
               data.column.dataKey === 2 ||
               data.column.dataKey === 4 ||
               data.column.dataKey === 6 ||
               data.column.dataKey === 8 ||
               data.column.dataKey === 10 ||
-              data.column.dataKey === 12
+              data.column.dataKey === 12 ||
+              data.column.dataKey === 14
             ) {
               data.cell.colSpan = 2;
             }
@@ -369,7 +352,6 @@ const StockMovementReport = () => {
         },
       });
 
-      // Save the PDF
       const fileName = `Stock_Report_${selectedOutlet || "all"}_${
         dayjs(dateRange.start).format("YYYY-MM-DD") +
           " to " +
@@ -382,7 +364,6 @@ const StockMovementReport = () => {
     }
   };
 
-  // Calculate totals
   const totals = reportData.reduce(
     (acc, item) => {
       acc.openingQty += item.openingStock || 0;
@@ -395,6 +376,8 @@ const StockMovementReport = () => {
       acc.officeReturnValue += item.officeReturnValueDP || 0;
       acc.secondaryQty += item.secondary || 0;
       acc.secondaryValue += item.secondaryValueDP || 0;
+      acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
+      acc.actualSecondaryValue += (item.secondaryValueDP - item.marketReturnValueDP) || 0;
       acc.closingQty += item.closingStock || 0;
       acc.closingValue += item.closingValueDP || 0;
       return acc;
@@ -410,6 +393,8 @@ const StockMovementReport = () => {
       officeReturnValue: 0,
       secondaryQty: 0,
       secondaryValue: 0,
+      actualSecondaryQty: 0,
+      actualSecondaryValue: 0,
       closingQty: 0,
       closingValue: 0,
     }
@@ -473,7 +458,6 @@ const StockMovementReport = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           {!user?.outlet && (
             <select
@@ -521,16 +505,14 @@ const StockMovementReport = () => {
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500">
             <p className="text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Summary Cards */}
         {!loading && reportData.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Stock (DP)</p>
               <p className="text-2xl font-semibold text-purple-700">
@@ -561,28 +543,27 @@ const StockMovementReport = () => {
                 {totals.officeReturnValue?.toFixed(2)}
               </p>
             </div>
+            <div className="bg-white border-l-4 border-teal-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Actual Secondary (DP)</p>
+              <p className="text-2xl font-semibold text-teal-700">
+                {totals.actualSecondaryValue?.toFixed(2)}
+              </p>
+            </div>
             <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Closing Stock (DP)</p>
               <p className="text-2xl font-semibold text-indigo-700">
-                {(
-                  totals.openingValue +
-                  totals.primaryValue +
-                  totals.marketReturnValue -
-                  totals.secondaryValue -
-                  totals.officeReturnValue
-                )?.toFixed(2)}
+                {totals.closingValue?.toFixed(2)}
               </p>
             </div>
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         )}
-        {/* Report Table */}
+
         {!loading && reportData.length > 0 && (
           <div
             className="overflow-x-auto shadow rounded-lg"
@@ -591,18 +572,18 @@ const StockMovementReport = () => {
             <table className="min-w-full border">
               <thead className="sticky top-[-1px] bg-white z-10">
                 <tr>
-                  <th colSpan="14" className="bg-gray-200 px-4 py-2 text-left">
+                  <th colSpan="16" className="bg-gray-200 px-4 py-2 text-left">
                     Distributor Name: {selectedOutlet}
                   </th>
                 </tr>
                 <tr>
-                  <th colSpan="14" className="bg-gray-200 px-4 py-3 text-left">
+                  <th colSpan="16" className="bg-gray-200 px-4 py-3 text-left">
                     Period: {dayjs(dateRange.start).format("DD-MM-YY")} to{" "}
                     {dayjs(dateRange.end).format("DD-MM-YY")}
                   </th>
                 </tr>
                 <tr className="bg-gray-100">
-                  <th rowSpan="2" className=" p-2 sticky top-22 bg-gray-100">
+                  <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
                     Sl
                   </th>
                   <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
@@ -610,42 +591,50 @@ const StockMovementReport = () => {
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Opening Stock
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Primary
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Market Return
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Office Return
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Secondary
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
+                  >
+                    Actual Secondary
+                  </th>
+                  <th
+                    colSpan="2"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Closing Stock
                   </th>
                 </tr>
                 <tr className="bg-gray-100 sticky top-32">
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
                   <th className="border p-2">Qty</th>
                   <th className="border p-2">Value</th>
                   <th className="border p-2">Qty</th>
@@ -696,6 +685,12 @@ const StockMovementReport = () => {
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
+                      {(item.secondary - item.marketReturn)} pcs
+                    </td>
+                    <td className="border p-2 text-right">
+                      {(item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2)}
+                    </td>
+                    <td className="border p-2 text-right">
                       {item.openingStock +
                         item.primary +
                         item.marketReturn -
@@ -739,6 +734,10 @@ const StockMovementReport = () => {
                   <td className="p-2 text-right">{totals.secondaryQty}</td>
                   <td className="p-2 text-right">
                     {totals.secondaryValue.toFixed(2)}
+                  </td>
+                  <td className="p-2 text-right">{totals.actualSecondaryQty}</td>
+                  <td className="p-2 text-right">
+                    {totals.actualSecondaryValue.toFixed(2)}
                   </td>
                   <td className="p-2 text-right">{totals.closingQty}</td>
                   <td className="p-2 text-right">

@@ -54,12 +54,10 @@ const GroupStockMovementReport = () => {
     setError(null);
 
     try {
-      // Validate dates
       if (!dateRange.start || !dateRange.end) {
         throw new Error("Please select both start and end dates");
       }
 
-      // Format dates properly
       const params = {
         areaType: selectedType,
         areaValue: selectedArea,
@@ -82,7 +80,6 @@ const GroupStockMovementReport = () => {
             (item.marketReturn && item.marketReturn !== 0)
           );
         });
-        // Sort the data alphabetically by productName
         const sortedData = [...filteredData].sort((a, b) =>
           a.productName.localeCompare(b.productName)
         );
@@ -111,7 +108,6 @@ const GroupStockMovementReport = () => {
     fetchReportData();
   };
 
-  // Export functions (similar to your existing ones, just updated labels)
   const exportToExcel = () => {
     const sortedData = [...reportData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
@@ -127,13 +123,14 @@ const GroupStockMovementReport = () => {
         "",
         "",
         "",
+        "",
         `Period: ${
           dayjs(dateRange.start).format("DD-MM-YY") +
           " to " +
           dayjs(dateRange.end).format("DD-MM-YY")
         }`,
       ],
-      ["", "", "", "", "", "", "", "", ""],
+      ["", "", "", "", "", "", "", "", "", ""],
       [
         "Sl",
         "Products Name",
@@ -147,12 +144,16 @@ const GroupStockMovementReport = () => {
         "",
         "Secondary",
         "",
+        "Actual Secondary",
+        "",
         "Closing Stock",
         "",
       ],
       [
         "",
         "",
+        "Qty",
+        "Value",
         "Qty",
         "Value",
         "Qty",
@@ -179,6 +180,8 @@ const GroupStockMovementReport = () => {
         item.officeReturnValueDP?.toFixed(2),
         item.secondary,
         item.secondaryValueDP?.toFixed(2),
+        item.secondary - item.marketReturn,
+        (item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2),
         item.openingStock +
           item.primary +
           item.marketReturn -
@@ -198,16 +201,17 @@ const GroupStockMovementReport = () => {
     const ws = XLSX.utils.aoa_to_sheet(excelData);
 
     ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
-      { s: { r: 0, c: 8 }, e: { r: 0, c: 13 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
-      { s: { r: 1, c: 8 }, e: { r: 1, c: 13 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+      { s: { r: 0, c: 9 }, e: { r: 0, c: 15 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
+      { s: { r: 1, c: 9 }, e: { r: 1, c: 15 } },
       { s: { r: 2, c: 2 }, e: { r: 2, c: 3 } },
       { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } },
       { s: { r: 2, c: 6 }, e: { r: 2, c: 7 } },
       { s: { r: 2, c: 8 }, e: { r: 2, c: 9 } },
       { s: { r: 2, c: 10 }, e: { r: 2, c: 11 } },
       { s: { r: 2, c: 12 }, e: { r: 2, c: 13 } },
+      { s: { r: 2, c: 14 }, e: { r: 2, c: 15 } },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
@@ -256,12 +260,16 @@ const GroupStockMovementReport = () => {
           "",
           "Secondary",
           "",
+          "Actual Secondary",
+          "",
           "Closing Stock",
           "",
         ],
         [
           "",
           "",
+          "Qty",
+          "Value",
           "Qty",
           "Value",
           "Qty",
@@ -290,6 +298,8 @@ const GroupStockMovementReport = () => {
         item.officeReturnValueDP?.toFixed(2) || "0.00",
         item.secondary || 0,
         item.secondaryValueDP?.toFixed(2) || "0.00",
+        item.secondary - item.marketReturn || 0,
+        (item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2) || "0.00",
         item.openingStock +
           item.primary +
           item.marketReturn -
@@ -303,6 +313,27 @@ const GroupStockMovementReport = () => {
           item.officeReturnValueDP
         )?.toFixed(2) || "0.00",
       ]);
+
+      if (totals) {
+        data.push([
+          "",
+          "TOTAL",
+          totals.openingQty || 0,
+          totals.openingValue?.toFixed(2) || "0.00",
+          totals.primaryQty || 0,
+          totals.primaryValue?.toFixed(2) || "0.00",
+          totals.marketReturnQty || 0,
+          totals.marketReturnValue?.toFixed(2) || "0.00",
+          totals.officeReturnQty || 0,
+          totals.officeReturnValue?.toFixed(2) || "0.00",
+          totals.secondaryQty || 0,
+          totals.secondaryValue?.toFixed(2) || "0.00",
+          totals.actualSecondaryQty || 0,
+          totals.actualSecondaryValue?.toFixed(2) || "0.00",
+          totals.closingQty || 0,
+          totals.closingValue?.toFixed(2) || "0.00",
+        ]);
+      }
 
       autoTable(doc, {
         head: headers,
@@ -332,7 +363,8 @@ const GroupStockMovementReport = () => {
               data.column.dataKey === 6 ||
               data.column.dataKey === 8 ||
               data.column.dataKey === 10 ||
-              data.column.dataKey === 12
+              data.column.dataKey === 12 ||
+              data.column.dataKey === 14
             ) {
               data.cell.colSpan = 2;
             }
@@ -352,7 +384,6 @@ const GroupStockMovementReport = () => {
     }
   };
 
-  // Calculate totals
   const totals = reportData.reduce(
     (acc, item) => {
       acc.openingQty += item.openingStock || 0;
@@ -365,6 +396,8 @@ const GroupStockMovementReport = () => {
       acc.officeReturnValue += item.officeReturnValueDP || 0;
       acc.secondaryQty += item.secondary || 0;
       acc.secondaryValue += item.secondaryValueDP || 0;
+      acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
+      acc.actualSecondaryValue += (item.secondaryValueDP - item.marketReturnValueDP) || 0;
       acc.closingQty += item.closingStock || 0;
       acc.closingValue += item.closingValueDP || 0;
       return acc;
@@ -380,6 +413,8 @@ const GroupStockMovementReport = () => {
       officeReturnValue: 0,
       secondaryQty: 0,
       secondaryValue: 0,
+      actualSecondaryQty: 0,
+      actualSecondaryValue: 0,
       closingQty: 0,
       closingValue: 0,
     }
@@ -443,7 +478,6 @@ const GroupStockMovementReport = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <select
             value={selectedType}
@@ -499,16 +533,14 @@ const GroupStockMovementReport = () => {
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500">
             <p className="text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Summary Cards */}
         {!loading && reportData.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Stock (DP)</p>
               <p className="text-2xl font-semibold text-purple-700">
@@ -539,29 +571,27 @@ const GroupStockMovementReport = () => {
                 {totals.officeReturnValue?.toFixed(2)}
               </p>
             </div>
+            <div className="bg-white border-l-4 border-teal-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Actual Secondary (DP)</p>
+              <p className="text-2xl font-semibold text-teal-700">
+                {totals.actualSecondaryValue?.toFixed(2)}
+              </p>
+            </div>
             <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Closing Stock (DP)</p>
               <p className="text-2xl font-semibold text-indigo-700">
-                {(
-                  totals.openingValue +
-                  totals.primaryValue +
-                  totals.marketReturnValue -
-                  totals.secondaryValue -
-                  totals.officeReturnValue
-                )?.toFixed(2)}
+                {totals.closingValue?.toFixed(2)}
               </p>
             </div>
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         )}
 
-        {/* Report Table */}
         {!loading && reportData.length > 0 && (
           <div
             className="overflow-x-auto shadow rounded-lg"
@@ -570,18 +600,18 @@ const GroupStockMovementReport = () => {
             <table className="min-w-full border">
               <thead className="sticky top-[-1px] bg-white z-10">
                 <tr>
-                  <th colSpan="14" className="bg-gray-200 px-4 py-2 text-left">
+                  <th colSpan="16" className="bg-gray-200 px-4 py-2 text-left">
                     {selectedType}: {selectedArea}
                   </th>
                 </tr>
                 <tr>
-                  <th colSpan="14" className="bg-gray-200 px-4 py-3 text-left">
+                  <th colSpan="16" className="bg-gray-200 px-4 py-3 text-left">
                     Period: {dayjs(dateRange.start).format("DD-MM-YY")} to{" "}
                     {dayjs(dateRange.end).format("DD-MM-YY")}
                   </th>
                 </tr>
                 <tr className="bg-gray-100">
-                  <th rowSpan="2" className=" p-2 sticky top-22 bg-gray-100">
+                  <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
                     Sl
                   </th>
                   <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
@@ -589,42 +619,50 @@ const GroupStockMovementReport = () => {
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Opening Stock
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Primary
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Market Return
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Office Return
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Secondary
                   </th>
                   <th
                     colSpan="2"
-                    className=" p-2 text-center sticky top-24 bg-gray-100"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
+                  >
+                    Actual Secondary
+                  </th>
+                  <th
+                    colSpan="2"
+                    className="p-2 text-center sticky top-24 bg-gray-100"
                   >
                     Closing Stock
                   </th>
                 </tr>
                 <tr className="bg-gray-100 sticky top-32">
+                  <th className="border p-2">Qty</th>
+                  <th className="border p-2">Value</th>
                   <th className="border p-2">Qty</th>
                   <th className="border p-2">Value</th>
                   <th className="border p-2">Qty</th>
@@ -675,6 +713,12 @@ const GroupStockMovementReport = () => {
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
+                      {(item.secondary - item.marketReturn)} pcs
+                    </td>
+                    <td className="border p-2 text-right">
+                      {(item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2)}
+                    </td>
+                    <td className="border p-2 text-right">
                       {item.openingStock +
                         item.primary +
                         item.marketReturn -
@@ -718,6 +762,10 @@ const GroupStockMovementReport = () => {
                   <td className="p-2 text-right">{totals.secondaryQty}</td>
                   <td className="p-2 text-right">
                     {totals.secondaryValue.toFixed(2)}
+                  </td>
+                  <td className="p-2 text-right">{totals.actualSecondaryQty}</td>
+                  <td className="p-2 text-right">
+                    {totals.actualSecondaryValue.toFixed(2)}
                   </td>
                   <td className="p-2 text-right">{totals.closingQty}</td>
                   <td className="p-2 text-right">
