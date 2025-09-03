@@ -111,7 +111,6 @@ const TDDAdminPanel = () => {
       transport: { ...record.transport },
       hotelBill: record.hotelBill,
       totalExpense: record.totalExpense,
-      // Include other fields if needed
       name: reportData.userInfo.name,
       designation: reportData.userInfo.designation,
       area: reportData.userInfo.area,
@@ -121,17 +120,9 @@ const TDDAdminPanel = () => {
   };
 
   // Handle edit form change
-  const handleEditChange = (field, value, subfield = null, subsubfield = null) => {
+  const handleEditChange = (field, value, subfield = null) => {
     setEditForm((prev) => {
-      if (subfield && subsubfield) {
-        return {
-          ...prev,
-          [field]: {
-            ...prev[field],
-            [subfield]: value,
-          },
-        };
-      } else if (subfield) {
+      if (subfield) {
         return {
           ...prev,
           [field]: {
@@ -230,14 +221,381 @@ const TDDAdminPanel = () => {
     }
   };
 
-  // Export to Excel (existing)
+  // Export to Excel with professional styling
   const exportToExcel = () => {
-    // ... (keep existing code)
+    if (!reportData) return;
+
+    try {
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+
+      // Prepare data for the worksheet
+      const data = [
+        // Title row
+        ["Employee TD/DA Report", "", "", "", "", "", "", "", "", ""],
+        // Employee info
+        [
+          "Name:",
+          reportData.userInfo.name,
+          "",
+          "Designation:",
+          reportData.userInfo.designation,
+          "",
+          "Month:",
+          reportData.userInfo.month,
+          "",
+          "",
+        ],
+        ["Area:", reportData.userInfo.area, "", "", "", "", "", "", "", ""],
+        // Empty row
+        [""],
+        // Main table header
+        [
+          "Date",
+          "Visited Place",
+          "",
+          "HQ",
+          "Ex. HQ",
+          "Transport Bill",
+          "",
+          "",
+          "",
+          "Hotel Bill",
+          "Total",
+        ],
+        // Sub-header row
+        ["", "From", "To", "", "", "Bus", "CNG", "Train", "Other", "", ""],
+        // Daily expenses data
+        ...reportData.dailyExpenses.map((day) => [
+          day.date,
+          day.from,
+          day.to,
+          day.hqExHq?.hq ? parseFloat(day.hqExHq.hq).toFixed(2) : "-",
+          day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
+          day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
+          day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
+          day.transport?.train
+            ? parseFloat(day.transport.train).toFixed(2)
+            : "-",
+          day.transport?.other
+            ? parseFloat(day.transport.other).toFixed(2)
+            : "-",
+          day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
+          day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
+        ]),
+        // Empty row
+        [""],
+        // Summary
+        [
+          "Total Working Days:",
+          reportData.summary.totalWorkingDays,
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ],
+        [
+          "Total Expense:",
+          parseFloat(reportData.summary.totalExpense || 0).toFixed(2),
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ],
+      ];
+
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(data);
+
+      // Set column widths
+      ws["!cols"] = [
+        { wch: 12 }, // Date
+        { wch: 15 }, // From
+        { wch: 15 }, // To
+        { wch: 10 }, // HQ
+        { wch: 10 }, // Ex HQ
+        { wch: 8 }, // Bus
+        { wch: 8 }, // CNG
+        { wch: 8 }, // Train
+        { wch: 8 }, // Other
+        { wch: 12 }, // Hotel Bill
+        { wch: 12 }, // Total
+      ];
+
+      // Define border style
+      const borderStyle = {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      };
+
+      // Define styles
+      const styles = {
+        title: {
+          font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "4472C4" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
+        info: {
+          font: { bold: true, sz: 12 },
+          border: borderStyle,
+        },
+        mainHeader: {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "4472C4" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
+        subHeader: {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "5B9BD5" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
+        dataEven: {
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
+        dataOdd: {
+          fill: { fgColor: { rgb: "F2F2F2" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
+        total: {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "FCE4D6" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
+        numberFormat: {
+          t: "n",
+          z: "#,##0.00",
+        },
+      };
+
+      // Apply styles to ALL cells with data
+      for (let i = 0; i < data.length; i++) {
+        for (let j = 0; j < data[i].length; j++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: i, c: j });
+
+          if (!ws[cellAddress]) continue;
+
+          // Title row
+          if (i === 0) {
+            ws[cellAddress].s = styles.title;
+          }
+          // Info rows
+          else if (i >= 1 && i <= 2) {
+            ws[cellAddress].s = styles.info;
+          }
+          // Main header row
+          else if (i === 4) {
+            ws[cellAddress].s = styles.mainHeader;
+          }
+          // Sub-header row
+          else if (i === 5) {
+            ws[cellAddress].s = styles.subHeader;
+          }
+          // Data rows
+          else if (i >= 6 && i < data.length - 3 && data[i][0]) {
+            ws[cellAddress].s = i % 2 === 0 ? styles.dataEven : styles.dataOdd;
+            // Format numbers for HQ, Ex-HQ, Transport, Hotel, Total
+            if (j >= 3 && j <= 10) {
+              ws[cellAddress].t = styles.numberFormat.t;
+              ws[cellAddress].z = styles.numberFormat.z;
+            }
+          }
+          // Summary rows
+          else if (i >= data.length - 2) {
+            ws[cellAddress].s = styles.total;
+            if (j === 1) {
+              ws[cellAddress].t = styles.numberFormat.t;
+              ws[cellAddress].z = styles.numberFormat.z;
+            }
+          }
+          // Empty cells in data range
+          else {
+            ws[cellAddress].s = { border: borderStyle };
+          }
+        }
+      }
+
+      // Merge cells
+      ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }, // Title
+        { s: { r: 4, c: 1 }, e: { r: 4, c: 2 } }, // Visited Place
+        { s: { r: 4, c: 5 }, e: { r: 4, c: 8 } }, // Transport Bill
+        { s: { r: data.length - 2, c: 0 }, e: { r: data.length - 2, c: 1 } }, // Summary: Total Working Days
+        { s: { r: data.length - 1, c: 0 }, e: { r: data.length - 1, c: 1 } }, // Summary: Total Expense
+      ];
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, "TDDA Report");
+
+      // Generate file name
+      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
+        /\s+/g,
+        "_"
+      )}_${reportData.userInfo.month}.xlsx`;
+
+      // Export the workbook
+      XLSX.writeFile(wb, fileName);
+
+      toast.success("Excel report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      toast.error("Failed to export report");
+    }
   };
 
-  // Export to PDF (existing)
+  // Export to PDF with professional styling
   const exportToPDF = () => {
-    // ... (keep existing code)
+    if (!reportData) return;
+
+    try {
+      const doc = new jsPDF({
+        orientation: "landscape",
+      });
+
+      // Header Title
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(68, 114, 196);
+      doc.text(
+        "Employee TD/DA Report",
+        doc.internal.pageSize.getWidth() / 2,
+        15,
+        {
+          align: "center",
+        }
+      );
+
+      // Employee Info Row
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Name: ${reportData.userInfo.name}`, 10, 25);
+      doc.text(`Designation: ${reportData.userInfo.designation}`, 90, 25);
+      doc.text(`Month: ${reportData.userInfo.month}`, 170, 25);
+      doc.text(`Area: ${reportData.userInfo.area}`, 240, 25);
+
+      // Data rows
+      autoTable(doc, {
+        startY: 35,
+        margin: { left: 10, right: 10 },
+        tableWidth: "auto",
+        head: [
+          [
+            { content: "Date" },
+            { content: "Visited Place", colSpan: 2 },
+            { content: "HQ" },
+            { content: "Ex. HQ" },
+            { content: "Transport Bill", colSpan: 4 },
+            { content: "Hotel Bill" },
+            { content: "Total" },
+          ],
+          [
+            "", // Date
+            "From", // Visited Place
+            "To", // Visited Place
+            "", // HQ
+            "", // Ex HQ
+            "Bus", // Transport
+            "CNG", // Transport
+            "Train", // Transport
+            "Other", // Transport
+            "", // Hotel
+            "", // Total
+          ],
+        ],
+        body: reportData.dailyExpenses.map((day) => [
+          day.date,
+          day.from,
+          day.to,
+          day.hqExHq?.hq ? parseFloat(day.hqExHq.hq).toFixed(2) : "-",
+          day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
+          day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
+          day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
+          day.transport?.train
+            ? parseFloat(day.transport.train).toFixed(2)
+            : "-",
+          day.transport?.other
+            ? parseFloat(day.transport.other).toFixed(2)
+            : "-",
+          day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
+          day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
+        ]),
+        headStyles: {
+          fillColor: [68, 114, 196],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+        },
+        styles: {
+          fontSize: 10,
+          halign: "center",
+          valign: "middle",
+          cellPadding: 2,
+        },
+        alternateRowStyles: {
+          fillColor: [242, 242, 242],
+        },
+        columnStyles: {
+          0: { cellWidth: 30 }, // Date
+          1: { cellWidth: 30 }, // From
+          2: { cellWidth: 30 }, // To
+          3: { cellWidth: 25 }, // HQ
+          4: { cellWidth: 25 }, // Ex HQ
+          5: { cellWidth: 20 }, // Bus
+          6: { cellWidth: 20 }, // CNG
+          7: { cellWidth: 20 }, // Train
+          8: { cellWidth: 20 }, // Other
+          9: { cellWidth: 25 }, // Hotel
+          10: { cellWidth: 25 }, // Total
+        },
+      });
+
+      // Summary section
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `Total Working Days: ${reportData.summary.totalWorkingDays}`,
+        10,
+        finalY
+      );
+      doc.text(
+        `Total Expense: ${parseFloat(
+          reportData.summary.totalExpense || 0
+        ).toFixed(2)}`,
+        90,
+        finalY
+      );
+
+      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
+        /\s+/g,
+        "_"
+      )}_${reportData.userInfo.month}.pdf`;
+
+      doc.save(fileName);
+      toast.success("PDF report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+      toast.error("Failed to export PDF report");
+    }
   };
 
   return (
