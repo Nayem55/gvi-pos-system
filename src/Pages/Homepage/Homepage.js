@@ -48,6 +48,30 @@ export default function Home() {
     fetchData();
   }, []);
 
+  const fetchUserData = useCallback(async () => {
+    if (!attendanceUser) return;
+
+    try {
+      setDataLoading(true);
+      const response = await axios.get(
+        `https://attendance-app-server-blue.vercel.app/getUser/${attendanceUser?._id}`
+      );
+      localStorage.setItem("attendance-user", JSON.stringify(response.data));
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setDataLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!attendanceUser) {
+      navigate("/login");
+    } else {
+      fetchUserData();
+    }
+  }, []);
+
   const fetchUserTargetAndAchievement = async () => {
     try {
       const currentMonth = dayjs().format("YYYY-MM");
