@@ -52,7 +52,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (posUser) {
       const fetchData = async () => {
         try {
           setDataLoading(true);
@@ -68,8 +67,7 @@ export default function Home() {
         }
       };
       fetchData();
-    }
-  }, [posUser]);
+  }, []);
 
   const fetchUserData = useCallback(async () => {
     if (!attendanceUser) return;

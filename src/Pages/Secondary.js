@@ -124,6 +124,7 @@ export default function Secondary({
           params: { barcode: product.barcode, outlet: user.outlet },
         }
       );
+      console.log(stockResponse);
       const outletStock = stockResponse.data.stock.currentStock;
 
       if (outletStock === 0) {
