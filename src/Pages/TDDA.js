@@ -537,7 +537,7 @@ const TDDAdminPanel = () => {
 
       XLSX.utils.book_append_sheet(wb, ws, "TDDA Report");
 
-      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
+      const fileName = `TADA_Report_${reportData.userInfo.name.replace(
         /\s+/g,
         "_"
       )}_${reportData.userInfo.month}.xlsx`;
@@ -672,7 +672,7 @@ const TDDAdminPanel = () => {
         finalY
       );
 
-      const fileName = `TDDA_Report_${reportData.userInfo.name.replace(
+      const fileName = `TADA_Report_${reportData.userInfo.name.replace(
         /\s+/g,
         "_"
       )}_${reportData.userInfo.month}.pdf`;
@@ -691,7 +691,7 @@ const TDDAdminPanel = () => {
       <div className="flex-1 overflow-auto p-4 md:p-8">
         <div className="max-w-6xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-            <h1 className="text-2xl font-bold text-white">TD/DA Admin Panel</h1>
+            <h1 className="text-2xl font-bold text-white">TA/DA Admin Panel</h1>
           </div>
           <div className="p-6 border-b border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

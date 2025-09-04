@@ -61,7 +61,7 @@ const AdminSidebar = () => {
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => window.addEventListener("resize", handleResize);
   }, []);
 
   const toggleDropdown = (dropdownName) => {
@@ -89,11 +89,6 @@ const AdminSidebar = () => {
       name: "Accounts",
       path: "/admin/money-transaction",
       icon: <DollarSign size={20} />,
-    },
-    {
-      name: "TA/DA Report",
-      path: "/admin/tada",
-      icon: <BiSolidReport size={20} />,
     },
     {
       name: "Salary Sheet",
@@ -149,7 +144,23 @@ const AdminSidebar = () => {
         },
       ],
     },
-    // In the dropdowns array, update the "create" and "alter" sections:
+    {
+      name: "tada",
+      title: "TA/DA Report",
+      icon: <BiSolidReport size={20} />,
+      items: [
+        {
+          name: "Single Report",
+          path: "/admin/tada",
+          icon: <SheetIcon size={16} />,
+        },
+        {
+          name: "Full Report",
+          path: "/admin/tada-full-report",
+          icon: <SheetIcon size={16} />,
+        },
+      ],
+    },
     {
       name: "create",
       title: "Create",
@@ -180,7 +191,7 @@ const AdminSidebar = () => {
           name: "Price Level",
           path: "/admin/create-pricelevel",
           icon: <DollarSign size={16} />,
-        }, // New item
+        },
       ],
     },
     {
@@ -217,7 +228,7 @@ const AdminSidebar = () => {
           name: "Price Levels",
           path: "/admin/alter-pricelevels",
           icon: <DollarSign size={16} />,
-        }, // New item
+        },
       ],
     },
     {
@@ -279,10 +290,8 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-[100vh] bg-[#3C3F46] text-white w-72 p-5 shadow-xl transform transition-transform duration-300 ease-in-out z-40
-        ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:sticky md:top-0 md:z-0`}
+        className={`fixed top-0 left-0 h-[100vh] bg-[#3C3F46] text-white w-72 p-5 shadow-xl transform transition-transform duration-300 ease-in-out z-40 sidebar-container
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:sticky md:top-0 md:z-0`}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
