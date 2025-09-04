@@ -45,6 +45,7 @@ import CreatePriceLevelPage from "../Pages/AdminPanel/CreatePriceLevelPage";
 import AlterPriceLevelsPage from "../Pages/AdminPanel/AlterPriceLevelsPage";
 import PaymentRequests from "../Pages/AdminPanel/PaymentRequests";
 import ManagerReports from "../Pages/ManagerReports";
+import FullTDDReport from "../Pages/AdminPanel/FullTDDReport";
 
 const router = createBrowserRouter([
   {
@@ -107,6 +108,10 @@ const router = createBrowserRouter([
       {
         path: "admin/tada",
         element: <TDDAdminPanel />,
+      },
+      {
+        path: "admin/tada-full-report",
+        element: <FullTDDReport />,
       },
       {
         path: "/admin",
