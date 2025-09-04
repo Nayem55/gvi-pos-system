@@ -112,7 +112,7 @@ const CreateOutletPage = () => {
                   }
                   className="w-full p-2 border rounded"
                   placeholder="Enter proprietor name"
-                  required
+                  
                 />
               </div>
 
@@ -128,7 +128,7 @@ const CreateOutletPage = () => {
                   className="w-full p-2 border rounded"
                   placeholder="Enter full address"
                   rows={3}
-                  required
+                  
                 />
               </div>
 
@@ -147,7 +147,7 @@ const CreateOutletPage = () => {
                   }
                   className="w-full p-2 border rounded"
                   placeholder="Enter contact number"
-                  required
+                  
                 />
               </div>
 
@@ -163,7 +163,7 @@ const CreateOutletPage = () => {
                   }
                   className="w-full p-2 border rounded"
                   placeholder="Enter NID number"
-                  required
+                  
                 />
               </div>
 
