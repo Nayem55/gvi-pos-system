@@ -21,32 +21,55 @@ export default function Home() {
   const [target, setTarget] = useState(null); // Monthly target
   const [totalTP, setTotalTP] = useState(0); // Total TP for achievement calculation
   const [dataLoading, setDataLoading] = useState(true); // Unified loading state
-  const user = JSON.parse(localStorage.getItem("pos-user"));
+  const [posUser, setPosUser] = useState(JSON.parse(localStorage.getItem("pos-user")));
   const attendanceUser = JSON.parse(localStorage.getItem("attendance-user"));
   const [locationError, setLocationError] = useState("");
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const navigate = useNavigate();
 
+  const fetchPosUser = useCallback(async () => {
+    if (!posUser) return;
+    try {
+      setDataLoading(true);
+      const response = await axios.get(`http://175.29.181.245:5000/getUser/${posUser._id}`);
+      console.log(response);
+      const updatedUser = response.data;
+      localStorage.setItem("pos-user", JSON.stringify(updatedUser));
+      setPosUser(updatedUser);
+    } catch (error) {
+      console.error("Error fetching pos user:", error);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [posUser]);
+
   useEffect(() => {
-    if (!user) {
+    if (!posUser) {
       navigate("/login");
       return;
     }
-    const fetchData = async () => {
-      try {
-        await Promise.all([
-          getStockValue(user.outlet),
-          fetchUserTargetAndAchievement(),
-        ]);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load data. Please try again.");
-      } finally {
-        setDataLoading(false); // Stop loading regardless of success or failure
-      }
-    };
-    fetchData();
+    fetchPosUser();
   }, []);
+
+  useEffect(() => {
+    if (posUser) {
+      const fetchData = async () => {
+        try {
+          setDataLoading(true);
+          await Promise.all([
+            getStockValue(posUser.outlet),
+            fetchUserTargetAndAchievement(),
+          ]);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          toast.error("Failed to load data. Please try again.");
+        } finally {
+          setDataLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [posUser]);
 
   const fetchUserData = useCallback(async () => {
     if (!attendanceUser) return;
@@ -82,11 +105,11 @@ export default function Home() {
       const targetResponse = await axios.get(
         "http://175.29.181.245:5000/targets",
         {
-          params: { year, month, userID: user._id },
+          params: { year, month, userID: posUser._id },
         }
       );
       const targetEntry = targetResponse.data.find(
-        (entry) => entry.userID === user._id
+        (entry) => entry.userID === posUser._id
       );
       if (targetEntry) {
         const targetForMonth = targetEntry.targets.find(
@@ -99,7 +122,7 @@ export default function Home() {
 
       // Fetch sales reports for the current month to calculate achievement
       const reportsResponse = await axios.get(
-        `http://175.29.181.245:5000/sales-reports/${user._id}?month=${currentMonth}`
+        `http://175.29.181.245:5000/sales-reports/${posUser._id}?month=${currentMonth}`
       );
       const reports = reportsResponse.data;
       const totalTPValue = reports.reduce(
@@ -158,7 +181,7 @@ export default function Home() {
 
       {selectedTab === "opening" && (
         <OpeningStock
-          user={user}
+          user={posUser}
           stock={stock}
           currentDue={currentDue}
           setStock={setStock}
@@ -170,7 +193,7 @@ export default function Home() {
       )}
       {selectedTab === "primary request" && (
         <PrimaryRequest
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -182,7 +205,7 @@ export default function Home() {
       )}
       {selectedTab === "primary" && (
         <Primary
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -194,7 +217,7 @@ export default function Home() {
       )}
       {selectedTab === "secondary" && (
         <Secondary
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -206,7 +229,7 @@ export default function Home() {
       )}
       {selectedTab === "officeReturn" && (
         <OfficeReturn
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -218,7 +241,7 @@ export default function Home() {
       )}
       {selectedTab === "marketReturn" && (
         <MarketReturn
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -230,7 +253,7 @@ export default function Home() {
       )}
       {selectedTab === "payment" && (
         <PaymentVoucher
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -242,7 +265,7 @@ export default function Home() {
       )}
       {selectedTab === "pos" && (
         <PosVoucher
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
@@ -254,7 +277,7 @@ export default function Home() {
       )}
       {selectedTab === "tada" && (
         <TadaVoucher
-          user={user}
+          user={posUser}
           stock={stock}
           setStock={setStock}
           currentDue={currentDue}
