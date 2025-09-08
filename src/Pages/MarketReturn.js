@@ -108,8 +108,9 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     }
 
     try {
+      const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${user.outlet}`
+        `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
       const currentStock = stockRes.data.stock.currentStock || 0;
       const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
@@ -192,9 +193,11 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             continue;
           }
 
+          const encodedOutlet = encodeURIComponent(user.outlet);
+
           const stockRes = await axios.get(
             "http://175.29.181.245:5000/outlet-stock",
-            { params: { barcode: product.barcode, outlet: user.outlet } }
+            { params: { barcode: product.barcode, outlet: encodedOutlet } }
           );
 
           const currentStock = stockRes.data.stock.currentStock || 0;

@@ -418,7 +418,7 @@ const UserDashboard = () => {
                           {report.total_tp.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {isEditable(report.sale_date) ? (
+                          {user.role==="super admin" ? (
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => handleEditReport(report)}
