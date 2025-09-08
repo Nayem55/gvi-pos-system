@@ -46,6 +46,7 @@ import AlterPriceLevelsPage from "../Pages/AdminPanel/AlterPriceLevelsPage";
 import PaymentRequests from "../Pages/AdminPanel/PaymentRequests";
 import ManagerReports from "../Pages/ManagerReports";
 import FullTDDReport from "../Pages/AdminPanel/FullTDDReport";
+import FullSalesReport from "../Pages/FullSalesReport";
 
 const router = createBrowserRouter([
   {
@@ -176,6 +177,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/sales-movement/dealer-wise",
         element: <DealerSalesReport />,
+      },
+      {
+        path: "/admin/full-sales-report",
+        element: <FullSalesReport />,
       },
       {
         path: "/admin/sales-movement/category-wise",
