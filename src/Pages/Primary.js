@@ -423,10 +423,6 @@ export default function Primary({
             }
           );
 
-          // if (!stockResponse.data.success) {
-          //   throw new Error(`Failed to update stock for ${item.barcode}`);
-          // }
-
           // Record transaction
           await axios.post("http://175.29.181.245:5000/stock-transactions", {
             barcode: item.barcode,
@@ -579,10 +575,10 @@ export default function Primary({
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b bg-gray-200 text-xs">
-                <th className="p-2 w-[60px] text-left">Product</th>
-                <th className="p-2 w-[60px] text-center">Opening</th>
+                <th className="p-2 text-left w-1/3">Product</th>
                 <th className="p-2 w-[100px] text-center">Prices</th>
                 <th className="p-2 w-[60px] text-center">Primary</th>
+                <th className="p-2 w-[60px] text-center">Total (DP)</th>
                 <th className="p-2 w-[40px] text-center"></th>
               </tr>
             </thead>
@@ -590,9 +586,8 @@ export default function Primary({
               {cart.map((item) => (
                 <tr key={item.barcode} className="border-b text-xs">
                   <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
-                    {item.name}
+                    {item.name} {item.openingStock ? `(${item.openingStock})` : ""}
                   </td>
-                  <td className="p-2 text-center">{item.openingStock}</td>
                   <td className="p-1 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <input
@@ -631,6 +626,9 @@ export default function Primary({
                       className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[50px]"
                     />
                   </td>
+                  <td className="p-2 text-center text-xs">
+                    {(item.editableDP * item.primary).toFixed(2)}
+                  </td>
                   <td className="text-center">
                     <button onClick={() => removeFromCart(item.barcode)}>
                       <svg
@@ -655,7 +653,10 @@ export default function Primary({
       {/* Overall Total & Submit Button */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
         <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)}{" "}
+          Total (DP):{" "}
+          {cart
+            .reduce((sum, item) => sum + item.editableDP * item.primary, 0)
+            .toFixed(2)}{" "}
           BDT
         </span>
         <button
