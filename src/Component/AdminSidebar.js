@@ -256,6 +256,11 @@ const AdminSidebar = () => {
           path: "/admin/sales-movement/category-wise",
           icon: <BiCategoryAlt size={16} />,
         },
+        {
+          name: "Full Report",
+          path: "/admin/full-sales-report",
+          icon: <BiCategoryAlt size={16} />,
+        },
       ],
     },
     {
