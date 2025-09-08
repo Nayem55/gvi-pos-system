@@ -198,7 +198,7 @@ const FullSalesReport = () => {
       <AdminSidebar />
       <div className="flex-1 overflow-auto p-4 md:p-8">
         <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
+          <div className="bg-gradient-to-r from-gray-600 to-gray-800 px-6 py-4">
             <h1 className="text-2xl font-bold text-white">Full Sales Report</h1>
           </div>
           <div className="p-6 border-b border-gray-200">
@@ -211,7 +211,7 @@ const FullSalesReport = () => {
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-500 focus:border-gray-500"
                 />
               </div>
               <div>
@@ -221,7 +221,7 @@ const FullSalesReport = () => {
                 <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-500 focus:border-gray-500"
                   disabled={!reportData}
                 >
                   <option value="">All Zones</option>
@@ -236,7 +236,7 @@ const FullSalesReport = () => {
                 <button
                   onClick={generateReport}
                   disabled={isGenerating}
-                  className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
+                  className={`w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
                     isGenerating ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
@@ -300,7 +300,7 @@ const FullSalesReport = () => {
               </div>
               <div className="overflow-x-auto shadow-md rounded-lg max-h-[60vh]">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-indigo-600 sticky top-0 z-10">
+                  <thead className="bg-gray-600 sticky top-0 z-10">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                         User Name
@@ -353,7 +353,7 @@ const FullSalesReport = () => {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-indigo-50 sticky bottom-0 z-10">
+                  <tfoot className="bg-gray-50 sticky bottom-0 z-10">
                     <tr>
                       <td
                         colSpan={3}
