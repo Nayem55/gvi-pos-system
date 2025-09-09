@@ -225,6 +225,10 @@ export default function Secondary({
       toast.error("No item selected");
       return;
     }
+    if (!menu || !route) {
+      toast.error("Pleas provide route and memo");
+      return;
+    }
     try {
       setIsSubmitting(true);
 

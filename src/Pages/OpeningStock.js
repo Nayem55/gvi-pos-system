@@ -416,7 +416,7 @@ export default function OpeningStock({
 
       // Then process all stock updates
       const requests = cart.map(async (item) => {
-        if (item.canEdit) {
+        // if (item.canEdit) {
           await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
             barcode: item.barcode,
             outlet: user.outlet,
@@ -442,7 +442,7 @@ export default function OpeningStock({
             dp: item.editableDP,
             tp: item.editableTP,
           });
-        }
+        // }
       });
 
       await Promise.all(requests);

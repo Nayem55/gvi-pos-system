@@ -98,51 +98,20 @@ const DailyReport = () => {
     }
   };
 
-  const fetchProductStock = async (barcode) => {
-    try {
-      const outlet = viewedUser?.outlet || user?.outlet;
-      if (!outlet) {
-        throw new Error("Outlet information not available");
-      }
-      const response = await axios.get(
-        "http://175.29.181.245:5000/outlet-stock",
-        {
-          params: { barcode, outlet },
-        }
-      );
-      return response.data.stock || 0;
-    } catch (error) {
-      console.error("Error fetching stock:", error);
-      toast.error("Failed to fetch stock information");
-      return 0;
-    }
-  };
+  const handleEditReport = (report) => {
+    const productsWithOriginalValues = report.products.map((product) => ({
+      ...product,
+      originalQuantity: product.quantity,
+      originalDP: product.quantity ? product.dp / product.quantity : 0,
+      originalTP: product.quantity ? product.tp / product.quantity : 0,
+      originalMRP: product.quantity ? product.mrp / product.quantity : 0,
+    }));
 
-  const handleEditReport = async (report) => {
-    try {
-      const productsWithOriginalValues = await Promise.all(
-        report.products.map(async (product) => {
-          const currentStock = await fetchProductStock(product.barcode);
-          return {
-            ...product,
-            originalQuantity: product.quantity,
-            originalDP: product.quantity ? product.dp / product.quantity : 0,
-            originalTP: product.quantity ? product.tp / product.quantity : 0,
-            originalMRP: product.quantity ? product.mrp / product.quantity : 0,
-            currentStock,
-          };
-        })
-      );
-
-      setEditingReport({
-        ...report,
-        products: productsWithOriginalValues,
-      });
-      setIsEditing(true);
-    } catch (error) {
-      console.error("Error preparing edit:", error);
-      toast.error("Failed to prepare report for editing");
-    }
+    setEditingReport({
+      ...report,
+      products: productsWithOriginalValues,
+    });
+    setIsEditing(true);
   };
 
   const handleUpdateReport = async (e) => {
@@ -150,51 +119,6 @@ const DailyReport = () => {
     if (!editingReport) return;
 
     try {
-      const outlet = viewedUser?.outlet || user?.outlet;
-      if (!outlet) {
-        throw new Error("Outlet information not available");
-      }
-
-      const stockUpdates = await Promise.all(
-        editingReport.products.map(async (product) => {
-          const stockRes = await axios.get(
-            "http://175.29.181.245:5000/outlet-stock",
-            { params: { barcode: product.barcode, outlet } }
-          );
-
-          const currentStock = stockRes.data.stock.currentStock || 0;
-          const currentDPValue = stockRes.data.stock.currentStockValueDP || 0;
-          const currentTPValue = stockRes.data.stock.currentStockValueTP || 0;
-
-          const quantityChange = product.quantity - product.originalQuantity;
-          const dpValueChange =
-            product.dp - product.originalQuantity * product.originalDP;
-          const tpValueChange =
-            product.tp - product.originalQuantity * product.originalTP;
-
-          return {
-            barcode: product.barcode,
-            newStock: currentStock - quantityChange,
-            currentStockValueDP: currentDPValue - dpValueChange,
-            currentStockValueTP: currentTPValue - tpValueChange,
-          };
-        })
-      );
-
-      await Promise.all(
-        stockUpdates.map(
-          ({ barcode, newStock, currentStockValueDP, currentStockValueTP }) => {
-            return axios.put("http://175.29.181.245:5000/update-outlet-stock", {
-              barcode,
-              outlet,
-              newStock,
-              currentStockValueDP,
-              currentStockValueTP,
-            });
-          }
-        )
-      );
-
       const updatedReport = {
         ...editingReport,
         updatedAt: new Date().toISOString(),
@@ -223,7 +147,7 @@ const DailyReport = () => {
       return;
 
     try {
-      const outlet = viewedUser?.outlet || user?.outlet;
+      const outlet = viewedUser?.outlet;
       if (!outlet) {
         throw new Error("Outlet information not available");
       }
@@ -265,19 +189,22 @@ const DailyReport = () => {
 
     if (field === "quantity") {
       const newQuantity = parseInt(value) || 0;
-      // Scale total values using original unit prices
+      const currentUnitDP = product.quantity
+        ? product.dp / product.quantity
+        : 0;
+      const currentUnitTP = product.quantity
+        ? product.tp / product.quantity
+        : 0;
+      const currentUnitMRP = product.quantity
+        ? product.mrp / product.quantity
+        : 0;
       product.quantity = newQuantity;
-      product.dp = newQuantity * (product.originalDP || 0);
-      product.tp = newQuantity * (product.originalTP || 0);
-      product.mrp = newQuantity * (product.originalMRP || 0);
+      product.dp = newQuantity * currentUnitDP;
+      product.tp = newQuantity * currentUnitTP;
+      product.mrp = newQuantity * currentUnitMRP;
     } else {
-      // Update total value based on user-entered unit price
       const newValue = parseFloat(value) || 0;
       product[field] = newValue * product.quantity;
-      // Update original unit price when user manually changes it
-      if (field === "dp") product.originalDP = newValue;
-      if (field === "tp") product.originalTP = newValue;
-      if (field === "mrp") product.originalMRP = newValue;
     }
 
     updatedProducts[index] = product;
