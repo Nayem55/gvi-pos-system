@@ -174,16 +174,28 @@ export default function PromotionalPage() {
     });
   };
 
-  const calculatePromotionalPrice = (original, promotion, forDisplay = false) => {
+  const calculatePromotionalPrice = (
+    original,
+    promotion,
+    forDisplay = false
+  ) => {
+    // If original is not a valid number, return 0 for display or calculations
+    const validOriginal =
+      typeof original === "number" && !isNaN(original) ? original : 0;
+
+    // If no promotion exists or promotion has no effect, return original price
     if (
       !promotion ||
-      (!promotion.paid && !promotion.free && !promotion.percentage)
+      (promotion.type === "quantity" &&
+        (!promotion.paid || promotion.paid === 0)) ||
+      (promotion.type === "percentage" &&
+        (!promotion.percentage || promotion.percentage === 0))
     ) {
-      return forDisplay ? original.toFixed(2) : original;
+      return forDisplay ? validOriginal.toFixed(2) : validOriginal;
     }
 
     if (promotion.type === "percentage") {
-      const result = original * (1 - (promotion.percentage || 0) / 100);
+      const result = validOriginal * (1 - (promotion.percentage || 0) / 100);
       return forDisplay ? result.toFixed(2) : result;
     }
 
@@ -191,13 +203,13 @@ export default function PromotionalPage() {
       const paid = promotion.paid || 0;
       const total = paid + (promotion.free || 0);
       if (paid === 0 || total === 0) {
-        return forDisplay ? original.toFixed(2) : original;
+        return forDisplay ? validOriginal.toFixed(2) : validOriginal;
       }
-      const result = (original * paid) / total;
+      const result = (validOriginal * paid) / total;
       return forDisplay ? result.toFixed(2) : result;
     }
 
-    return forDisplay ? original.toFixed(2) : original;
+    return forDisplay ? validOriginal.toFixed(2) : validOriginal;
   };
 
   const validateDates = (startDate, endDate) => {
@@ -224,7 +236,9 @@ export default function PromotionalPage() {
           ? `${basePromo.paid}+${basePromo.free || 0}`
           : "None",
       promoPercentage:
-        basePromo.type === "percentage" ? basePromo.percentage || 0 : 0,
+        basePromo.type === "percentage" && basePromo.percentage > 0
+          ? basePromo.percentage
+          : 0,
       promoDP: calculatePromotionalPrice(product.dp, basePromo), // Full precision for DB
       promoTP: calculatePromotionalPrice(product.tp, basePromo), // Full precision for DB
       promoStartDate: basePromo.startDate || null,
@@ -247,7 +261,9 @@ export default function PromotionalPage() {
             ? `${promo.paid}+${promo.free || 0}`
             : "None",
         promoPercentage:
-          promo.type === "percentage" ? promo.percentage || 0 : 0,
+          promo.type === "percentage" && promo.percentage > 0
+            ? promo.percentage
+            : 0,
         promoDP: calculatePromotionalPrice(product.priceList[level].dp, promo), // Full precision for DB
         promoTP: calculatePromotionalPrice(product.priceList[level].tp, promo), // Full precision for DB
         promoStartDate: promo.startDate || null,
@@ -274,8 +290,8 @@ export default function PromotionalPage() {
       promoType: "none",
       promoPlan: "None",
       promoPercentage: 0,
-      promoDP: product.dp,
-      promoTP: product.tp,
+      promoDP: product.dp || 0,
+      promoTP: product.tp || 0,
       promoStartDate: null,
       promoEndDate: null,
       promoPriceList: {},
@@ -288,8 +304,8 @@ export default function PromotionalPage() {
             promoType: "none",
             promoPlan: "None",
             promoPercentage: 0,
-            promoDP: product.priceList[outlet].dp,
-            promoTP: product.priceList[outlet].tp,
+            promoDP: product.priceList[outlet].dp || 0,
+            promoTP: product.priceList[outlet].tp || 0,
             promoStartDate: null,
             promoEndDate: null,
           };
@@ -436,7 +452,10 @@ export default function PromotionalPage() {
               outletType === "quantity" && outletPaid > 0
                 ? `${outletPaid}+${outletFree}`
                 : "None",
-            promoPercentage: outletType === "percentage" ? outletPercentage : 0,
+            promoPercentage:
+              outletType === "percentage" && outletPercentage > 0
+                ? outletPercentage
+                : 0,
             promoDP: calculatePromotionalPrice(
               product.priceList[outlet].dp,
               outletPromotion
@@ -457,7 +476,10 @@ export default function PromotionalPage() {
             baseType === "quantity" && basePaid > 0
               ? `${basePaid}+${baseFree}`
               : "None",
-          promoPercentage: baseType === "percentage" ? basePercentage : 0,
+          promoPercentage:
+            baseType === "percentage" && basePercentage > 0
+              ? basePercentage
+              : 0,
           promoDP: calculatePromotionalPrice(product.dp, basePromotion), // Full precision for DB
           promoTP: calculatePromotionalPrice(product.tp, basePromotion), // Full precision for DB
           promoStartDate: baseStartDate || null,
@@ -533,8 +555,8 @@ export default function PromotionalPage() {
       const row = {
         "Product ID": product._id,
         "Product Name": product.name,
-        "Price DP": product.dp,
-        "Price TP": product.tp,
+        "Price DP": product.dp || 0,
+        "Price TP": product.tp || 0,
         "Promo Type": "quantity",
         "Paid Quantity": "",
         "Free Quantity": "",
@@ -729,8 +751,8 @@ export default function PromotionalPage() {
                         <td className="p-3 font-medium text-gray-800">
                           {product.name}
                         </td>
-                        <td className="p-3 text-center">{product.dp}</td>
-                        <td className="p-3 text-center">{product.tp}</td>
+                        <td className="p-3 text-center">{product.dp || 0}</td>
+                        <td className="p-3 text-center">{product.tp || 0}</td>
                         <td className="p-3 text-center">
                           <select
                             value={basePromo.type || "quantity"}
@@ -801,10 +823,18 @@ export default function PromotionalPage() {
                           )}
                         </td>
                         <td className="p-3 text-center">
-                          {calculatePromotionalPrice(product.dp, basePromo, true)}
+                          {calculatePromotionalPrice(
+                            product.dp,
+                            basePromo,
+                            true
+                          )}
                         </td>
                         <td className="p-3 text-center">
-                          {calculatePromotionalPrice(product.tp, basePromo, true)}
+                          {calculatePromotionalPrice(
+                            product.tp,
+                            basePromo,
+                            true
+                          )}
                         </td>
                         <td className="p-3 text-center">
                           <div className="flex flex-col space-y-1">
@@ -858,7 +888,7 @@ export default function PromotionalPage() {
 
                       {expandedPromos[product._id] && product.priceList && (
                         <tr className="bg-gray-50">
-                          <td colSpan="10" className="px-6 py-4">
+                          <td>
                             <div className="ml-8">
                               <h4 className="font-medium text-gray-700 mb-2">
                                 Outlet Specific Promotions
