@@ -196,8 +196,8 @@ const FinancialMovementReport = () => {
       { align: "right" }
     );
     doc.text(`Printed By : ${user.name}`, pageWidth - marginX - 2, y + 10, {
-      align: "right" }
-    );
+      align: "right",
+    });
     y += 25;
 
     // === CENTERED SUBJECT & DATE RANGE ===
@@ -650,20 +650,22 @@ const FinancialMovementReport = () => {
                       <td className="border p-2">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
-                      <td className="border p-2">
-                        <button
-                          onClick={() => handleEdit(txn)}
-                          className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(txn._id)}
-                          className="bg-red-600 text-white px-2 py-1 rounded"
-                        >
-                          Delete
-                        </button>
-                      </td>
+                      {user.role === "super admin" && (
+                        <td className="border p-2">
+                          <button
+                            onClick={() => handleEdit(txn)}
+                            className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(txn._id)}
+                            className="bg-red-600 text-white px-2 py-1 rounded"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -685,7 +687,9 @@ const FinancialMovementReport = () => {
               <h3 className="text-lg font-bold mb-4">Edit Transaction</h3>
               <form>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Amount</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Amount
+                  </label>
                   <input
                     type="number"
                     name="amount"
@@ -709,7 +713,9 @@ const FinancialMovementReport = () => {
                   </select>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Remarks</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Remarks
+                  </label>
                   <textarea
                     name="remarks"
                     value={editForm.remarks}
