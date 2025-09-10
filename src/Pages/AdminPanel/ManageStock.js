@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import AdminSidebar from "../../Component/AdminSidebar";
 import OpeningStock from "../OpeningStock";
@@ -15,13 +15,30 @@ const ManageStock = () => {
   const [selectedTab, setSelectedTab] = useState("");
   const [stock, setStock] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState([]); // State for all products
+  const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
-  const [currentDue, setCurrentDue] = useState(0); // Total due
+  const [currentDue, setCurrentDue] = useState(0);
+  const [userSearch, setUserSearch] = useState(""); // State for user search query
+  const [showUserDropdown, setShowUserDropdown] = useState(false); // State for user dropdown visibility
+  const userDropdownRef = useRef(null); // Ref for handling click outside
 
   useEffect(() => {
     fetchUsers();
-    fetchAllProducts(); // Fetch products when component mounts
+    fetchAllProducts();
+  }, []);
+
+  // Handle click outside to close user dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(event.target)
+      ) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchUsers = async () => {
@@ -36,7 +53,6 @@ const ManageStock = () => {
     }
   };
 
-  // Fetch all products once
   const fetchAllProducts = async () => {
     try {
       setProductsLoading(true);
@@ -85,6 +101,21 @@ const ManageStock = () => {
     }
   };
 
+  // Filter users based on search query
+  const filteredUsers = users.filter((user) =>
+    `${user.outlet} ${user.name} ${user.role}`
+      .toLowerCase()
+      .includes(userSearch.toLowerCase())
+  );
+
+  // Handle user selection
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    setUserSearch(`${user.outlet} (${user.name}) - ${user.role}`);
+    setShowUserDropdown(false);
+    setSelectedTab("");
+  };
+
   const renderContent = () => {
     if (!selectedUser) {
       return (
@@ -103,14 +134,13 @@ const ManageStock = () => {
       );
     }
 
-    // Common props for all voucher components
     const commonProps = {
       user: selectedUser,
       stock: stock,
       setStock: setStock,
       getStockValue: getStockValue,
-      allProducts: products, 
-      currentDue:currentDue
+      allProducts: products,
+      currentDue: currentDue,
     };
 
     switch (selectedTab) {
@@ -144,23 +174,40 @@ const ManageStock = () => {
               <label className="block text-gray-700 font-medium mb-2">
                 Select User
               </label>
-              <select
-                value={selectedUser ? selectedUser._id : ""}
-                onChange={(e) => {
-                  const userId = e.target.value;
-                  const user = users.find((u) => u._id === userId);
-                  setSelectedUser(user);
-                  setSelectedTab("");
-                }}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Choose a user --</option>
-                {users.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.outlet} ({user.name}) - {user.role}
-                  </option>
-                ))}
-              </select>
+              <div className="relative w-full" ref={userDropdownRef}>
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setShowUserDropdown(true);
+                  }}
+                  onFocus={() => setShowUserDropdown(true)}
+                  placeholder="Search User (Outlet, Name, Role)..."
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Search User"
+                />
+                {showUserDropdown && filteredUsers.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredUsers.map((user) => (
+                      <div
+                        key={user._id}
+                        onClick={() => handleUserSelect(user)}
+                        className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                        role="option"
+                        aria-selected={selectedUser?._id === user._id}
+                      >
+                        {user.outlet} ({user.name}) - {user.role}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {showUserDropdown && userSearch && filteredUsers.length === 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                    No users found
+                  </div>
+                )}
+              </div>
             </div>
 
             {selectedUser && (
@@ -191,7 +238,6 @@ const ManageStock = () => {
             )}
           </div>
 
-          {/* Tab content */}
           {selectedTab && (
             <div className="bg-white p-6 rounded-xl shadow-md">
               {renderContent()}

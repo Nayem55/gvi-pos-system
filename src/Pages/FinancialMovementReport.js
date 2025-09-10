@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
@@ -10,11 +10,14 @@ import { toast } from "react-hot-toast";
 
 const FinancialMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
-  const [selectedType, setSelectedType] = useState("outlet"); // outlet, ASM, RSM, or Zone
+  const [selectedType, setSelectedType] = useState("outlet");
   const [selectedArea, setSelectedArea] = useState(user.outlet || "");
   const [areaOptions, setAreaOptions] = useState([]);
   const [exportDropdown, setExportDropdown] = useState(false);
   const [outlets, setOutlets] = useState([]);
+  const [outletSearch, setOutletSearch] = useState(""); // State for outlet search query
+  const [showOutletDropdown, setShowOutletDropdown] = useState(false); // State for outlet dropdown visibility
+  const outletDropdownRef = useRef(null); // Ref for handling click outside
 
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
@@ -39,7 +42,6 @@ const FinancialMovementReport = () => {
     setOutlets(response.data);
   };
 
-  // Fetch area options based on selected type
   useEffect(() => {
     const fetchAreaOptions = async () => {
       try {
@@ -70,6 +72,20 @@ const FinancialMovementReport = () => {
       fetchReportData();
     }
   }, [selectedArea, dateRange, selectedType]);
+
+  // Handle click outside to close outlet dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        outletDropdownRef.current &&
+        !outletDropdownRef.current.contains(event.target)
+      ) {
+        setShowOutletDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -176,7 +192,6 @@ const FinancialMovementReport = () => {
     doc.setFont("times", "normal");
     doc.setFontSize(12);
 
-    // === HEADER ===
     doc.text(
       `${selectedType === "outlet" ? "Dealer" : selectedType}: ${
         selectedArea || ""
@@ -200,7 +215,6 @@ const FinancialMovementReport = () => {
     });
     y += 25;
 
-    // === CENTERED SUBJECT & DATE RANGE ===
     doc.setFont("times", "bold");
     doc.text("Sub: Confirmation of Accounts", pageWidth / 2, y, {
       align: "center",
@@ -218,7 +232,6 @@ const FinancialMovementReport = () => {
     );
     y += 10;
 
-    // === LEFT-ALIGNED PARAGRAPHS ===
     const paragraphs = [
       "Given below is the details of your Accounts as standing in my/our Books of Accounts for the above mentioned period.",
       "Kindly return 3 copies stating your I.T. Permanent A/c No., duly signed and sealed, in confirmation of the same. Please note that if no reply is received from you within a fortnight, it will be assumed that you have accepted the balance shown below.",
@@ -228,13 +241,12 @@ const FinancialMovementReport = () => {
       const split = doc.splitTextToSize(line, pageWidth - marginX * 2);
       split.forEach((l) => {
         doc.text(l, marginX, y);
-        y += 6; // line spacing within the same paragraph
+        y += 6;
       });
-      y += 4; // extra space *between* paragraphs only
+      y += 4;
     });
     y += 10;
 
-    // === SPLIT TRANSACTIONS ===
     const debit = [];
     const credit = [];
 
@@ -247,7 +259,7 @@ const FinancialMovementReport = () => {
     }
 
     reportData.transactions.forEach((txn) => {
-      const type = txn.type.toLowerCase();
+      const type = txn.type?.toLowerCase();
       if (["primary", "adjustment"].includes(type)) {
         debit.push({ date: txn.date, type: txn.type, amount: txn.amount });
       } else if (
@@ -270,7 +282,6 @@ const FinancialMovementReport = () => {
     const verticalDividerX = pageWidth / 2;
     const colWidths = { date: 24, particulars: 42, amount: 25 };
 
-    // === TABLE HEADER ===
     const headerBoxY = y;
     const rowHeight = 8;
     doc.setDrawColor(0);
@@ -332,14 +343,12 @@ const FinancialMovementReport = () => {
       y += 6;
     }
 
-    // === DIVIDERS ===
     doc.setDrawColor(180);
     doc.line(verticalDividerX, headerBoxY - 6, verticalDividerX, y);
     doc.line(marginX, y, pageWidth - marginX, y);
 
     y += 6;
 
-    // === TOTALS ===
     doc.setFont("times", "bold");
     doc.text("TOTAL", colLeftX + colWidths.date + colGap, y);
     doc.text(
@@ -358,7 +367,6 @@ const FinancialMovementReport = () => {
 
     y += 8;
 
-    // === CLOSING BALANCE ===
     const closing = totalDebit - totalCredit;
     doc.text("Closing Balance", colRightX + colWidths.date + colGap, y);
     doc.text(
@@ -368,7 +376,6 @@ const FinancialMovementReport = () => {
       { align: "right" }
     );
 
-    // === FOOTER ===
     y += 25;
     doc.setFont("times", "normal");
     doc.text("I/We hereby confirm the above", marginX, y);
@@ -424,6 +431,18 @@ const FinancialMovementReport = () => {
       toast.error("Failed to delete transaction");
       console.error("Error:", error);
     }
+  };
+
+  // Filter outlets based on search query
+  const filteredOutlets = outlets.filter((outlet) =>
+    outlet?.toLowerCase().includes(outletSearch?.toLowerCase())
+  );
+
+  // Handle outlet selection
+  const handleOutletSelect = (outlet) => {
+    setSelectedArea(outlet);
+    setOutletSearch(outlet);
+    setShowOutletDropdown(false);
   };
 
   return (
@@ -491,6 +510,7 @@ const FinancialMovementReport = () => {
             onChange={(e) => {
               setSelectedType(e.target.value);
               setSelectedArea("");
+              setOutletSearch("");
             }}
             className="px-4 py-2 border rounded-md shadow-sm"
           >
@@ -516,18 +536,40 @@ const FinancialMovementReport = () => {
           )}
 
           {selectedType === "outlet" && !user?.outlet && (
-            <select
-              value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value)}
-              className="px-4 py-2 border rounded-md shadow-sm"
-            >
-              <option value="">Select Outlet</option>
-              {outlets.map((area, index) => (
-                <option key={index} value={area}>
-                  {area}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-full max-w-xs" ref={outletDropdownRef}>
+              <input
+                type="text"
+                value={outletSearch}
+                onChange={(e) => {
+                  setOutletSearch(e.target.value);
+                  setShowOutletDropdown(true);
+                }}
+                onFocus={() => setShowOutletDropdown(true)}
+                placeholder="Search Outlet..."
+                className="w-full px-4 py-2 border rounded-md shadow-sm"
+                aria-label="Search Outlet"
+              />
+              {showOutletDropdown && filteredOutlets.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {filteredOutlets.map((outlet, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleOutletSelect(outlet)}
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      role="option"
+                      aria-selected={selectedArea === outlet}
+                    >
+                      {outlet}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showOutletDropdown && outletSearch && filteredOutlets.length === 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                  No outlets found
+                </div>
+              )}
+            </div>
           )}
 
           <div className="flex flex-col md:flex-row gap-2">
@@ -685,7 +727,7 @@ const FinancialMovementReport = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h3 className="text-lg font-bold mb-4">Edit Transaction</h3>
-              <form>
+              <div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-1">
                     Amount
@@ -740,7 +782,7 @@ const FinancialMovementReport = () => {
                     Save
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         )}

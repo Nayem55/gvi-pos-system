@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
@@ -12,6 +12,9 @@ const StockMovementReport = () => {
   const [selectedOutlet, setSelectedOutlet] = useState(user.outlet || "");
   const [exportDropdown, setExportDropdown] = useState(false);
   const [outlets, setOutlets] = useState([]);
+  const [outletSearch, setOutletSearch] = useState(""); // State for outlet search query
+  const [showOutletDropdown, setShowOutletDropdown] = useState(false); // State for outlet dropdown visibility
+  const outletDropdownRef = useRef(null); // Ref for handling click outside
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
     end: dayjs().endOf("month").format("YYYY-MM-DD"),
@@ -29,6 +32,20 @@ const StockMovementReport = () => {
       fetchReportData();
     }
   }, [selectedOutlet, dateRange.start, dateRange.end]);
+
+  // Handle click outside to close outlet dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        outletDropdownRef.current &&
+        !outletDropdownRef.current.contains(event.target)
+      ) {
+        setShowOutletDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -400,6 +417,18 @@ const StockMovementReport = () => {
     }
   );
 
+  // Filter outlets based on search query
+  const filteredOutlets = outlets.filter((outlet) =>
+    outlet?.toLowerCase().includes(outletSearch?.toLowerCase())
+  );
+
+  // Handle outlet selection
+  const handleOutletSelect = (outlet) => {
+    setSelectedOutlet(outlet);
+    setOutletSearch(outlet);
+    setShowOutletDropdown(false);
+  };
+
   return (
     <div className="flex">
       {!user?.outlet && <AdminSidebar />}
@@ -460,18 +489,40 @@ const StockMovementReport = () => {
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           {!user?.outlet && (
-            <select
-              value={selectedOutlet}
-              onChange={(e) => setSelectedOutlet(e.target.value)}
-              className="px-4 py-2 border rounded-md shadow-sm"
-            >
-              <option value="">Select Outlet</option>
-              {outlets?.map((outlet, index) => (
-                <option key={index} value={outlet}>
-                  {outlet}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-full max-w-xs" ref={outletDropdownRef}>
+              <input
+                type="text"
+                value={outletSearch}
+                onChange={(e) => {
+                  setOutletSearch(e.target.value);
+                  setShowOutletDropdown(true);
+                }}
+                onFocus={() => setShowOutletDropdown(true)}
+                placeholder="Search Outlet..."
+                className="w-full px-4 py-2 border rounded-md shadow-sm"
+                aria-label="Search Outlet"
+              />
+              {showOutletDropdown && filteredOutlets.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {filteredOutlets.map((outlet, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleOutletSelect(outlet)}
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      role="option"
+                      aria-selected={selectedOutlet === outlet}
+                    >
+                      {outlet}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showOutletDropdown && outletSearch && filteredOutlets.length === 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                  No outlets found
+                </div>
+              )}
+            </div>
           )}
           <div className="flex flex-col md:flex-row gap-2">
             <div className="flex items-center gap-2">
