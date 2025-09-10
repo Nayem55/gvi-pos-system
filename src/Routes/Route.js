@@ -47,6 +47,7 @@ import PaymentRequests from "../Pages/AdminPanel/PaymentRequests";
 import ManagerReports from "../Pages/ManagerReports";
 import FullTDDReport from "../Pages/AdminPanel/FullTDDReport";
 import FullSalesReport from "../Pages/FullSalesReport";
+import StockTransactionsReport from "../Pages/StockTransactionsReport";
 
 const router = createBrowserRouter([
   {
@@ -181,6 +182,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/full-sales-report",
         element: <FullSalesReport />,
+      },
+      {
+        path: "/admin/full-stock-report",
+        element: <StockTransactionsReport />,
       },
       {
         path: "/admin/sales-movement/category-wise",
