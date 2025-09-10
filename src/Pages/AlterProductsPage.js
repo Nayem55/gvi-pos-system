@@ -30,9 +30,9 @@ const AlterProductsPage = () => {
   const [bulkUpdateMode, setBulkUpdateMode] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [bulkUpdateFields, setBulkUpdateFields] = useState({
-    dp: "",
-    tp: "",
-    mrp: "",
+    dp: 0,
+    tp: 0,
+    mrp: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedPriceLists, setExpandedPriceLists] = useState({});
@@ -91,14 +91,15 @@ const AlterProductsPage = () => {
   }, []);
 
   const handleInputChange = (e, id, field) => {
+    const value = field === "dp" || field === "tp" || field === "mrp" ? Number(e.target.value) : e.target.value;
     const updatedProducts = products.map((product) =>
-      product._id === id ? { ...product, [field]: e.target.value } : product
+      product._id === id ? { ...product, [field]: value } : product
     );
     setProducts(updatedProducts);
 
     if (bulkUpdateMode && selectedCategory) {
       const updatedFiltered = filteredProducts.map((product) =>
-        product._id === id ? { ...product, [field]: e.target.value } : product
+        product._id === id ? { ...product, [field]: value } : product
       );
       setFilteredProducts(updatedFiltered);
     }
@@ -113,7 +114,7 @@ const AlterProductsPage = () => {
             ...product.priceList,
             [outlet]: {
               ...product.priceList?.[outlet],
-              [field]: value,
+              [field]: Number(value),
             },
           },
         };
@@ -131,7 +132,7 @@ const AlterProductsPage = () => {
               ...product.priceList,
               [outlet]: {
                 ...product.priceList?.[outlet],
-                [field]: value,
+                [field]: Number(value),
               },
             },
           };
@@ -145,7 +146,7 @@ const AlterProductsPage = () => {
   const handleBulkFieldChange = (e, field) => {
     setBulkUpdateFields({
       ...bulkUpdateFields,
-      [field]: e.target.value,
+      [field]: Number(e.target.value),
     });
   };
 
@@ -171,7 +172,7 @@ const AlterProductsPage = () => {
     }
 
     const updateFields = Object.fromEntries(
-      Object.entries(bulkUpdateFields).filter(([_, value]) => value !== "")
+      Object.entries(bulkUpdateFields).filter(([_, value]) => value !== 0)
     );
 
     if (Object.keys(updateFields).length === 0) {
@@ -222,7 +223,7 @@ const AlterProductsPage = () => {
   const resetBulkUpdate = () => {
     setBulkUpdateMode(false);
     setSelectedCategory("");
-    setBulkUpdateFields({ dp: "", tp: "", mrp: "" });
+    setBulkUpdateFields({ dp: 0, tp: 0, mrp: 0 });
     setFilteredProducts(products);
   };
 
@@ -255,7 +256,6 @@ const AlterProductsPage = () => {
   const exportToExcel = () => {
     setExportLoading(true);
     try {
-      // Prepare data for export
       const exportData = products.map((product) => {
         const baseData = {
           "Product ID": product._id,
@@ -268,24 +268,21 @@ const AlterProductsPage = () => {
           MRP: product.mrp,
         };
 
-        // Add price list data if available
         if (product.priceList) {
           Object.entries(product.priceList).forEach(([outlet, prices]) => {
-            baseData[`${outlet} DP`] = prices.dp || "";
-            baseData[`${outlet} TP`] = prices.tp || "";
-            baseData[`${outlet} MRP`] = prices.mrp || "";
+            baseData[`${outlet} DP`] = prices.dp || 0;
+            baseData[`${outlet} TP`] = prices.tp || 0;
+            baseData[`${outlet} MRP`] = prices.mrp || 0;
           });
         }
 
         return baseData;
       });
 
-      // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
       XLSX.utils.book_append_sheet(wb, ws, "Products");
 
-      // Generate file and download
       const fileName = `products_export_${new Date()
         .toISOString()
         .slice(0, 10)}.xlsx`;
@@ -312,7 +309,7 @@ const AlterProductsPage = () => {
       const workbook = XLSX.read(data, { type: "array" });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-      setImportPreview(jsonData.slice(0, 5)); // Show preview of first 5 rows
+      setImportPreview(jsonData.slice(0, 5));
     };
 
     reader.readAsArrayBuffer(file);
@@ -327,7 +324,6 @@ const AlterProductsPage = () => {
     setImportLoading(true);
 
     try {
-      // Wrap FileReader in a Promise to properly handle async flow
       const importResult = await new Promise((resolve, reject) => {
         const reader = new FileReader();
 
@@ -414,24 +410,6 @@ const AlterProductsPage = () => {
       setImportPreview([]);
       fetchProducts();
     }
-  };
-
-  // const generateNewId = () => {
-  //   return new mongoose.Types.ObjectId().toString();
-  // };
-
-  const extractPriceList = (row) => {
-    const priceList = {};
-    Object.keys(row).forEach((key) => {
-      if (key.includes(" DP") || key.includes(" TP") || key.includes(" MRP")) {
-        const [outlet, priceType] = key.split(" ");
-        if (!priceList[outlet]) {
-          priceList[outlet] = {};
-        }
-        priceList[outlet][priceType.toLowerCase()] = row[key];
-      }
-    });
-    return priceList;
   };
 
   const displayProducts = bulkUpdateMode
@@ -664,8 +642,8 @@ const AlterProductsPage = () => {
                     </span>
                     <input
                       type="number"
-                      placeholder="Current value"
-                      value={bulkUpdateFields.dp}
+                      placeholder="Enter new DP"
+                      value={bulkUpdateFields.dp || ""}
                       onChange={(e) => handleBulkFieldChange(e, "dp")}
                       className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -682,8 +660,8 @@ const AlterProductsPage = () => {
                     </span>
                     <input
                       type="number"
-                      placeholder="Current value"
-                      value={bulkUpdateFields.tp}
+                      placeholder="Enter new TP"
+                      value={bulkUpdateFields.tp || ""}
                       onChange={(e) => handleBulkFieldChange(e, "tp")}
                       className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -700,8 +678,8 @@ const AlterProductsPage = () => {
                     </span>
                     <input
                       type="number"
-                      placeholder="Current value"
-                      value={bulkUpdateFields.mrp}
+                      placeholder="Enter new MRP"
+                      value={bulkUpdateFields.mrp || ""}
                       onChange={(e) => handleBulkFieldChange(e, "mrp")}
                       className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -914,7 +892,7 @@ const AlterProductsPage = () => {
                                   </span>
                                   <input
                                     type="number"
-                                    value={product.dp}
+                                    value={product.dp || ""}
                                     onChange={(e) =>
                                       handleInputChange(e, product._id, "dp")
                                     }
@@ -935,7 +913,7 @@ const AlterProductsPage = () => {
                                   </span>
                                   <input
                                     type="number"
-                                    value={product.tp}
+                                    value={product.tp || ""}
                                     onChange={(e) =>
                                       handleInputChange(e, product._id, "tp")
                                     }
@@ -956,7 +934,7 @@ const AlterProductsPage = () => {
                                   </span>
                                   <input
                                     type="number"
-                                    value={product.mrp}
+                                    value={product.mrp || ""}
                                     onChange={(e) =>
                                       handleInputChange(e, product._id, "mrp")
                                     }

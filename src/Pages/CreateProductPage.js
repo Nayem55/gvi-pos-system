@@ -20,7 +20,7 @@ const InputField = ({
     <label className="block text-sm font-medium mb-1">{label}</label>
     <input
       type={type}
-      value={value}
+      value={value || ""}
       onChange={onChange}
       className={`w-full p-2 border rounded ${className}`}
       placeholder={placeholder}
@@ -108,8 +108,8 @@ const PriceListSection = ({ outlet, prices, onChange, onRemove }) => (
       <InputField
         label="DP Price"
         type="number"
-        value={prices?.dp}
-        onChange={(e) => onChange(outlet, "dp", e.target.value)}
+        value={prices?.dp || ""}
+        onChange={(e) => onChange(outlet, "dp", Number(e.target.value))}
         placeholder="Enter DP price"
         min="0"
         step="0.01"
@@ -117,8 +117,8 @@ const PriceListSection = ({ outlet, prices, onChange, onRemove }) => (
       <InputField
         label="TP Price"
         type="number"
-        value={prices?.tp}
-        onChange={(e) => onChange(outlet, "tp", e.target.value)}
+        value={prices?.tp || ""}
+        onChange={(e) => onChange(outlet, "tp", Number(e.target.value))}
         placeholder="Enter TP price"
         min="0"
         step="0.01"
@@ -126,8 +126,8 @@ const PriceListSection = ({ outlet, prices, onChange, onRemove }) => (
       <InputField
         label="MRP Price"
         type="number"
-        value={prices?.mrp}
-        onChange={(e) => onChange(outlet, "mrp", e.target.value)}
+        value={prices?.mrp || ""}
+        onChange={(e) => onChange(outlet, "mrp", Number(e.target.value))}
         placeholder="Enter MRP price"
         min="0"
         step="0.01"
@@ -138,18 +138,17 @@ const PriceListSection = ({ outlet, prices, onChange, onRemove }) => (
 
 const CreateProductPage = () => {
   const [priceLevels, setPriceLevels] = useState([]);
-  console.log(priceLevels);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
     barcode: "",
-    dp: "",
-    tp: "",
-    mrp: "",
+    dp: 0,
+    tp: 0,
+    mrp: 0,
     category: "",
     brand: "",
     priceList: Object.fromEntries(
-      priceLevels.map((outlet) => [outlet, { tp: "", dp: "", mrp: "" }])
+      priceLevels.map((outlet) => [outlet, { tp: 0, dp: 0, mrp: 0 }])
     ),
   });
 
@@ -193,14 +192,21 @@ const CreateProductPage = () => {
       setFetchingData((prev) => ({ ...prev, brands: false }));
     }
   };
+
   const fetchPriceLevels = async () => {
     try {
       const response = await axios.get(
         "http://175.29.181.245:5000/api/pricelevels"
       );
-      // Extract just the 'name' values from each object
       const namesArray = response.data.map((level) => level.name);
       setPriceLevels(namesArray);
+      // Update newProduct.priceList with fetched price levels
+      setNewProduct((prev) => ({
+        ...prev,
+        priceList: Object.fromEntries(
+          namesArray.map((outlet) => [outlet, { tp: 0, dp: 0, mrp: 0 }])
+        ),
+      }));
     } catch (error) {
       console.error("Error fetching price levels:", error);
       toast.error("Failed to load price levels");
@@ -218,10 +224,27 @@ const CreateProductPage = () => {
   const createProductWithStocks = async () => {
     try {
       setLoading(true);
+      // Ensure all prices are numbers before sending to the backend
+      const productToSend = {
+        ...newProduct,
+        dp: Number(newProduct.dp),
+        tp: Number(newProduct.tp),
+        mrp: Number(newProduct.mrp),
+        priceList: Object.fromEntries(
+          Object.entries(newProduct.priceList).map(([outlet, prices]) => [
+            outlet,
+            {
+              dp: Number(prices.dp),
+              tp: Number(prices.tp),
+              mrp: Number(prices.mrp),
+            },
+          ])
+        ),
+      };
       await axios.post(
         "http://175.29.181.245:5000/create-product-with-stocks",
         {
-          productData: newProduct,
+          productData: productToSend,
         }
       );
 
@@ -229,13 +252,13 @@ const CreateProductPage = () => {
       setNewProduct({
         name: "",
         barcode: "",
-        dp: "",
-        tp: "",
-        mrp: "",
+        dp: 0,
+        tp: 0,
+        mrp: 0,
         category: "",
         brand: "",
         priceList: Object.fromEntries(
-          priceLevels.map((outlet) => [outlet, { tp: "", dp: "", mrp: "" }])
+          priceLevels.map((outlet) => [outlet, { tp: 0, dp: 0, mrp: 0 }])
         ),
       });
     } catch (error) {
@@ -303,7 +326,7 @@ const CreateProductPage = () => {
         ...prev.priceList,
         [outlet]: {
           ...prev.priceList[outlet],
-          [field]: value,
+          [field]: Number(value),
         },
       },
     }));
@@ -327,7 +350,7 @@ const CreateProductPage = () => {
       ...prev,
       priceList: {
         ...prev.priceList,
-        [outletKey]: { tp: "", dp: "", mrp: "" },
+        [outletKey]: { tp: 0, dp: 0, mrp: 0 },
       },
     }));
 
@@ -520,9 +543,9 @@ const CreateProductPage = () => {
             <InputField
               label="DP Price"
               type="number"
-              value={newProduct?.dp}
+              value={newProduct.dp || ""}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, dp: e.target.value })
+                setNewProduct({ ...newProduct, dp: Number(e.target.value) })
               }
               placeholder="Enter DP price"
               required
@@ -533,9 +556,9 @@ const CreateProductPage = () => {
             <InputField
               label="TP Price"
               type="number"
-              value={newProduct?.tp}
+              value={newProduct.tp || ""}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, tp: e.target.value })
+                setNewProduct({ ...newProduct, tp: Number(e.target.value) })
               }
               placeholder="Enter TP price"
               required
@@ -546,9 +569,9 @@ const CreateProductPage = () => {
             <InputField
               label="MRP Price"
               type="number"
-              value={newProduct?.mrp}
+              value={newProduct.mrp || ""}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, mrp: e.target.value })
+                setNewProduct({ ...newProduct, mrp: Number(e.target.value) })
               }
               placeholder="Enter MRP price"
               required
@@ -568,6 +591,7 @@ const CreateProductPage = () => {
             {showPriceList && (
               <button
                 type="button"
+                onClick={() => setShowNewOutletModal(true)}
                 className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
               >
                 <PlusCircle size={14} /> Add New Price Level
