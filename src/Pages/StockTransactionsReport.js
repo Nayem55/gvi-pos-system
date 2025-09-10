@@ -16,7 +16,7 @@ const StockTransactionsReport = () => {
   const [outlets, setOutlets] = useState([]);
   const outletDropdownRef = useRef(null);
   const [exportDropdown, setExportDropdown] = useState(false);
-  const [selectedType, setSelectedType] = useState(""); // New state for type filter
+  const [selectedType, setSelectedType] = useState("primary"); // New state for type filter
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
     end: dayjs().endOf("month").format("YYYY-MM-DD"),
