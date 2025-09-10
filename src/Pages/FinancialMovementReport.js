@@ -6,6 +6,7 @@ import { jsPDF } from "jspdf/dist/jspdf.umd.min.js";
 import "jspdf-autotable";
 import autoTable from "jspdf-autotable";
 import AdminSidebar from "../Component/AdminSidebar";
+import { toast } from "react-hot-toast";
 
 const FinancialMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -22,6 +23,12 @@ const FinancialMovementReport = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
+  const [editingTxn, setEditingTxn] = useState(null);
+  const [editForm, setEditForm] = useState({
+    amount: "",
+    type: "",
+    remarks: "",
+  });
 
   useEffect(() => {
     fetchOutlets();
@@ -189,8 +196,8 @@ const FinancialMovementReport = () => {
       { align: "right" }
     );
     doc.text(`Printed By : ${user.name}`, pageWidth - marginX - 2, y + 10, {
-      align: "right",
-    });
+      align: "right" }
+    );
     y += 25;
 
     // === CENTERED SUBJECT & DATE RANGE ===
@@ -374,6 +381,49 @@ const FinancialMovementReport = () => {
         "YYYYMMDD"
       )}.pdf`
     );
+  };
+
+  const handleEdit = (txn) => {
+    setEditForm({
+      amount: txn.amount,
+      type: txn.type,
+      remarks: txn.remarks || "",
+    });
+    setEditingTxn(txn);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await axios.put(
+        `http://175.29.181.245:5000/money-transaction/${editingTxn._id}`,
+        editForm
+      );
+      toast.success("Transaction updated successfully!");
+      setEditingTxn(null);
+      fetchReportData();
+    } catch (error) {
+      toast.error("Failed to update transaction");
+      console.error("Error:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this transaction?")) {
+      return;
+    }
+    try {
+      await axios.delete(`http://175.29.181.245:5000/money-transaction/${id}`);
+      toast.success("Transaction deleted successfully!");
+      fetchReportData();
+    } catch (error) {
+      toast.error("Failed to delete transaction");
+      console.error("Error:", error);
+    }
   };
 
   return (
@@ -582,6 +632,7 @@ const FinancialMovementReport = () => {
                     <th className="border p-2">Amount</th>
                     <th className="border p-2">Created By</th>
                     <th className="border p-2">Remarks</th>
+                    <th className="border p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -599,6 +650,20 @@ const FinancialMovementReport = () => {
                       <td className="border p-2">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
+                      <td className="border p-2">
+                        <button
+                          onClick={() => handleEdit(txn)}
+                          className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(txn._id)}
+                          className="bg-red-600 text-white px-2 py-1 rounded"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -610,6 +675,67 @@ const FinancialMovementReport = () => {
         {!loading && !reportData && (
           <div className="text-center py-8 text-gray-500">
             No data available for selected period
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {editingTxn && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h3 className="text-lg font-bold mb-4">Edit Transaction</h3>
+              <form>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Amount</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    value={editForm.amount}
+                    onChange={handleEditChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Type</label>
+                  <select
+                    name="type"
+                    value={editForm.type}
+                    onChange={handleEditChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  >
+                    <option value="primary">Primary</option>
+                    <option value="payment">Payment</option>
+                    <option value="office return">Office Return</option>
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Remarks</label>
+                  <textarea
+                    name="remarks"
+                    value={editForm.remarks}
+                    onChange={handleEditChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    rows="3"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTxn(null)}
+                    className="bg-gray-600 text-white px-4 py-2 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEdit}
+                    className="bg-green-600 text-white px-4 py-2 rounded"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>
