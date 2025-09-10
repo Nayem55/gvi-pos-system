@@ -395,8 +395,8 @@ const StockMovementReport = () => {
       acc.secondaryValue += item.secondaryValueDP || 0;
       acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
       acc.actualSecondaryValue += (item.secondaryValueDP - item.marketReturnValueDP) || 0;
-      acc.closingQty += item.closingStock || 0;
-      acc.closingValue += item.closingValueDP || 0;
+      acc.closingQty += (item.openingStock + item.primary + item.marketReturn - item.secondary - item.officeReturn) || 0;
+      acc.closingValue += (item.openingValueDP + item.primaryValueDP + item.marketReturnValueDP - item.secondaryValueDP - item.officeReturnValueDP) || 0;
       return acc;
     },
     {
