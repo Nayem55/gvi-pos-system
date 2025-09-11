@@ -569,6 +569,22 @@ export default function Primary({
         )}
       </div>
 
+      {/* Total Quantity and Value */}
+      <div className="bg-white p-4 shadow rounded-lg mb-4">
+        <div className="flex flex-row-reverse justify-between">
+          <span className="text-lg font-bold">
+            Total (DP):{" "}
+            {cart
+              .reduce((sum, item) => sum + item.editableDP * item.primary, 0)
+              .toFixed(2)}{" "}
+            BDT
+          </span>
+          <span className="text-lg font-bold">
+            Total Quantity: {cart.reduce((sum, item) => sum + item.primary, 0)}
+          </span>
+        </div>
+      </div>
+
       {/* Sales Table */}
       <div className="bg-white p-4 shadow rounded-lg mb-4">
         <div className="overflow-x-hidden w-full">
@@ -650,19 +666,12 @@ export default function Primary({
         </div>
       </div>
 
-      {/* Overall Total & Submit Button */}
-      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
-        <span className="text-lg font-bold">
-          Total (DP):{" "}
-          {cart
-            .reduce((sum, item) => sum + item.editableDP * item.primary, 0)
-            .toFixed(2)}{" "}
-          BDT
-        </span>
+      {/* Submit Button */}
+      <div className="bg-white p-4 shadow rounded-lg">
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full h-[40px] mx-auto"
         >
           {isSubmitting ? (
             <svg

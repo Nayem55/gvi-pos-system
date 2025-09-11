@@ -16,7 +16,7 @@ const StockTransactionsReport = () => {
   const [outlets, setOutlets] = useState([]);
   const outletDropdownRef = useRef(null);
   const [exportDropdown, setExportDropdown] = useState(false);
-  const [selectedType, setSelectedType] = useState("primary"); // New state for type filter
+  const [selectedType, setSelectedType] = useState("primary");
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
     end: dayjs().endOf("month").format("YYYY-MM-DD"),
@@ -107,20 +107,22 @@ const StockTransactionsReport = () => {
         ).format("DD-MM-YY")}`,
       ],
       [],
-      ["Date", "Product", "Barcode", "Type", "Quantity", "DP", "TP", "Value DP", "Value TP", "Created By"],
+      ["Date", "Product", "Barcode", "Type", "Quantity", "Unit DP", "Unit TP", "Total DP", "Total TP", "Created By"],
     ];
 
     reportData.forEach((txn) => {
+      const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
+      const tp = isNaN(txn.tp) || txn.tp == null ? 0 : Number(txn.tp);
       excelData.push([
         dayjs(txn.date).format("DD-MM-YY"),
         txn.productName,
         txn.barcode,
         txn.type,
         txn.quantity,
-        txn.dp?.toFixed(2),
-        txn.tp?.toFixed(2),
-        (txn.quantity * txn.dp)?.toFixed(2),
-        (txn.quantity * txn.tp)?.toFixed(2),
+        dp.toFixed(2),
+        tp.toFixed(2),
+        (txn.quantity * dp).toFixed(2),
+        (txn.quantity * tp).toFixed(2),
         txn.user,
       ]);
     });
@@ -138,20 +140,24 @@ const StockTransactionsReport = () => {
     if (!reportData) return;
 
     const doc = new jsPDF({ orientation: "landscape" });
-    const headers = [["Date", "Product", "Barcode", "Type", "Quantity", "DP", "TP", "Value DP", "Value TP", "Created By"]];
+    const headers = [["Date", "Product", "Barcode", "Type", "Quantity", "Unit DP", "Unit TP", "Total DP", "Total TP", "Created By"]];
 
-    const data = reportData.map((txn) => [
-      dayjs(txn.date).format("DD-MM-YY"),
-      txn.productName,
-      txn.barcode,
-      txn.type,
-      txn.quantity,
-      txn.dp?.toFixed(2),
-      txn.tp?.toFixed(2),
-      (txn.quantity * txn.dp)?.toFixed(2),
-      (txn.quantity * txn.tp)?.toFixed(2),
-      txn.user,
-    ]);
+    const data = reportData.map((txn) => {
+      const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
+      const tp = isNaN(txn.tp) || txn.tp == null ? 0 : Number(txn.tp);
+      return [
+        dayjs(txn.date).format("DD-MM-YY"),
+        txn.productName,
+        txn.barcode,
+        txn.type,
+        txn.quantity,
+        dp.toFixed(2),
+        tp.toFixed(2),
+        (txn.quantity * dp).toFixed(2),
+        (txn.quantity * tp).toFixed(2),
+        txn.user,
+      ];
+    });
 
     autoTable(doc, {
       head: headers,
@@ -209,7 +215,8 @@ const StockTransactionsReport = () => {
 
   const movement = reportData ? reportData.reduce(
     (acc, txn) => {
-      const valueDP = txn.quantity * txn.dp;
+      const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
+      const valueDP = txn.quantity * dp;
       switch (txn.type) {
         case "primary":
           acc.primaryQty += txn.quantity;
@@ -450,47 +457,55 @@ const StockTransactionsReport = () => {
                     <th className="border p-2">Barcode</th>
                     <th className="border p-2">Type</th>
                     <th className="border p-2">Quantity</th>
-                    <th className="border p-2">Value DP</th>
-                    <th className="border p-2">Value TP</th>
+                    <th className="border p-2">Unit DP</th>
+                    <th className="border p-2">Unit TP</th>
+                    <th className="border p-2">Total DP</th>
+                    <th className="border p-2">Total TP</th>
                     <th className="border p-2">Created By</th>
                     <th className="border p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.map((txn, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border p-2">
-                        {dayjs(txn.date).format("DD-MM-YY")}
-                      </td>
-                      <td className="border p-2">{txn.productName}</td>
-                      <td className="border p-2">{txn.barcode}</td>
-                      <td className="border p-2 capitalize">
-                        {txn.type.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
-                      </td>
-                      <td className="border p-2">{txn.quantity}</td>
-                      <td className="border p-2">{(txn.quantity * txn.dp)?.toFixed(2)}</td>
-                      <td className="border p-2">{(txn.quantity * txn.tp)?.toFixed(2)}</td>
-                      <td className="border p-2">{txn.user}</td>
-                      <td className="border p-2">
-                        {user.role === "super admin" && txn.type !== "secondary" && (
-                          <>
-                            <button
-                              onClick={() => handleEdit(txn)}
-                              className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(txn._id)}
-                              className="bg-red-600 text-white px-2 py-1 rounded"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {reportData.map((txn, index) => {
+                    const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
+                    const tp = isNaN(txn.tp) || txn.tp == null ? 0 : Number(txn.tp);
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border p-2">
+                          {dayjs(txn.date).format("DD-MM-YY")}
+                        </td>
+                        <td className="border p-2">{txn.productName}</td>
+                        <td className="border p-2">{txn.barcode}</td>
+                        <td className="border p-2 capitalize">
+                          {txn.type.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+                        </td>
+                        <td className="border p-2">{txn.quantity}</td>
+                        <td className="border p-2">{dp.toFixed(2)}</td>
+                        <td className="border p-2">{tp.toFixed(2)}</td>
+                        <td className="border p-2">{(txn.quantity * dp).toFixed(2)}</td>
+                        <td className="border p-2">{(txn.quantity * tp).toFixed(2)}</td>
+                        <td className="border p-2">{txn.user}</td>
+                        <td className="border p-2">
+                          {user.role === "super admin" && txn.type !== "secondary" && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(txn)}
+                                className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(txn._id)}
+                                className="bg-red-600 text-white px-2 py-1 rounded"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -24,7 +24,7 @@ import {
   Settings,
   HelpCircle,
 } from "lucide-react";
-import { BiCategoryAlt, BiSolidReport } from "react-icons/bi";
+import { BiCategoryAlt, BiDetail, BiSolidReport } from "react-icons/bi";
 import { BsCash, BsCashCoin, BsShop } from "react-icons/bs";
 import { FaTrademark } from "react-icons/fa";
 
@@ -277,6 +277,11 @@ const AdminSidebar = () => {
           name: "Group Wise",
           path: "/stock-movement/group",
           icon: <BsShop size={16} />,
+        },
+        {
+          name: "Movement Details",
+          path: "/admin/full-stock-report",
+          icon: <BiDetail size={16} />,
         },
       ],
     },
