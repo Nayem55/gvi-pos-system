@@ -218,6 +218,10 @@ const StockTransactionsReport = () => {
       const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
       const valueDP = txn.quantity * dp;
       switch (txn.type) {
+        case "opening":
+          acc.openingQty += txn.quantity;
+          acc.openingValue += valueDP;
+          break;
         case "primary":
           acc.primaryQty += txn.quantity;
           acc.primaryValue += valueDP;
@@ -240,6 +244,8 @@ const StockTransactionsReport = () => {
       return acc;
     },
     {
+      openingQty: 0,
+      openingValue: 0,
       primaryQty: 0,
       primaryValue: 0,
       secondaryQty: 0,
@@ -411,29 +417,35 @@ const StockTransactionsReport = () => {
         )}
 
         {!loading && movement && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
+              <p className="text-sm text-gray-600">Opening (DP)</p>
+              <p className="text-2xl font-semibold text-purple-700">
+                {movement.openingValue.toFixed(2)}
+              </p>
+            </div>
             <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Primary (DP)</p>
               <p className="text-2xl font-semibold text-blue-700">
-                {movement.primaryValue?.toFixed(2)}
+                {movement.primaryValue.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-orange-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Secondary (DP)</p>
               <p className="text-2xl font-semibold text-orange-700">
-                {movement.secondaryValue?.toFixed(2)}
+                {movement.secondaryValue.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Market Return (DP)</p>
               <p className="text-2xl font-semibold text-green-700">
-                {movement.marketReturnValue?.toFixed(2)}
+                {movement.marketReturnValue.toFixed(2)}
               </p>
             </div>
             <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Office Return (DP)</p>
               <p className="text-2xl font-semibold text-yellow-700">
-                {movement.officeReturnValue?.toFixed(2)}
+                {movement.officeReturnValue.toFixed(2)}
               </p>
             </div>
           </div>
