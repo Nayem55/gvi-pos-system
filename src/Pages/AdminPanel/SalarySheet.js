@@ -661,7 +661,7 @@ const SalarySheet = () => {
 
         return {
           ...report,
-          target: Number(target).toFixed(2),
+          target: Number(target)?.toFixed(2),
           achievement,
           belt,
           transactionCount: report.transactionCount || 1,
@@ -729,14 +729,14 @@ const SalarySheet = () => {
           Role: report.role,
           Belt: report.belt,
           Target: report.target,
-          "Primary (DP)": report.primary?.valueDP.toFixed(2) || "0.00",
-          "Secondary (TP)": report.secondary?.valueTP.toFixed(2) || "0.00",
+          "Primary (DP)": report.primary?.valueDP?.toFixed(2) || "0.00",
+          "Secondary (TP)": report.secondary?.valueTP?.toFixed(2) || "0.00",
           "Market Return (TP)":
-            report.marketReturn?.valueTP.toFixed(2) || "0.00",
+            report.marketReturn?.valueTP?.toFixed(2) || "0.00",
           "Office Return (DP)":
-            report.officeReturn?.valueDP.toFixed(2) || "0.00",
-          Collection: report.collection?.amount.toFixed(2) || "0.00",
-          "TD/DA Expense": tddaData[report.userId].toFixed(2),
+            report.officeReturn?.valueDP?.toFixed(2) || "0.00",
+          Collection: report.collection?.amount?.toFixed(2) || "0.00",
+          "TD/DA Expense": tddaData[report.userId]?.toFixed(2),
           // "Total Working Days": workingDaysData,
           // Holidays: dayCount - workingDaysData,
           // "Approved Leave": userAttendance.approvedLeave,
@@ -796,37 +796,37 @@ const SalarySheet = () => {
           <div className="bg-yellow-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Opening (DP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.openingValue.toFixed(2)}
+              {summaryData.openingValue?.toFixed(2)}
             </p>
           </div>
           <div className="bg-purple-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Primary (DP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.totalPrimary.toFixed(2)}
+              {summaryData.totalPrimary?.toFixed(2)}
             </p>
           </div>
           <div className="bg-red-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Secondary (TP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.totalSecondary.toFixed(2)}
+              {summaryData.totalSecondary?.toFixed(2)}
             </p>
           </div>
           <div className="bg-red-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Market Return (TP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.totalMarketReturn.toFixed(2)}
+              {summaryData.totalMarketReturn?.toFixed(2)}
             </p>
           </div>
           <div className="bg-red-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Office Return (DP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.totalOfficeReturn.toFixed(2)}
+              {summaryData.totalOfficeReturn?.toFixed(2)}
             </p>
           </div>
           <div className="bg-indigo-100 p-4 rounded-lg shadow text-center">
             <h3 className="text-lg font-semibold">Closing (DP)</h3>
             <p className="text-xl font-bold">
-              {summaryData.closingValue.toFixed(2)}
+              {summaryData.closingValue?.toFixed(2)}
             </p>
           </div>
           <div className="bg-blue-100 p-4 rounded-lg shadow text-center">
@@ -1054,7 +1054,7 @@ const SalarySheet = () => {
                               {userAttendance.checkInCount}
                             </td> */}
                             <td className="border p-2 text-right">
-                              {(tddaData[report.userId] || 0).toFixed(2)}
+                              {(tddaData[report.userId] || 0)?.toFixed(2)}
                             </td>
                             <td className="border p-2 text-right">
                               <span
