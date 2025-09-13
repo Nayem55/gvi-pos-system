@@ -15,9 +15,9 @@ const FinancialMovementReport = () => {
   const [areaOptions, setAreaOptions] = useState([]);
   const [exportDropdown, setExportDropdown] = useState(false);
   const [outlets, setOutlets] = useState([]);
-  const [outletSearch, setOutletSearch] = useState(""); // State for outlet search query
-  const [showOutletDropdown, setShowOutletDropdown] = useState(false); // State for outlet dropdown visibility
-  const outletDropdownRef = useRef(null); // Ref for handling click outside
+  const [outletSearch, setOutletSearch] = useState("");
+  const [showOutletDropdown, setShowOutletDropdown] = useState(false);
+  const outletDropdownRef = useRef(null);
 
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
@@ -32,6 +32,8 @@ const FinancialMovementReport = () => {
     type: "",
     remarks: "",
   });
+  const [showOpeningModal, setShowOpeningModal] = useState(false);
+  const [openingBreakdown, setOpeningBreakdown] = useState([]);
 
   useEffect(() => {
     fetchOutlets();
@@ -73,7 +75,6 @@ const FinancialMovementReport = () => {
     }
   }, [selectedArea, dateRange, selectedType]);
 
-  // Handle click outside to close outlet dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -90,6 +91,7 @@ const FinancialMovementReport = () => {
   const fetchReportData = async () => {
     setLoading(true);
     setError(null);
+    setOpeningBreakdown([]);
 
     try {
       const params = {
@@ -116,6 +118,7 @@ const FinancialMovementReport = () => {
 
       if (response.data?.success) {
         setReportData(response.data.data);
+        setOpeningBreakdown(response.data.data.openingBreakdown || []);
       } else {
         throw new Error(response.data?.message || "Invalid response format");
       }
@@ -433,12 +436,10 @@ const FinancialMovementReport = () => {
     }
   };
 
-  // Filter outlets based on search query
   const filteredOutlets = outlets.filter((outlet) =>
     outlet?.toLowerCase().includes(outletSearch?.toLowerCase())
   );
 
-  // Handle outlet selection
   const handleOutletSelect = (outlet) => {
     setSelectedArea(outlet);
     setOutletSearch(outlet);
@@ -503,7 +504,6 @@ const FinancialMovementReport = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <select
             value={selectedType}
@@ -604,17 +604,19 @@ const FinancialMovementReport = () => {
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500">
             <p className="text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Summary Cards */}
         {!loading && reportData && (
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
+            <div 
+              className="bg-white border-l-4 border-purple-600 p-4 rounded shadow"
+              onClick={selectedType !== "outlet" ? () => setShowOpeningModal(true) : undefined}
+              style={{ cursor: selectedType !== "outlet" ? "pointer" : "default" }}
+            >
               <p className="text-sm text-gray-600">Opening Balance</p>
               <p className="text-2xl font-semibold text-purple-700">
                 {reportData.openingDue?.toFixed(2)}
@@ -653,14 +655,12 @@ const FinancialMovementReport = () => {
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         )}
 
-        {/* Transaction Table */}
         {!loading && reportData?.transactions && (
           <div className="bg-white p-4 rounded shadow-md mb-6">
             <h3 className="text-lg font-bold mb-4">Transaction Details</h3>
@@ -722,7 +722,6 @@ const FinancialMovementReport = () => {
           </div>
         )}
 
-        {/* Edit Modal */}
         {editingTxn && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -782,6 +781,40 @@ const FinancialMovementReport = () => {
                     Save
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showOpeningModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+              <h3 className="text-lg font-bold mb-4">Opening Balance Breakdown</h3>
+              <div className="overflow-y-auto max-h-96">
+                <table className="min-w-full border">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border p-2">Outlet</th>
+                      <th className="border p-2">Opening Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {openingBreakdown.map((bd, index) => (
+                      <tr key={index}>
+                        <td className="border p-2 capitalize">{bd.outlet.replace("_", " ")}</td>
+                        <td className="border p-2">{bd.openingDue.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setShowOpeningModal(false)}
+                  className="bg-gray-600 text-white px-4 py-2 rounded"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
