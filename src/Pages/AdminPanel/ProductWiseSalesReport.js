@@ -40,8 +40,9 @@ const ProductWiseSalesReport = () => {
         "http://175.29.181.245:5000/api/sales/product-wise",
         { params }
       );
-      setSalesData(response.data);
-      calculateSummary(response.data);
+      const sortedData = response.data.sort((a, b) => a._id.localeCompare(b._id));
+      setSalesData(sortedData);
+      calculateSummary(sortedData);
     } catch (err) {
       setError("Failed to fetch sales data");
     } finally {
@@ -69,22 +70,23 @@ const ProductWiseSalesReport = () => {
         { params }
       );
 
-      setModalData(response.data);
+      const sortedModalData = response.data.sort((a, b) => a._id.outlet.localeCompare(b._id.outlet));
+      setModalData(sortedModalData);
 
       // Calculate modal summary
-      const totalQuantity = response.data.reduce(
+      const totalQuantity = sortedModalData.reduce(
         (sum, outlet) => sum + outlet.total_quantity,
         0
       );
-      const totalTP = response.data.reduce(
+      const totalTP = sortedModalData.reduce(
         (sum, outlet) => sum + outlet.total_tp,
         0
       );
-      const totalMRP = response.data.reduce(
+      const totalMRP = sortedModalData.reduce(
         (sum, outlet) => sum + outlet.total_mrp,
         0
       );
-      const totalOutlets = response.data.length;
+      const totalOutlets = sortedModalData.length;
 
       setModalSummary({ totalQuantity, totalTP, totalMRP, totalOutlets });
       setIsModalOpen(true);
@@ -157,7 +159,7 @@ const ProductWiseSalesReport = () => {
     try {
       const exportData = modalData.map((outlet) => ({
         Product: selectedProduct,
-        Outlet: outlet._id,
+        Outlet: outlet._id.outlet,
         "PCS Sold": outlet.total_quantity,
         "Total TP": outlet.total_tp,
         "Total MRP": outlet.total_mrp,
