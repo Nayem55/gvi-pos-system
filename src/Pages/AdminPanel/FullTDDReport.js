@@ -16,9 +16,12 @@ const FullTDDReport = () => {
   const generateReport = async () => {
     try {
       setIsGenerating(true);
-      const response = await axios.get("http://175.29.181.245:5000/tdda/full-report", {
-        params: { month: selectedMonth },
-      });
+      const response = await axios.get(
+        "http://175.29.181.245:5000/tdda/full-report",
+        {
+          params: { month: selectedMonth },
+        }
+      );
       setReportData(response.data);
       const zones = [...new Set(response.data.users.map((u) => u.zone))].sort();
       setUniqueZones(zones);
@@ -33,9 +36,10 @@ const FullTDDReport = () => {
   };
 
   // Filtered users based on zone
-  const filteredUsers = reportData?.users.filter(
-    (user) => !selectedZone || user.zone === selectedZone
-  ) || [];
+  const filteredUsers =
+    reportData?.users.filter(
+      (user) => !selectedZone || user.zone === selectedZone
+    ) || [];
 
   // Calculate summary
   const calculateSummary = () => {
@@ -65,7 +69,7 @@ const FullTDDReport = () => {
         "User Name",
         "Zone",
         "Outlet",
-        ...reportData.days.map((day) => dayjs(day).format("D")),
+        ...reportData.days.map((day) => dayjs(day).format("ddd, D")), // e.g., "Sun, 14"
         "Total",
       ];
 
@@ -97,7 +101,7 @@ const FullTDDReport = () => {
         { wch: 30 },
         { wch: 20 },
         { wch: 25 },
-        ...reportData.days.map(() => ({ wch: 10 })),
+        ...reportData.days.map(() => ({ wch: 12 })), // Increased width for day+date
         { wch: 15 },
       ];
 
@@ -315,8 +319,9 @@ const FullTDDReport = () => {
                         <th
                           key={day}
                           className="px-3 py-3 text-center text-xs font-medium text-white uppercase tracking-wider"
+                          title={dayjs(day).format("YYYY-MM-DD")}
                         >
-                          {dayjs(day).format("D")}
+                          {dayjs(day).format("ddd, D")} {/* e.g., "Sun, 14" */}
                         </th>
                       ))}
                       <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
