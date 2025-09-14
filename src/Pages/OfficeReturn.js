@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
 
 export default function OfficeReturn({
   user,
@@ -394,6 +395,7 @@ export default function OfficeReturn({
     if (cart.length === 0) return;
     setIsSubmitting(true);
     const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+    const transaction_id = uuidv4(); // Generate a unique transaction ID
 
     try {
       // Calculate total amount that will be deducted from due
@@ -432,11 +434,7 @@ export default function OfficeReturn({
             }
           );
 
-          // if (!stockResponse.data.success) {
-          //   throw new Error(`Failed to update stock for ${item.barcode}`);
-          // }
-
-          // Record transaction
+          // Record transaction with transaction_id
           await axios.post("http://175.29.181.245:5000/stock-transactions", {
             barcode: item.barcode,
             outlet: user.outlet,
@@ -451,6 +449,7 @@ export default function OfficeReturn({
             userID: user._id,
             dp: item.editableDP,
             tp: item.editableTP,
+            transaction_id: transaction_id, // Add unique transaction ID
           });
 
           return { success: true, barcode: item.barcode };
@@ -467,7 +466,7 @@ export default function OfficeReturn({
       //   throw new Error(`${failedUpdates.length} products failed to update`);
       // }
 
-      // Record money transaction for the office return
+      // Record money transaction for the office return with transaction_id
       await axios.post("http://175.29.181.245:5000/money-transfer", {
         outlet: user.outlet,
         amount: totalAmount,
@@ -477,6 +476,7 @@ export default function OfficeReturn({
         type: "office return",
         date: formattedDateTime,
         createdBy: user.name,
+        transaction_id: transaction_id, // Add unique transaction ID
       });
 
       toast.success("Office returns processed successfully!");

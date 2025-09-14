@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
+import { v4 as uuidv4 } from 'uuid';
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
 export default function Primary({
@@ -381,103 +382,106 @@ export default function Primary({
     setCart((prev) => prev.filter((item) => item.barcode !== barcode));
   };
 
-  const handleSubmit = async () => {
-    if (cart.length === 0) return;
-    setIsSubmitting(true);
-    const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+const handleSubmit = async () => {
+  if (cart.length === 0) return;
+  setIsSubmitting(true);
+  const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+  const transaction_id = uuidv4(); // Generate a unique transaction ID
 
-    try {
-      // Calculate total amount that will be added to due
-      const totalAmount = cart.reduce(
-        (sum, item) => sum + item.primary * item.editableDP,
-        0
-      );
+  try {
+    // Calculate total amount that will be added to due
+    const totalAmount = cart.reduce(
+      (sum, item) => sum + item.primary * item.editableDP,
+      0
+    );
 
-      // First update the due amount
-      const dueResponse = await axios.put(
-        "http://175.29.181.245:5000/update-due",
-        {
-          outlet: user.outlet,
-          currentDue: currentDue + totalAmount,
-        }
-      );
-
-      if (!dueResponse.data.success) {
-        throw new Error("Failed to update due amount");
+    // First update the due amount
+    const dueResponse = await axios.put(
+      "http://175.29.181.245:5000/update-due",
+      {
+        outlet: user.outlet,
+        currentDue: currentDue + totalAmount,
       }
+    );
 
-      // Process stock updates with improved error handling
-      const updatePromises = cart.map(async (item) => {
-        try {
-          // Update outlet stock
-          const stockResponse = await axios.put(
-            "http://175.29.181.245:5000/update-outlet-stock",
-            {
-              barcode: item.barcode,
-              outlet: user.outlet,
-              newStock: item.openingStock + item.primary,
-              currentStockValueDP:
-                item.currentStockDP + item.primary * item.editableDP,
-              currentStockValueTP:
-                item.currentStockTP + item.primary * item.editableTP,
-            }
-          );
+    if (!dueResponse.data.success) {
+      throw new Error("Failed to update due amount");
+    }
 
-          // Record transaction
-          await axios.post("http://175.29.181.245:5000/stock-transactions", {
+    // Process stock updates with improved error handling
+    const updatePromises = cart.map(async (item) => {
+      try {
+        // Update outlet stock
+        const stockResponse = await axios.put(
+          "http://175.29.181.245:5000/update-outlet-stock",
+          {
             barcode: item.barcode,
             outlet: user.outlet,
-            type: "primary",
-            quantity: item.primary,
-            date: formattedDateTime,
-            asm: user.asm,
-            rsm: user.rsm,
-            som: user.som,
-            zone: user.zone,
-            user: user.name,
-            userID: user._id,
-            dp: item.editableDP,
-            tp: item.editableTP,
-          });
+            newStock: item.openingStock + item.primary,
+            currentStockValueDP:
+              item.currentStockDP + item.primary * item.editableDP,
+            currentStockValueTP:
+              item.currentStockTP + item.primary * item.editableTP,
+          }
+        );
 
-          return { success: true, barcode: item.barcode };
-        } catch (error) {
-          console.error(`Error updating product ${item.barcode}:`, error);
-          return { success: false, barcode: item.barcode, error };
-        }
-      });
+        // Record transaction with transaction_id
+        await axios.post("http://175.29.181.245:5000/stock-transactions", {
+          barcode: item.barcode,
+          outlet: user.outlet,
+          type: "primary",
+          quantity: item.primary,
+          date: formattedDateTime,
+          asm: user.asm,
+          rsm: user.rsm,
+          som: user.som,
+          zone: user.zone,
+          user: user.name,
+          userID: user._id,
+          dp: item.editableDP,
+          tp: item.editableTP,
+          transaction_id: transaction_id, // Add unique transaction ID
+        });
 
-      const results = await Promise.all(updatePromises);
-      const failedUpdates = results.filter((r) => !r.success);
-
-      if (failedUpdates.length > 0) {
-        throw new Error(`${failedUpdates.length} products failed to update`);
+        return { success: true, barcode: item.barcode };
+      } catch (error) {
+        console.error(`Error updating product ${item.barcode}:`, error);
+        return { success: false, barcode: item.barcode, error };
       }
+    });
 
-      // Record money transaction for the primary voucher
-      await axios.post("http://175.29.181.245:5000/money-transfer", {
-        outlet: user.outlet,
-        amount: totalAmount,
-        asm: user.asm,
-        rsm: user.rsm,
-        zone: user.zone,
-        type: "primary",
-        date: formattedDateTime,
-        createdBy: user.name,
-      });
+    const results = await Promise.all(updatePromises);
+    const failedUpdates = results.filter((r) => !r.success);
 
-      toast.success("Primary voucher processed successfully!");
-      getStockValue(user.outlet);
-      setCart([]);
-      setSearch("");
-      setSearchResults([]);
-    } catch (err) {
-      console.error("Bulk update error:", err);
-      toast.error(err.message || "Failed to process primary voucher");
-    } finally {
-      setIsSubmitting(false);
+    if (failedUpdates.length > 0) {
+      throw new Error(`${failedUpdates.length} products failed to update`);
     }
-  };
+
+    // Record money transaction for the primary voucher with transaction_id
+    await axios.post("http://175.29.181.245:5000/money-transfer", {
+      outlet: user.outlet,
+      amount: totalAmount,
+      asm: user.asm,
+      rsm: user.rsm,
+      zone: user.zone,
+      type: "primary",
+      date: formattedDateTime,
+      createdBy: user.name,
+      transaction_id: transaction_id, // Add unique transaction ID
+    });
+
+    toast.success("Primary voucher processed successfully!");
+    getStockValue(user.outlet);
+    setCart([]);
+    setSearch("");
+    setSearchResults([]);
+  } catch (err) {
+    console.error("Bulk update error:", err);
+    toast.error(err.message || "Failed to process primary voucher");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">

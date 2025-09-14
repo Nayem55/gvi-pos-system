@@ -692,7 +692,7 @@ const FinancialMovementReport = () => {
                       <td className="border p-2">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
-                      {user.role === "super admin" && (
+                      {(user.role === "super admin" && txn.type==="payment") && (
                         <td className="border p-2">
                           <button
                             onClick={() => handleEdit(txn)}
