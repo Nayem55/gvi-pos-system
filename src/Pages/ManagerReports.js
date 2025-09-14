@@ -26,7 +26,7 @@ const ManagerReports = () => {
   const [endDate, setEndDate] = useState("");
   const [selectedRole, setSelectedRole] = useState("SO");
   const [selectedZone, setSelectedZone] = useState(
-    user.role === "ASM" ? user.zone : ""
+    (user.role === "ASM"||user.role === "RSM") ? user.zone : ""
   );
   const [selectedBelt, setSelectedBelt] = useState("");
 
