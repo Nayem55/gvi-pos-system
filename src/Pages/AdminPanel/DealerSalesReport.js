@@ -538,6 +538,7 @@ const DealerSalesReport = () => {
             >
               <option value="">All Zones</option>
               <option value="DHAKA-01-ZONE-01">DHAKA-01-ZONE-01</option>
+              <option value="DHAKA-02-ZONE-01">DHAKA-02-ZONE-01</option>
               <option value="DHAKA-02-ZONE-03">DHAKA-02-ZONE-03</option>
               <option value="DHAKA-03-ZONE-03">DHAKA-03-ZONE-03</option>
               <option value="KHULNA-ZONE-01">KHULNA-ZONE-01</option>
