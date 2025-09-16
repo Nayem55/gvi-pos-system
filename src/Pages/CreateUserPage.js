@@ -47,7 +47,7 @@ const CreateUserPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [dropdownData, setDropdownData] = useState({
-    roles: ["SO", "ASM", "RSM", "SOM", "super admin"],
+    roles: ["SO", "ASM", "RSM", "SOM", "SELF", "COMMISSION", "super admin"],
     pricelabel: [], // Changed from hardcoded to empty array
     groups: [],
     zones: [

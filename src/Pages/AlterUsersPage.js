@@ -21,7 +21,7 @@ const AlterUsersPage = () => {
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [dropdownData, setDropdownData] = useState({
-    roles: ["SO", "ASM", "RSM", "SOM", "super admin"],
+    roles: ["SO", "ASM", "RSM", "SOM", "SELF", "COMMISSION", "super admin"],
     pricelabel: [],
     groups: [],
     zones: [
