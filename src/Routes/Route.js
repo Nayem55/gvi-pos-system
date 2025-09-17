@@ -48,6 +48,7 @@ import ManagerReports from "../Pages/ManagerReports";
 import FullTDDReport from "../Pages/AdminPanel/FullTDDReport";
 import FullSalesReport from "../Pages/FullSalesReport";
 import StockTransactionsReport from "../Pages/StockTransactionsReport";
+import ProductStockMovementReport from "../Pages/ProductStockMovementReport";
 
 const router = createBrowserRouter([
   {
@@ -90,6 +91,10 @@ const router = createBrowserRouter([
       {
         path: "/stock-movement/dealer",
         element: <StockMovementReport />,
+      },
+      {
+        path: "/stock-movement/product",
+        element: <ProductStockMovementReport />,
       },
       {
         path: "/stock-movement/group",
