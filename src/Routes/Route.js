@@ -50,6 +50,7 @@ import FullSalesReport from "../Pages/FullSalesReport";
 import StockTransactionsReport from "../Pages/StockTransactionsReport";
 import ProductStockMovementReport from "../Pages/ProductStockMovementReport";
 import CategoryStockMovementReport from "../Pages/CategoryStockMovementReport";
+import BrandStockMovementReport from "../Pages/BrandStockMovementReport";
 
 const router = createBrowserRouter([
   {
@@ -100,6 +101,10 @@ const router = createBrowserRouter([
       {
         path: "/stock-movement/category",
         element: <CategoryStockMovementReport />,
+      },
+      {
+        path: "/stock-movement/brand",
+        element: <BrandStockMovementReport />,
       },
       {
         path: "/stock-movement/group",
