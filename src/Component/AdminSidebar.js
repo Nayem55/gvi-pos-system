@@ -61,7 +61,7 @@ const AdminSidebar = () => {
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const toggleDropdown = (dropdownName) => {
@@ -246,15 +246,16 @@ const AdminSidebar = () => {
           path: "/admin/sales-movement/brand-wise",
           icon: <Package size={16} />,
         },
-        {
-          name: "Product Wise",
-          path: "/admin/sales-movement/product-wise",
-          icon: <Box size={16} />,
-        },
+
         {
           name: "Category Wise",
           path: "/admin/sales-movement/category-wise",
           icon: <BiCategoryAlt size={16} />,
+        },
+        {
+          name: "Product Wise",
+          path: "/admin/sales-movement/product-wise",
+          icon: <Box size={16} />,
         },
         {
           name: "Full Report",
@@ -279,6 +280,21 @@ const AdminSidebar = () => {
           icon: <BsShop size={16} />,
         },
         {
+          name: "Product Wise",
+          path: "/admin/stock-movement/product",
+          icon: <Box size={16} />,
+        },
+        {
+          name: "Category Wise",
+          path: "/admin/stock-movement/category",
+          icon: <BiCategoryAlt size={16} />,
+        },
+        {
+          name: "Brand Wise",
+          path: "/admin/stock-movement/brand",
+          icon: <FaTrademark size={16} />,
+        },
+        {
           name: "Movement Details",
           path: "/admin/full-stock-report",
           icon: <BiDetail size={16} />,
@@ -301,7 +317,9 @@ const AdminSidebar = () => {
       {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-[100vh] bg-[#3C3F46] text-white w-72 p-5 shadow-xl transform transition-transform duration-300 ease-in-out z-40 sidebar-container
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:sticky md:top-0 md:z-0`}
+        ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 md:sticky md:top-0 md:z-0`}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
