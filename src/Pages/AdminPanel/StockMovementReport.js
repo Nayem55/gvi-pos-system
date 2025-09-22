@@ -22,6 +22,12 @@ const StockMovementReport = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
+  const [modalType, setModalType] = useState(null);
+  const [modalData, setModalData] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [modalContext, setModalContext] = useState(''); // 'summary', 'product', or 'total'
+  const [transactionData, setTransactionData] = useState({}); // Cache full data per type
+  const [currentBarcode, setCurrentBarcode] = useState(null);
 
   useEffect(() => {
     fetchOutlets();
@@ -47,6 +53,19 @@ const StockMovementReport = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setTransactionData({});
+  }, [selectedOutlet, dateRange.start, dateRange.end]);
+
+  useEffect(() => {
+    if (modalType && selectedOutlet && dateRange.start && dateRange.end) {
+      const typeLower = modalType.toLowerCase();
+      const context = modalContext;
+      const barcode = context === 'product' ? currentBarcode : null;
+      fetchDetails(typeLower, barcode, context);
+    }
+  }, [selectedOutlet, dateRange.start, dateRange.end]);
+
   const fetchReportData = async () => {
     setLoading(true);
     setError(null);
@@ -59,7 +78,7 @@ const StockMovementReport = () => {
       const params = {
         outlet: selectedOutlet,
         startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
-        endDate: dayjs(dateRange.end).format("YYYY-MM-DD HH:mm:ss"),
+        endDate: dayjs(dateRange.end).endOf('day').format("YYYY-MM-DD HH:mm:ss"),
       };
 
       const response = await axios.get(
@@ -97,6 +116,79 @@ const StockMovementReport = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchDetails = async (type, productBarcode = null, context = 'total') => {
+    setLoadingDetails(true);
+    setModalData(null);
+    setModalType(type.charAt(0).toUpperCase() + type.slice(1)); // Capitalize for display
+    setModalContext(productBarcode ? 'product' : context);
+    if (productBarcode) {
+      setCurrentBarcode(productBarcode);
+    }
+
+    let data;
+    if (transactionData[type]) {
+      data = transactionData[type];
+    } else {
+      try {
+        const params = {
+          outlet: selectedOutlet,
+          startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
+          endDate: dayjs(dateRange.end).endOf('day').format("YYYY-MM-DD HH:mm:ss"),
+          type: type,
+        };
+
+        const response = await axios.get(
+          "http://175.29.181.245:5000/api/stock-transactions",
+          { params }
+        );
+
+        if (response.data.success) {
+          data = response.data.data;
+          setTransactionData(prev => ({ ...prev, [type]: data }));
+        } else {
+          setError("Failed to load transaction details");
+          setLoadingDetails(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Details fetch error:", err);
+        setError("Failed to load transaction details");
+        setLoadingDetails(false);
+        return;
+      }
+    }
+
+    if (productBarcode) {
+      const filtered = {};
+      Object.keys(data).forEach(date => {
+        if (date !== 'products') {
+          const trans = data[date].filter(t => t.barcode == productBarcode);
+          if (trans.length > 0) {
+            filtered[date] = trans;
+          }
+        }
+      });
+
+      // Add products info from first transaction if available
+      const allTrans = Object.values(filtered).flat();
+      if (allTrans.length > 0) {
+        const first = allTrans[0];
+        filtered.products = [{
+          productName: first.productName,
+          barcode: first.barcode,
+          dpPrice: first.dpPrice,
+          tpPrice: first.tpPrice,
+        }];
+      }
+
+      setModalData(filtered);
+    } else {
+      setModalData(data);
+    }
+
+    setLoadingDetails(false);
   };
 
   const fetchOutlets = async () => {
@@ -429,6 +521,20 @@ const StockMovementReport = () => {
     setShowOutletDropdown(false);
   };
 
+  // Get modal title based on context
+  const getModalTitle = () => {
+    let title = `${modalType} Transaction Details`;
+    
+    if (modalContext === 'summary') {
+      return `Summary - ${title}`;
+    } else if (modalContext === 'product') {
+      const productName = modalData && modalData.products && modalData.products[0]?.productName;
+      return `${productName || 'Product'} - ${title}`;
+    } else {
+      return `Total - ${title}`;
+    }
+  };
+
   return (
     <div className="flex">
       {!user?.outlet && <AdminSidebar />}
@@ -566,45 +672,99 @@ const StockMovementReport = () => {
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Stock (DP)</p>
-              <p className="text-2xl font-semibold text-purple-700">
-                {totals.openingValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-purple-700">
+                  {totals.openingValue?.toFixed(2)}
+                </p>
+              </div>
             </div>
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Primary Stock (DP)</p>
-              <p className="text-2xl font-semibold text-green-700">
-                {totals.primaryValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-green-700 cursor-pointer hover:underline" onClick={() => fetchDetails('primary', null, 'summary')}>
+                  {totals.primaryValue?.toFixed(2)}
+                </p>
+                <button
+                  onClick={() => fetchDetails('primary', null, 'summary')}
+                  className="text-xs text-green-600 hover:text-green-800 ml-2"
+                  title="View Details"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Secondary Sales (DP)</p>
-              <p className="text-2xl font-semibold text-blue-700">
-                {totals.secondaryValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-blue-700 cursor-pointer hover:underline" onClick={() => fetchDetails('secondary', null, 'summary')}>
+                  {totals.secondaryValue?.toFixed(2)}
+                </p>
+                <button
+                  onClick={() => fetchDetails('secondary', null, 'summary')}
+                  className="text-xs text-blue-600 hover:text-blue-800 ml-2"
+                  title="View Details"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="bg-white border-l-4 border-red-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Market Returns (DP)</p>
-              <p className="text-2xl font-semibold text-red-700">
-                {totals.marketReturnValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-red-700 cursor-pointer hover:underline" onClick={() => fetchDetails('market return', null, 'summary')}>
+                  {totals.marketReturnValue?.toFixed(2)}
+                </p>
+                <button
+                  onClick={() => fetchDetails('market return', null, 'summary')}
+                  className="text-xs text-red-600 hover:text-red-800 ml-2"
+                  title="View Details"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Office Returns (DP)</p>
-              <p className="text-2xl font-semibold text-yellow-700">
-                {totals.officeReturnValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-yellow-700 cursor-pointer hover:underline" onClick={() => fetchDetails('office return', null, 'summary')}>
+                  {totals.officeReturnValue?.toFixed(2)}
+                </p>
+                <button
+                  onClick={() => fetchDetails('office return', null, 'summary')}
+                  className="text-xs text-yellow-600 hover:text-yellow-800 ml-2"
+                  title="View Details"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="bg-white border-l-4 border-teal-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Actual Secondary (DP)</p>
-              <p className="text-2xl font-semibold text-teal-700">
-                {totals.actualSecondaryValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-teal-700">
+                  {totals.actualSecondaryValue?.toFixed(2)}
+                </p>
+              </div>
             </div>
             <div className="bg-white border-l-4 border-indigo-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Closing Stock (DP)</p>
-              <p className="text-2xl font-semibold text-indigo-700">
-                {totals.closingValue?.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-semibold text-indigo-700">
+                  {totals.closingValue?.toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -711,25 +871,25 @@ const StockMovementReport = () => {
                     <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">
+                    <td className="border p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails('primary', item.barcode, 'product')}>
                       {item.primary} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.primaryValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">
+                    <td className="border p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails('market return', item.barcode, 'product')}>
                       {item.marketReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.marketReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">
+                    <td className="border p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails('office return', item.barcode, 'product')}>
                       {item.officeReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.officeReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right">
+                    <td className="border p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails('secondary', item.barcode, 'product')}>
                       {item.secondary} pcs
                     </td>
                     <td className="border p-2 text-right">
@@ -768,31 +928,39 @@ const StockMovementReport = () => {
                   </td>
                   <td className="p-2 text-right">{totals.openingQty}</td>
                   <td className="p-2 text-right">
-                    {totals.openingValue.toFixed(2)}
+                    {totals.openingValue?.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right">{totals.primaryQty}</td>
-                  <td className="p-2 text-right">
-                    {totals.primaryValue.toFixed(2)}
+                  <td className="p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails('primary', null, 'total')}>
+                    {totals.primaryQty}
                   </td>
-                  <td className="p-2 text-right">{totals.marketReturnQty}</td>
                   <td className="p-2 text-right">
-                    {totals.marketReturnValue.toFixed(2)}
+                    {totals.primaryValue?.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right">{totals.officeReturnQty}</td>
-                  <td className="p-2 text-right">
-                    {totals.officeReturnValue.toFixed(2)}
+                  <td className="p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails('market return', null, 'total')}>
+                    {totals.marketReturnQty}
                   </td>
-                  <td className="p-2 text-right">{totals.secondaryQty}</td>
                   <td className="p-2 text-right">
-                    {totals.secondaryValue.toFixed(2)}
+                    {totals.marketReturnValue?.toFixed(2)}
+                  </td>
+                  <td className="p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails('office return', null, 'total')}>
+                    {totals.officeReturnQty}
+                  </td>
+                  <td className="p-2 text-right">
+                    {totals.officeReturnValue?.toFixed(2)}
+                  </td>
+                  <td className="p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails('secondary', null, 'total')}>
+                    {totals.secondaryQty}
+                  </td>
+                  <td className="p-2 text-right">
+                    {totals.secondaryValue?.toFixed(2)}
                   </td>
                   <td className="p-2 text-right">{totals.actualSecondaryQty}</td>
                   <td className="p-2 text-right">
-                    {totals.actualSecondaryValue.toFixed(2)}
+                    {totals.actualSecondaryValue?.toFixed(2)}
                   </td>
                   <td className="p-2 text-right">{totals.closingQty}</td>
                   <td className="p-2 text-right">
-                    {totals.closingValue.toFixed(2)}
+                    {totals.closingValue?.toFixed(2)}
                   </td>
                 </tr>
               </tfoot>
@@ -806,6 +974,226 @@ const StockMovementReport = () => {
           </div>
         )}
       </div>
+
+      {/* Enhanced Modal */}
+      {modalType && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-2xl font-bold">{getModalTitle()}</h3>
+                  <p className="text-blue-100 mt-1">
+                    {selectedOutlet} | {dayjs(dateRange.start).format('DD-MM-YYYY')} to {dayjs(dateRange.end).format('DD-MM-YYYY')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setModalType(null);
+                    setModalData(null);
+                    setModalContext('');
+                  }}
+                  className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
+                  title="Close"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {loadingDetails ? (
+                <div className="flex justify-center py-8">
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    <p className="mt-4 text-gray-600">Loading transaction details...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {modalContext === 'product' && modalData?.products && (
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold mb-3 text-gray-800">
+                        Product: {modalData.products[0]?.productName}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-sm text-gray-600">Barcode</p>
+                          <p className="font-medium">{modalData.products[0]?.barcode}</p>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-sm text-gray-600">DP Price</p>
+                          <p className="font-medium">{modalData.products[0]?.dpPrice?.toFixed(2) || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalData && Object.keys(modalData).length > 0 ? (
+                    Object.keys(modalData).filter(key => key !== 'products').sort().map((date) => {
+                      const transactions = modalData[date];
+                      const dateTotalQty = transactions.reduce((sum, t) => sum + t.quantity, 0);
+                      const dateTotalValue = transactions.reduce((sum, t) => sum + t.valueDP, 0);
+
+                      return (
+                        <div key={date} className="mb-8 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                          {/* Date Header */}
+                          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-lg font-semibold text-gray-800">
+                                {dayjs(date).format("dddd, DD MMMM YYYY")}
+                              </h4>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-600">Total Qty: {dateTotalQty}</p>
+                                <p className="text-sm font-medium text-gray-900">{dateTotalValue?.toFixed(2)}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Transactions Table */}
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                              <thead className="bg-white">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Product
+                                  </th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Quantity
+                                  </th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    DP Value
+                                  </th>
+                                  {modalContext === 'product' && (
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      TP Value
+                                    </th>
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {transactions.map((trans, idx) => (
+                                  <tr key={idx} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                                      {trans.productName}
+                                      {modalContext === 'product' && (
+                                        <span className="block text-xs text-gray-500">
+                                          {trans.barcode}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                                      {trans.quantity}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                                      {trans.valueDP?.toFixed(2)}
+                                    </td>
+                                    {modalContext === 'product' && (
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                                        {trans.valueTP?.toFixed(2) || 'N/A'}
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Date Footer */}
+                          <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-700">
+                                Total for {dayjs(date).format("DD-MM-YYYY")}
+                              </span>
+                              <div className="text-right">
+                                <span className="text-sm text-gray-600">Qty: {dateTotalQty}</span>
+                                <span className="ml-2 text-sm font-bold text-gray-900">{dateTotalValue?.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 mb-4">
+                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Transactions Found</h3>
+                      <p className="text-gray-500">No {modalType.toLowerCase()} transactions found for the selected period.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  {modalContext === 'total' && (
+                    <>
+                      Showing all {modalType.toLowerCase()} transactions across all products
+                    </>
+                  )}
+                  {modalContext === 'product' && (
+                    <>
+                      Showing {modalType.toLowerCase()} transactions for specific product only
+                    </>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => {
+                      setModalType(null);
+                      setModalData(null);
+                      setModalContext('');
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Close
+                  </button>
+                  {modalData && Object.keys(modalData).length > 0 && (
+                    <button
+                      onClick={() => {
+                        // Export modal data to Excel
+                        const exportData = Object.keys(modalData).map(date => {
+                          const transactions = modalData[date];
+                          return transactions.map(t => [
+                            dayjs(date).format('DD-MM-YYYY'),
+                            dayjs(t.date).format('HH:mm:ss'),
+                            t.productName,
+                            t.quantity,
+                            t.valueDP?.toFixed(2),
+                            t.valueTP?.toFixed(2) || 'N/A'
+                          ]);
+                        }).flat();
+
+                        const wb = XLSX.utils.book_new();
+                        const ws = XLSX.utils.aoa_to_sheet([
+                          ['Date', 'Time', 'Product', 'Quantity', 'DP Value', 'TP Value'],
+                          ...exportData
+                        ]);
+                        XLSX.utils.book_append_sheet(wb, ws, `${modalType} Details`);
+                        XLSX.writeFile(wb, `${modalType}_${selectedOutlet}_${dateRange.start}.xlsx`);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Export to Excel
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

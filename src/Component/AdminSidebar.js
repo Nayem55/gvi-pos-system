@@ -281,17 +281,17 @@ const AdminSidebar = () => {
         },
         {
           name: "Product Wise",
-          path: "/admin/stock-movement/product",
+          path: "/stock-movement/product",
           icon: <Box size={16} />,
         },
         {
           name: "Category Wise",
-          path: "/admin/stock-movement/category",
+          path: "/stock-movement/category",
           icon: <BiCategoryAlt size={16} />,
         },
         {
           name: "Brand Wise",
-          path: "/admin/stock-movement/brand",
+          path: "/stock-movement/brand",
           icon: <FaTrademark size={16} />,
         },
         {
