@@ -160,13 +160,14 @@ const FinancialMovementReport = () => {
       ["Closing Due", reportData.closingDue?.toFixed(2)],
       [],
       ["Transaction Details"],
-      ["Date", "Type", "Amount", "Created By", "Remarks"],
+      ["Date", "Dealer", "Type", "Amount", "Created By", "Remarks"], // Added "Dealer" column
     ];
 
     if (reportData.transactions) {
       reportData.transactions.forEach((txn) => {
         excelData.push([
           dayjs(txn.date).format("DD-MM-YY"),
+          txn.outlet ? txn.outlet.replace("_", " ") : "", // Include outlet name, replace underscores
           txn.type,
           txn.amount?.toFixed(2),
           txn.createdBy,
@@ -183,7 +184,6 @@ const FinancialMovementReport = () => {
       `Financial_Report_${selectedArea}_${dateRange.start}.xlsx`
     );
   };
-
   const exportToPDF = () => {
     if (!reportData) return;
 
@@ -564,11 +564,13 @@ const FinancialMovementReport = () => {
                   ))}
                 </div>
               )}
-              {showOutletDropdown && outletSearch && filteredOutlets.length === 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
-                  No outlets found
-                </div>
-              )}
+              {showOutletDropdown &&
+                outletSearch &&
+                filteredOutlets.length === 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                    No outlets found
+                  </div>
+                )}
             </div>
           )}
 
@@ -612,10 +614,16 @@ const FinancialMovementReport = () => {
 
         {!loading && reportData && (
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-            <div 
+            <div
               className="bg-white border-l-4 border-purple-600 p-4 rounded shadow"
-              onClick={selectedType !== "outlet" ? () => setShowOpeningModal(true) : undefined}
-              style={{ cursor: selectedType !== "outlet" ? "pointer" : "default" }}
+              onClick={
+                selectedType !== "outlet"
+                  ? () => setShowOpeningModal(true)
+                  : undefined
+              }
+              style={{
+                cursor: selectedType !== "outlet" ? "pointer" : "default",
+              }}
             >
               <p className="text-sm text-gray-600">Opening Balance</p>
               <p className="text-2xl font-semibold text-purple-700">
@@ -692,22 +700,23 @@ const FinancialMovementReport = () => {
                       <td className="border p-2">{txn.amount?.toFixed(2)}</td>
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
-                      {(user.role === "super admin" && txn.type==="payment") && (
-                        <td className="border p-2">
-                          <button
-                            onClick={() => handleEdit(txn)}
-                            className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(txn._id)}
-                            className="bg-red-600 text-white px-2 py-1 rounded"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      )}
+                      {user.role === "super admin" &&
+                        txn.type === "payment" && (
+                          <td className="border p-2">
+                            <button
+                              onClick={() => handleEdit(txn)}
+                              className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(txn._id)}
+                              className="bg-red-600 text-white px-2 py-1 rounded"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        )}
                     </tr>
                   ))}
                 </tbody>
@@ -789,7 +798,9 @@ const FinancialMovementReport = () => {
         {showOpeningModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-              <h3 className="text-lg font-bold mb-4">Opening Balance Breakdown</h3>
+              <h3 className="text-lg font-bold mb-4">
+                Opening Balance Breakdown
+              </h3>
               <div className="overflow-y-auto max-h-96">
                 <table className="min-w-full border">
                   <thead>
@@ -801,8 +812,12 @@ const FinancialMovementReport = () => {
                   <tbody>
                     {openingBreakdown.map((bd, index) => (
                       <tr key={index}>
-                        <td className="border p-2 capitalize">{bd.outlet.replace("_", " ")}</td>
-                        <td className="border p-2">{bd.openingDue.toFixed(2)}</td>
+                        <td className="border p-2 capitalize">
+                          {bd.outlet.replace("_", " ")}
+                        </td>
+                        <td className="border p-2">
+                          {bd.openingDue.toFixed(2)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

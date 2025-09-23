@@ -26,6 +26,7 @@ const GroupStockMovementReport = () => {
   const [modalContext, setModalContext] = useState(''); // 'summary', 'product', or 'total'
   const [transactionData, setTransactionData] = useState({}); // Cache full data per type
   const [currentBarcode, setCurrentBarcode] = useState(null);
+  const [selectedOutlet, setSelectedOutlet] = useState('');
 
   // Fetch area options based on selected type
   useEffect(() => {
@@ -128,6 +129,7 @@ const GroupStockMovementReport = () => {
     setModalData(null);
     setModalType(type.charAt(0).toUpperCase() + type.slice(1)); // Capitalize for display
     setModalContext(productBarcode ? 'product' : context);
+    setSelectedOutlet('');
     if (productBarcode) {
       setCurrentBarcode(productBarcode);
     }
@@ -971,6 +973,7 @@ const GroupStockMovementReport = () => {
                     setModalType(null);
                     setModalData(null);
                     setModalContext('');
+                    setSelectedOutlet('');
                   }}
                   className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
                   title="Close"
@@ -1011,97 +1014,128 @@ const GroupStockMovementReport = () => {
                     </div>
                   )}
 
-                  {modalData && Object.keys(modalData).length > 0 ? (
-                    Object.keys(modalData).filter(key => key !== 'products').sort().map((date) => {
-                      const transactions = modalData[date];
-                      const dateTotalQty = transactions.reduce((sum, t) => sum + t.quantity, 0);
-                      const dateTotalValue = transactions.reduce((sum, t) => sum + t.valueDP, 0);
+                  {modalData && Object.keys(modalData).filter(key => key !== 'products').length > 0 ? (
+                    <>
+                      {/* Outlet Filter */}
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Outlet</label>
+                        <select
+                          value={selectedOutlet}
+                          onChange={(e) => setSelectedOutlet(e.target.value)}
+                          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">All Outlets</option>
+                          {(() => {
+                            const allOutlets = new Set();
+                            Object.keys(modalData).filter(key => key !== 'products').forEach(date => {
+                              modalData[date].forEach(t => allOutlets.add(t.outlet));
+                            });
+                            return Array.from(allOutlets).sort().map(outlet => (
+                              <option key={outlet} value={outlet}>
+                                {outlet}
+                              </option>
+                            ));
+                          })()}
+                        </select>
+                      </div>
 
-                      return (
-                        <div key={date} className="mb-8 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                          {/* Date Header */}
-                          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-lg font-semibold text-gray-800">
-                                {dayjs(date).format("dddd, DD MMMM YYYY")}
-                              </h4>
-                              <div className="text-right">
-                                <p className="text-sm text-gray-600">Total Qty: {dateTotalQty}</p>
-                                <p className="text-sm font-medium text-gray-900">{dateTotalValue?.toFixed(2)}</p>
+                      {Object.keys(modalData).filter(key => key !== 'products').sort().map((date) => {
+                        const transactions = modalData[date];
+                        const filteredTransactions = selectedOutlet
+                          ? transactions.filter(t => t.outlet === selectedOutlet)
+                          : transactions;
+
+                        if (filteredTransactions.length === 0) return null;
+
+                        const dateTotalQty = filteredTransactions.reduce((sum, t) => sum + t.quantity, 0);
+                        const dateTotalValue = filteredTransactions.reduce((sum, t) => sum + t.valueDP, 0);
+
+                        return (
+                          <div key={date} className="mb-8 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                            {/* Date Header */}
+                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                              <div className="flex justify-between items-center">
+                                <h4 className="text-lg font-semibold text-gray-800">
+                                  {dayjs(date).format("dddd, DD MMMM YYYY")}
+                                </h4>
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-600">Total Qty: {dateTotalQty}</p>
+                                  <p className="text-sm font-medium text-gray-900">{dateTotalValue?.toFixed(2)}</p>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Transactions Table */}
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                              <thead className="bg-white">
-                                <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Outlet
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Product
-                                  </th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Quantity
-                                  </th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    DP Value
-                                  </th>
-                                  {modalContext === 'product' && (
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      TP Value
+                            {/* Transactions Table */}
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full">
+                                <thead className="bg-white">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Outlet
                                     </th>
-                                  )}
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {transactions.map((trans, idx) => (
-                                  <tr key={idx} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 text-sm text-gray-900">
-                                      {trans.outlet}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
-                                      {trans.productName}
-                                      {modalContext === 'product' && (
-                                        <span className="block text-xs text-gray-500">
-                                          {trans.barcode}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
-                                      {trans.quantity}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                                      {trans.valueDP?.toFixed(2)}
-                                    </td>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Product
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Quantity
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      DP Value
+                                    </th>
                                     {modalContext === 'product' && (
-                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
-                                        {trans.valueTP?.toFixed(2) || 'N/A'}
-                                      </td>
+                                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        TP Value
+                                      </th>
                                     )}
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {filteredTransactions.map((trans, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50">
+                                      <td className="px-4 py-3 text-sm text-gray-900">
+                                        {trans.outlet}
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                                        {trans.productName}
+                                        {modalContext === 'product' && (
+                                          <span className="block text-xs text-gray-500">
+                                            {trans.barcode}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                                        {trans.quantity}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                                        {trans.valueDP?.toFixed(2)}
+                                      </td>
+                                      {modalContext === 'product' && (
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                                          {trans.valueTP?.toFixed(2) || 'N/A'}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
 
-                          {/* Date Footer */}
-                          <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-700">
-                                Total for {dayjs(date).format("DD-MM-YYYY")}
-                              </span>
-                              <div className="text-right">
-                                <span className="text-sm text-gray-600">Qty: {dateTotalQty}</span>
-                                <span className="ml-2 text-sm font-bold text-gray-900">{dateTotalValue?.toFixed(2)}</span>
+                            {/* Date Footer */}
+                            <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Total for {dayjs(date).format("DD-MM-YYYY")}
+                                </span>
+                                <div className="text-right">
+                                  <span className="text-sm text-gray-600">Qty: {dateTotalQty}</span>
+                                  <span className="ml-2 text-sm font-bold text-gray-900">{dateTotalValue?.toFixed(2)}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </>
                   ) : (
                     <div className="text-center py-12">
                       <div className="text-gray-400 mb-4">
@@ -1131,6 +1165,7 @@ const GroupStockMovementReport = () => {
                       Showing {modalType.toLowerCase()} transactions for specific product only
                     </>
                   )}
+                  {selectedOutlet && <span> (Filtered by {selectedOutlet})</span>}
                 </div>
                 <div className="flex space-x-2">
                   <button
@@ -1138,27 +1173,31 @@ const GroupStockMovementReport = () => {
                       setModalType(null);
                       setModalData(null);
                       setModalContext('');
+                      setSelectedOutlet('');
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Close
                   </button>
-                  {modalData && Object.keys(modalData).length > 0 && (
+                  {modalData && Object.keys(modalData).filter(key => key !== 'products').length > 0 && (
                     <button
                       onClick={() => {
-                        // Export modal data to Excel
-                        const exportData = Object.keys(modalData).filter(key => key !== 'products').map(date => {
-                          const transactions = modalData[date];
-                          return transactions.map(t => [
-                            dayjs(date).format('DD-MM-YYYY'),
-                            dayjs(t.date).format('HH:mm:ss'),
-                            t.outlet,
-                            t.productName,
-                            t.quantity,
-                            t.valueDP?.toFixed(2),
-                            t.valueTP?.toFixed(2) || 'N/A'
-                          ]);
-                        }).flat();
+                        // Export modal data to Excel (filtered)
+                        const exportData = [];
+                        Object.keys(modalData).filter(key => key !== 'products').forEach(date => {
+                          const filteredTrans = modalData[date].filter(t => !selectedOutlet || t.outlet === selectedOutlet);
+                          filteredTrans.forEach(t => {
+                            exportData.push([
+                              dayjs(date).format('DD-MM-YYYY'),
+                              dayjs(t.date).format('HH:mm:ss'),
+                              t.outlet,
+                              t.productName,
+                              t.quantity,
+                              t.valueDP?.toFixed(2),
+                              t.valueTP?.toFixed(2) || 'N/A'
+                            ]);
+                          });
+                        });
 
                         const wb = XLSX.utils.book_new();
                         const ws = XLSX.utils.aoa_to_sheet([
@@ -1166,7 +1205,7 @@ const GroupStockMovementReport = () => {
                           ...exportData
                         ]);
                         XLSX.utils.book_append_sheet(wb, ws, `${modalType} Details`);
-                        XLSX.writeFile(wb, `${modalType}_${selectedType}_${selectedArea}_${dateRange.start}.xlsx`);
+                        XLSX.writeFile(wb, `${modalType}_${selectedType}_${selectedArea}_${dateRange.start}${selectedOutlet ? `_${selectedOutlet}` : ''}.xlsx`);
                       }}
                       className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
