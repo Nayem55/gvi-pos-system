@@ -516,7 +516,8 @@ const FinancialMovementReport = () => {
           >
             <option value="outlet">Outlet Wise</option>
             <option value="ASM">ASM Wise</option>
-            <option value="RSM">RSM Wise</option>
+            {/* <option value="RSM">RSM Wise</option> */}
+            <option value="SOM">SOM Wise</option>
             <option value="Zone">Zone Wise</option>
           </select>
 
