@@ -110,10 +110,7 @@ const DealerSalesReport = () => {
     });
   }, [salesData, selectedZone, selectedBelt, getBeltFromZone]);
 
-  // Organize reports hierarchically by zone and then by role (SOM → RSM → ASM → SO)
-  // Updated organizeReportsHierarchically function
-  // Updated organizeReportsHierarchically function
-  // Updated organizeReportsHierarchically function
+  // Organize reports hierarchically by zone and then by role (SOM → ASM → SO)
   const organizeReportsHierarchically = (reports) => {
     // Group by belt first
     const reportsByBelt = reports.reduce((acc, report) => {
@@ -127,9 +124,8 @@ const DealerSalesReport = () => {
 
     // For each belt, organize by role hierarchy
     return Object.entries(reportsByBelt).map(([belt, beltReports]) => {
-      // Separate all roles
+      // Separate all roles (excluding RSM)
       const soms = beltReports.filter((r) => r.role === "SOM");
-      const rsms = beltReports.filter((r) => r.role === "RSM");
       const asms = beltReports.filter((r) => r.role === "ASM");
       const salesOfficers = beltReports.filter((r) => r.role === "SO");
 
@@ -138,13 +134,6 @@ const DealerSalesReport = () => {
         const som = so.som || "Unknown SOM";
         if (!acc[som]) acc[som] = [];
         acc[som].push(so);
-        return acc;
-      }, {});
-
-      const soByRsm = salesOfficers.reduce((acc, so) => {
-        const rsm = so.rsm || "Unknown RSM";
-        if (!acc[rsm]) acc[rsm] = [];
-        acc[rsm].push(so);
         return acc;
       }, {});
 
@@ -162,75 +151,30 @@ const DealerSalesReport = () => {
       soms.forEach((som) => {
         organizedReports.push(som);
 
-        // Find RSMs that report to this SOM
-        const somRsms = rsms.filter((rsm) =>
-          soBySom[rsm.name]?.some((so) => so.som === som.name)
+        // Find ASMs that report to this SOM
+        const somAsms = asms.filter((asm) =>
+          soBySom[asm.name]?.some((so) => so.som === som.name)
         );
 
-        // Add each RSM and their hierarchy
-        somRsms.forEach((rsm) => {
-          organizedReports.push(rsm);
-
-          // Find ASMs that report to this RSM
-          const rsmAsms = asms.filter((asm) =>
-            soByRsm[asm.name]?.some((so) => so.rsm === rsm.name)
-          );
-
-          // Add each ASM and their SOs
-          rsmAsms.forEach((asm) => {
-            organizedReports.push(asm);
-
-            // Add SOs for this ASM
-            const asmSos = soByAsm[asm.name] || [];
-            organizedReports.push(
-              ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
-            );
-          });
-
-          // Add SOs that report directly to RSM (without ASM)
-          const directSos = (soByRsm[rsm.name] || []).filter((so) => !so.asm);
-          organizedReports.push(
-            ...directSos.sort((a, b) => a.name.localeCompare(b.name))
-          );
-        });
-
-        // Add SOs that report directly to SOM (without RSM or ASM)
-        const directSos = (soBySom[som.name] || []).filter(
-          (so) => !so.rsm && !so.asm
-        );
-        organizedReports.push(
-          ...directSos.sort((a, b) => a.name.localeCompare(b.name))
-        );
-      });
-
-      // Add any remaining RSMs not under a SOM
-      const remainingRsms = rsms.filter(
-        (rsm) => !organizedReports.some((r) => r.userId === rsm.userId)
-      );
-      remainingRsms.forEach((rsm) => {
-        organizedReports.push(rsm);
-
-        // Add ASMs under this RSM
-        const rsmAsms = asms.filter((asm) =>
-          soByRsm[asm.name]?.some((so) => so.rsm === rsm.name)
-        );
-
-        rsmAsms.forEach((asm) => {
+        // Add each ASM and their SOs
+        somAsms.forEach((asm) => {
           organizedReports.push(asm);
+
+          // Add SOs for this ASM
           const asmSos = soByAsm[asm.name] || [];
           organizedReports.push(
             ...asmSos.sort((a, b) => a.name.localeCompare(b.name))
           );
         });
 
-        // Add SOs directly under RSM
-        const directSos = (soByRsm[rsm.name] || []).filter((so) => !so.asm);
+        // Add SOs that report directly to SOM (without ASM)
+        const directSos = (soBySom[som.name] || []).filter((so) => !so.asm);
         organizedReports.push(
           ...directSos.sort((a, b) => a.name.localeCompare(b.name))
         );
       });
 
-      // Add any remaining ASMs not under a RSM
+      // Add any remaining ASMs not under a SOM
       const remainingAsms = asms.filter(
         (asm) => !organizedReports.some((r) => r.userId === asm.userId)
       );
@@ -256,6 +200,7 @@ const DealerSalesReport = () => {
       };
     });
   };
+
   // Main aggregation logic
   const { organizedReports, summaryData } = useMemo(() => {
     if (!filteredSalesData || filteredSalesData.length === 0) {
@@ -282,7 +227,6 @@ const DealerSalesReport = () => {
           zone: sale.zone,
           role: sale.role || "SO",
           asm: sale.asm,
-          rsm: sale.rsm,
           som: sale.som,
           sales: [],
           totalTP: 0,
@@ -295,8 +239,8 @@ const DealerSalesReport = () => {
       return acc;
     }, {});
 
-    // Manager level aggregations
-    const managerLevels = ["ASM", "RSM", "SOM"];
+    // Manager level aggregations (SOM and ASM only)
+    const managerLevels = ["ASM", "SOM"];
     const managerReports = {};
 
     managerLevels.forEach((level) => {
@@ -354,14 +298,14 @@ const DealerSalesReport = () => {
         if (!matchRole) return null;
 
         const target = report.isManager
-          ? report.target // already calculated for managers
+          ? report.target
           : targetsData[report.userId] || 0;
 
         const achievement = target > 0 ? (report.totalTP / target) * 100 : 0;
 
         return {
           ...report,
-          target: Number(target).toFixed(2), // Format all targets consistently
+          target: Number(target).toFixed(2),
           achievement,
           belt,
           salesCount: report.salesCount || report.sales?.length || 0,
@@ -372,7 +316,7 @@ const DealerSalesReport = () => {
     // Organize reports hierarchically
     const organized = organizeReportsHierarchically(filteredReports);
 
-    // Calculate summary data (SO only) from filtered data (before role filter)
+    // Calculate summary data (SO only)
     const soReports = Object.values(salesByUser);
     const achievedSOs = soReports.filter((so) => {
       const target = targetsData[so.userId] || 0;
@@ -523,7 +467,6 @@ const DealerSalesReport = () => {
               <option value="">All Roles</option>
               <option value="SO">Sales Officer</option>
               <option value="ASM">ASM</option>
-              <option value="RSM">RSM</option>
               <option value="SOM">SOM</option>
             </select>
           </div>
