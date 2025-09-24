@@ -463,6 +463,7 @@ const handleSubmit = async () => {
       amount: totalAmount,
       asm: user.asm,
       rsm: user.rsm,
+      som: user.som,
       zone: user.zone,
       type: "primary",
       date: formattedDateTime,

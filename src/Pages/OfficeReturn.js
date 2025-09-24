@@ -472,6 +472,7 @@ export default function OfficeReturn({
         amount: totalAmount,
         asm: user.asm,
         rsm: user.rsm,
+        som: user.som,
         zone: user.zone,
         type: "office return",
         date: formattedDateTime,
