@@ -115,9 +115,9 @@ export default function AdjustmentVoucher({
   return (
     <div className="bg-white p-4 rounded-lg shadow-md min-h-screen">
       <h2 className="text-xl font-bold mb-4 text-green-800">Adjustment Voucher</h2>
-      <div className="mb-4 p-3 bg-green-50 rounded">
+      {/* <div className="mb-4 p-3 bg-green-50 rounded">
         <p className="font-semibold">Current Due: {currentDue?.toFixed(2)}</p>
-      </div>
+      </div> */}
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
