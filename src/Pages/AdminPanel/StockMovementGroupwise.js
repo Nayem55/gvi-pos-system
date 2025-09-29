@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
@@ -9,9 +9,13 @@ import autoTable from "jspdf-autotable";
 
 const GroupStockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
-  const [selectedType, setSelectedType] = useState("ASM"); // ASM, RSM, or Zone
+  const [selectedType, setSelectedType] = useState("ASM"); // ASM, RSM, SOM, or Zone
   const [selectedArea, setSelectedArea] = useState("");
   const [areaOptions, setAreaOptions] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedBrand, setSelectedBrand] = useState("all");
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [exportDropdown, setExportDropdown] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: dayjs().startOf("month").format("YYYY-MM-DD"),
@@ -23,10 +27,10 @@ const GroupStockMovementReport = () => {
   const [modalType, setModalType] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [modalContext, setModalContext] = useState(''); // 'summary', 'product', or 'total'
+  const [modalContext, setModalContext] = useState(""); // 'summary', 'product', or 'total'
   const [transactionData, setTransactionData] = useState({}); // Cache full data per type
   const [currentBarcode, setCurrentBarcode] = useState(null);
-  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [selectedOutlet, setSelectedOutlet] = useState("");
 
   // Fetch area options based on selected type
   useEffect(() => {
@@ -64,7 +68,7 @@ const GroupStockMovementReport = () => {
     if (modalType && selectedType && selectedArea && dateRange.start && dateRange.end) {
       const typeLower = modalType.toLowerCase();
       const context = modalContext;
-      const barcode = context === 'product' ? currentBarcode : null;
+      const barcode = context === "product" ? currentBarcode : null;
       fetchDetails(typeLower, barcode, context);
     }
   }, [selectedType, selectedArea, dateRange.start, dateRange.end]);
@@ -82,7 +86,7 @@ const GroupStockMovementReport = () => {
         areaType: selectedType,
         areaValue: selectedArea,
         startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
-        endDate: dayjs(dateRange.end).endOf('day').format("YYYY-MM-DD HH:mm:ss"),
+        endDate: dayjs(dateRange.end).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
       };
 
       const response = await axios.get(
@@ -100,6 +104,18 @@ const GroupStockMovementReport = () => {
             (item.marketReturn && item.marketReturn !== 0)
           );
         });
+
+        // Generate category and brand options
+        const uniqueCategories = [...new Set(
+          filteredData.map(item => item.category || "Uncategorized")
+        )].sort();
+        setCategories([{ value: "all", label: "All Categories" }, ...uniqueCategories.map(c => ({ value: c, label: c }))]);
+
+        const uniqueBrands = [...new Set(
+          filteredData.map(item => item.brand || "Unbranded")
+        )].sort();
+        setBrands([{ value: "all", label: "All Brands" }, ...uniqueBrands.map(b => ({ value: b, label: b }))]);
+
         const sortedData = [...filteredData].sort((a, b) =>
           a.productName.localeCompare(b.productName)
         );
@@ -119,17 +135,57 @@ const GroupStockMovementReport = () => {
       }
       setError(errorMessage);
       setReportData([]);
+      setCategories([]);
+      setBrands([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchDetails = async (type, productBarcode = null, context = 'total') => {
+  const filteredCategories = useMemo(() => {
+    if (selectedBrand === "all") {
+      return categories;
+    }
+    const relevantCats = [...new Set(
+      reportData
+        .filter(item => item.brand === selectedBrand)
+        .map(item => item.category || "Uncategorized")
+    )].sort();
+    return [{ value: "all", label: "All Categories" }, ...relevantCats.map(c => ({ value: c, label: c }))];
+  }, [selectedBrand, categories, reportData]);
+
+  const filteredBrands = useMemo(() => {
+    if (selectedCategory === "all") {
+      return brands;
+    }
+    const relevantBrands = [...new Set(
+      reportData
+        .filter(item => item.category === selectedCategory)
+        .map(item => item.brand || "Unbranded")
+    )].sort();
+    return [{ value: "all", label: "All Brands" }, ...relevantBrands.map(b => ({ value: b, label: b }))];
+  }, [selectedCategory, brands, reportData]);
+
+  useEffect(() => {
+    const catValues = filteredCategories.map(o => o.value);
+    if (selectedCategory !== "all" && !catValues.includes(selectedCategory)) {
+      setSelectedCategory("all");
+    }
+  }, [filteredCategories]);
+
+  useEffect(() => {
+    const brandValues = filteredBrands.map(o => o.value);
+    if (selectedBrand !== "all" && !brandValues.includes(selectedBrand)) {
+      setSelectedBrand("all");
+    }
+  }, [filteredBrands]);
+
+  const fetchDetails = async (type, productBarcode = null, context = "total") => {
     setLoadingDetails(true);
     setModalData(null);
     setModalType(type.charAt(0).toUpperCase() + type.slice(1)); // Capitalize for display
-    setModalContext(productBarcode ? 'product' : context);
-    setSelectedOutlet('');
+    setModalContext(productBarcode ? "product" : context);
+    setSelectedOutlet("");
     if (productBarcode) {
       setCurrentBarcode(productBarcode);
     }
@@ -143,7 +199,7 @@ const GroupStockMovementReport = () => {
           areaType: selectedType,
           areaValue: selectedArea,
           startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
-          endDate: dayjs(dateRange.end).endOf('day').format("YYYY-MM-DD HH:mm:ss"),
+          endDate: dayjs(dateRange.end).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
           type: type,
         };
 
@@ -171,7 +227,7 @@ const GroupStockMovementReport = () => {
     if (productBarcode) {
       const filtered = {};
       Object.keys(data).forEach(date => {
-        if (date !== 'products') {
+        if (date !== "products") {
           const trans = data[date].filter(t => t.barcode == productBarcode);
           if (trans.length > 0) {
             filtered[date] = trans;
@@ -204,7 +260,11 @@ const GroupStockMovementReport = () => {
   };
 
   const exportToExcel = () => {
-    const sortedData = [...reportData].sort((a, b) =>
+    const filteredData = reportData.filter(item =>
+      (selectedCategory === "all" || item.category === selectedCategory) &&
+      (selectedBrand === "all" || item.brand === selectedBrand)
+    );
+    const sortedData = [...filteredData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
     );
 
@@ -229,6 +289,8 @@ const GroupStockMovementReport = () => {
       [
         "Sl",
         "Products Name",
+        "Category",
+        "Brand",
         "Opening Stock",
         "",
         "Primary",
@@ -245,6 +307,8 @@ const GroupStockMovementReport = () => {
         "",
       ],
       [
+        "",
+        "",
         "",
         "",
         "Qty",
@@ -265,6 +329,8 @@ const GroupStockMovementReport = () => {
       ...sortedData.map((item, index) => [
         index + 1,
         item.productName,
+        item.category,
+        item.brand,
         item.openingStock,
         item.openingValueDP?.toFixed(2),
         item.primary,
@@ -297,16 +363,16 @@ const GroupStockMovementReport = () => {
 
     ws["!merges"] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
-      { s: { r: 0, c: 9 }, e: { r: 0, c: 15 } },
+      { s: { r: 0, c: 9 }, e: { r: 0, c: 17 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
-      { s: { r: 1, c: 9 }, e: { r: 1, c: 15 } },
-      { s: { r: 2, c: 2 }, e: { r: 2, c: 3 } },
+      { s: { r: 1, c: 9 }, e: { r: 1, c: 17 } },
       { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } },
       { s: { r: 2, c: 6 }, e: { r: 2, c: 7 } },
       { s: { r: 2, c: 8 }, e: { r: 2, c: 9 } },
       { s: { r: 2, c: 10 }, e: { r: 2, c: 11 } },
       { s: { r: 2, c: 12 }, e: { r: 2, c: 13 } },
       { s: { r: 2, c: 14 }, e: { r: 2, c: 15 } },
+      { s: { r: 2, c: 16 }, e: { r: 2, c: 17 } },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
@@ -317,7 +383,11 @@ const GroupStockMovementReport = () => {
   };
 
   const exportToPDF = () => {
-    const sortedData = [...reportData].sort((a, b) =>
+    const filteredData = reportData.filter(item =>
+      (selectedCategory === "all" || item.category === selectedCategory) &&
+      (selectedBrand === "all" || item.brand === selectedBrand)
+    );
+    const sortedData = [...filteredData].sort((a, b) =>
       a.productName.localeCompare(b.productName)
     );
 
@@ -345,6 +415,8 @@ const GroupStockMovementReport = () => {
         [
           "Sl",
           "Products Name",
+          "Category",
+          "Brand",
           "Opening Stock",
           "",
           "Primary",
@@ -361,6 +433,8 @@ const GroupStockMovementReport = () => {
           "",
         ],
         [
+          "",
+          "",
           "",
           "",
           "Qty",
@@ -383,6 +457,8 @@ const GroupStockMovementReport = () => {
       const data = sortedData.map((item, index) => [
         index + 1,
         item.productName || "",
+        item.category || "",
+        item.brand || "",
         item.openingStock || 0,
         item.openingValueDP?.toFixed(2) || "0.00",
         item.primary || 0,
@@ -413,6 +489,8 @@ const GroupStockMovementReport = () => {
         data.push([
           "",
           "TOTAL",
+          "",
+          "",
           totals.openingQty || 0,
           totals.openingValue?.toFixed(2) || "0.00",
           totals.primaryQty || 0,
@@ -444,6 +522,8 @@ const GroupStockMovementReport = () => {
         columnStyles: {
           0: { cellWidth: 8, halign: "center" },
           1: { cellWidth: 30, halign: "left" },
+          2: { cellWidth: 20, halign: "left" },
+          3: { cellWidth: 20, halign: "left" },
         },
         headStyles: {
           fillColor: [41, 128, 185],
@@ -453,13 +533,13 @@ const GroupStockMovementReport = () => {
         didParseCell: function (data) {
           if (data.section === "head" && data.row.index === 0) {
             if (
-              data.column.dataKey === 2 ||
               data.column.dataKey === 4 ||
               data.column.dataKey === 6 ||
               data.column.dataKey === 8 ||
               data.column.dataKey === 10 ||
               data.column.dataKey === 12 ||
-              data.column.dataKey === 14
+              data.column.dataKey === 14 ||
+              data.column.dataKey === 16
             ) {
               data.cell.colSpan = 2;
             }
@@ -481,20 +561,25 @@ const GroupStockMovementReport = () => {
 
   const totals = reportData.reduce(
     (acc, item) => {
-      acc.openingQty += item.openingStock || 0;
-      acc.openingValue += item.openingValueDP || 0;
-      acc.primaryQty += item.primary || 0;
-      acc.primaryValue += item.primaryValueDP || 0;
-      acc.marketReturnQty += item.marketReturn || 0;
-      acc.marketReturnValue += item.marketReturnValueDP || 0;
-      acc.officeReturnQty += item.officeReturn || 0;
-      acc.officeReturnValue += item.officeReturnValueDP || 0;
-      acc.secondaryQty += item.secondary || 0;
-      acc.secondaryValue += item.secondaryValueDP || 0;
-      acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
-      acc.actualSecondaryValue += (item.secondaryValueDP - item.marketReturnValueDP) || 0;
-      acc.closingQty += (item.openingStock + item.primary + item.marketReturn - item.secondary - item.officeReturn) || 0;
-      acc.closingValue += (item.openingValueDP + item.primaryValueDP + item.marketReturnValueDP - item.secondaryValueDP - item.officeReturnValueDP) || 0;
+      if (
+        (selectedCategory === "all" || item.category === selectedCategory) &&
+        (selectedBrand === "all" || item.brand === selectedBrand)
+      ) {
+        acc.openingQty += item.openingStock || 0;
+        acc.openingValue += item.openingValueDP || 0;
+        acc.primaryQty += item.primary || 0;
+        acc.primaryValue += item.primaryValueDP || 0;
+        acc.marketReturnQty += item.marketReturn || 0;
+        acc.marketReturnValue += item.marketReturnValueDP || 0;
+        acc.officeReturnQty += item.officeReturn || 0;
+        acc.officeReturnValue += item.officeReturnValueDP || 0;
+        acc.secondaryQty += item.secondary || 0;
+        acc.secondaryValue += item.secondaryValueDP || 0;
+        acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
+        acc.actualSecondaryValue += (item.secondaryValueDP - item.marketReturnValueDP) || 0;
+        acc.closingQty += (item.openingStock + item.primary + item.marketReturn - item.secondary - item.officeReturn) || 0;
+        acc.closingValue += (item.openingValueDP + item.primaryValueDP + item.marketReturnValueDP - item.secondaryValueDP - item.officeReturnValueDP) || 0;
+      }
       return acc;
     },
     {
@@ -519,15 +604,96 @@ const GroupStockMovementReport = () => {
   const getModalTitle = () => {
     let title = `${modalType} Transaction Details`;
     
-    if (modalContext === 'summary') {
+    if (modalContext === "summary") {
       return `Summary - ${title}`;
-    } else if (modalContext === 'product') {
+    } else if (modalContext === "product") {
       const productName = modalData && modalData.products && modalData.products[0]?.productName;
-      return `${productName || 'Product'} - ${title}`;
+      return `${productName || "Product"} - ${title}`;
     } else {
       return `Total - ${title}`;
     }
   };
+
+  const SearchableSelect = ({ options, selectedValue, onChange, placeholder, disabled }) => {
+    const [search, setSearch] = useState("");
+    const [open, setOpen] = useState(false);
+  
+    const filteredOptions = options.filter(opt =>
+      opt.label.toLowerCase().includes(search.toLowerCase())
+    );
+  
+    const currentLabel = options.find(opt => opt.value === selectedValue)?.label || placeholder;
+  
+    if (disabled) {
+      return (
+        <button 
+          disabled 
+          className="px-4 py-2 border rounded-md shadow-sm bg-gray-100 text-gray-500 w-full md:w-48 lg:w-64 text-left"
+        >
+          {placeholder}
+        </button>
+      );
+    }
+  
+    return (
+      <div className="relative w-full md:w-48 lg:w-64">
+        <button
+          onClick={() => setOpen(!open)}
+          className="px-4 py-2 border rounded-md shadow-sm bg-white w-full text-left focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200 flex justify-between items-center"
+        >
+          <span className="truncate">{currentLabel}</span>
+          <svg
+            className="w-4 h-4 ml-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d={open ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}
+            />
+          </svg>
+        </button>
+        {open && (
+          <div className="absolute w-full mt-1 bg-white border rounded-md shadow-lg z-30 max-h-60 overflow-auto">
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-4 py-2 border-b focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <ul>
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map(opt => (
+                  <li
+                    key={opt.value}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer transition-colors duration-150 truncate"
+                  >
+                    {opt.label}
+                  </li>
+                ))
+              ) : (
+                <li className="px-4 py-2 text-gray-500">No options found</li>
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const filteredData = reportData.filter(item =>
+    (selectedCategory === "all" || item.category === selectedCategory) &&
+    (selectedBrand === "all" || item.brand === selectedBrand)
+  );
 
   return (
     <div className="flex">
@@ -542,7 +708,7 @@ const GroupStockMovementReport = () => {
             <button
               onClick={() => setExportDropdown(!exportDropdown)}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
-              disabled={reportData.length === 0}
+              disabled={filteredData.length === 0}
             >
               Export
               <svg
@@ -591,7 +757,7 @@ const GroupStockMovementReport = () => {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-4 py-2 border rounded-md shadow-sm"
+            className="px-4 py-2 border rounded-md shadow-sm w-full md:w-48"
           >
             <option value="ASM">ASM Wise</option>
             {/* <option value="RSM">RSM Wise</option> */}
@@ -602,7 +768,7 @@ const GroupStockMovementReport = () => {
           <select
             value={selectedArea}
             onChange={(e) => setSelectedArea(e.target.value)}
-            className="px-4 py-2 border rounded-md shadow-sm"
+            className="px-4 py-2 border rounded-md shadow-sm w-full md:w-48"
           >
             {areaOptions.map((area, index) => (
               <option key={index} value={area}>
@@ -610,6 +776,21 @@ const GroupStockMovementReport = () => {
               </option>
             ))}
           </select>
+
+          <SearchableSelect
+            options={filteredCategories}
+            selectedValue={selectedCategory}
+            onChange={setSelectedCategory}
+            placeholder="Select Category"
+            disabled={filteredCategories.length === 0}
+          />
+          <SearchableSelect
+            options={filteredBrands}
+            selectedValue={selectedBrand}
+            onChange={setSelectedBrand}
+            placeholder="Select Brand"
+            disabled={filteredBrands.length === 0}
+          />
 
           <div className="flex flex-col md:flex-row gap-2">
             <div className="flex items-center gap-2">
@@ -649,7 +830,7 @@ const GroupStockMovementReport = () => {
           </div>
         )}
 
-        {!loading && reportData.length > 0 && (
+        {!loading && filteredData.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
             <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Stock (DP)</p>
@@ -662,11 +843,11 @@ const GroupStockMovementReport = () => {
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Primary Stock (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-green-700 cursor-pointer hover:underline" onClick={() => fetchDetails('primary', null, 'summary')}>
+                <p className="text-2xl font-semibold text-green-700 cursor-pointer hover:underline" onClick={() => fetchDetails("primary", null, "summary")}>
                   {totals.primaryValue?.toFixed(2)}
                 </p>
                 <button
-                  onClick={() => fetchDetails('primary', null, 'summary')}
+                  onClick={() => fetchDetails("primary", null, "summary")}
                   className="text-xs text-green-600 hover:text-green-800 ml-2"
                   title="View Details"
                 >
@@ -680,11 +861,11 @@ const GroupStockMovementReport = () => {
             <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Secondary Sales (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-blue-700 cursor-pointer hover:underline" onClick={() => fetchDetails('secondary', null, 'summary')}>
+                <p className="text-2xl font-semibold text-blue-700 cursor-pointer hover:underline" onClick={() => fetchDetails("secondary", null, "summary")}>
                   {totals.secondaryValue?.toFixed(2)}
                 </p>
                 <button
-                  onClick={() => fetchDetails('secondary', null, 'summary')}
+                  onClick={() => fetchDetails("secondary", null, "summary")}
                   className="text-xs text-blue-600 hover:text-blue-800 ml-2"
                   title="View Details"
                 >
@@ -698,11 +879,11 @@ const GroupStockMovementReport = () => {
             <div className="bg-white border-l-4 border-red-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Market Returns (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-red-700 cursor-pointer hover:underline" onClick={() => fetchDetails('market return', null, 'summary')}>
+                <p className="text-2xl font-semibold text-red-700 cursor-pointer hover:underline" onClick={() => fetchDetails("market return", null, "summary")}>
                   {totals.marketReturnValue?.toFixed(2)}
                 </p>
                 <button
-                  onClick={() => fetchDetails('market return', null, 'summary')}
+                  onClick={() => fetchDetails("market return", null, "summary")}
                   className="text-xs text-red-600 hover:text-red-800 ml-2"
                   title="View Details"
                 >
@@ -716,11 +897,11 @@ const GroupStockMovementReport = () => {
             <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Office Returns (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-yellow-700 cursor-pointer hover:underline" onClick={() => fetchDetails('office return', null, 'summary')}>
+                <p className="text-2xl font-semibold text-yellow-700 cursor-pointer hover:underline" onClick={() => fetchDetails("office return", null, "summary")}>
                   {totals.officeReturnValue?.toFixed(2)}
                 </p>
                 <button
-                  onClick={() => fetchDetails('office return', null, 'summary')}
+                  onClick={() => fetchDetails("office return", null, "summary")}
                   className="text-xs text-yellow-600 hover:text-yellow-800 ml-2"
                   title="View Details"
                 >
@@ -756,7 +937,7 @@ const GroupStockMovementReport = () => {
           </div>
         )}
 
-        {!loading && reportData.length > 0 && (
+        {!loading && filteredData.length > 0 && (
           <div
             className="overflow-x-auto shadow rounded-lg"
             style={{ maxHeight: "95vh" }}
@@ -764,14 +945,16 @@ const GroupStockMovementReport = () => {
             <table className="min-w-full border">
               <thead className="sticky top-[-1px] bg-white z-10">
                 <tr>
-                  <th colSpan="16" className="bg-gray-200 px-4 py-2 text-left">
+                  <th colSpan="18" className="bg-gray-200 px-4 py-2 text-left">
                     {selectedType}: {selectedArea}
                   </th>
                 </tr>
                 <tr>
-                  <th colSpan="16" className="bg-gray-200 px-4 py-3 text-left">
+                  <th colSpan="18" className="bg-gray-200 px-4 py-3 text-left">
                     Period: {dayjs(dateRange.start).format("DD-MM-YY")} to{" "}
                     {dayjs(dateRange.end).format("DD-MM-YY")}
+                    {selectedCategory !== "all" && ` | Category: ${selectedCategory}`}
+                    {selectedBrand !== "all" && ` | Brand: ${selectedBrand}`}
                   </th>
                 </tr>
                 <tr className="bg-gray-100">
@@ -780,6 +963,12 @@ const GroupStockMovementReport = () => {
                   </th>
                   <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
                     Products Name
+                  </th>
+                  <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
+                    Category
+                  </th>
+                  <th rowSpan="2" className="p-2 sticky top-22 bg-gray-100">
+                    Brand
                   </th>
                   <th
                     colSpan="2"
@@ -842,35 +1031,37 @@ const GroupStockMovementReport = () => {
                 </tr>
               </thead>
               <tbody>
-                {reportData.map((item, index) => (
+                {filteredData.map((item, index) => (
                   <tr key={item.barcode} className="hover:bg-gray-50">
                     <td className="border p-2">{index + 1}</td>
                     <td className="border p-2">{item.productName}</td>
+                    <td className="border p-2">{item.category}</td>
+                    <td className="border p-2">{item.brand}</td>
                     <td className="border p-2 text-right">
                       {item.openingStock} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails('primary', item.barcode, 'product')}>
+                    <td className="border p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails("primary", item.barcode, "product")}>
                       {item.primary} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.primaryValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails('market return', item.barcode, 'product')}>
+                    <td className="border p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails("market return", item.barcode, "product")}>
                       {item.marketReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.marketReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails('office return', item.barcode, 'product')}>
+                    <td className="border p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails("office return", item.barcode, "product")}>
                       {item.officeReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.officeReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails('secondary', item.barcode, 'product')}>
+                    <td className="border p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails("secondary", item.barcode, "product")}>
                       {item.secondary} pcs
                     </td>
                     <td className="border p-2 text-right">
@@ -904,32 +1095,32 @@ const GroupStockMovementReport = () => {
               </tbody>
               <tfoot className="sticky bottom-[-1px] bg-gray-100">
                 <tr className="font-bold">
-                  <td className="p-2" colSpan="2">
+                  <td className="p-2" colSpan="4">
                     Total
                   </td>
                   <td className="p-2 text-right">{totals.openingQty}</td>
                   <td className="p-2 text-right">
                     {totals.openingValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails('primary', null, 'total')}>
+                  <td className="p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails("primary", null, "total")}>
                     {totals.primaryQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.primaryValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails('market return', null, 'total')}>
+                  <td className="p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails("market return", null, "total")}>
                     {totals.marketReturnQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.marketReturnValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails('office return', null, 'total')}>
+                  <td className="p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails("office return", null, "total")}>
                     {totals.officeReturnQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.officeReturnValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails('secondary', null, 'total')}>
+                  <td className="p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails("secondary", null, "total")}>
                     {totals.secondaryQty}
                   </td>
                   <td className="p-2 text-right">
@@ -946,6 +1137,12 @@ const GroupStockMovementReport = () => {
                 </tr>
               </tfoot>
             </table>
+          </div>
+        )}
+
+        {!loading && filteredData.length === 0 && reportData.length > 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No data available for selected filters
           </div>
         )}
 
@@ -966,15 +1163,15 @@ const GroupStockMovementReport = () => {
                 <div>
                   <h3 className="text-2xl font-bold">{getModalTitle()}</h3>
                   <p className="text-blue-100 mt-1">
-                    {selectedType}: {selectedArea} | {dayjs(dateRange.start).format('DD-MM-YYYY')} to {dayjs(dateRange.end).format('DD-MM-YYYY')}
+                    {selectedType}: {selectedArea} | {dayjs(dateRange.start).format("DD-MM-YYYY")} to {dayjs(dateRange.end).format("DD-MM-YYYY")}
                   </p>
                 </div>
                 <button
                   onClick={() => {
                     setModalType(null);
                     setModalData(null);
-                    setModalContext('');
-                    setSelectedOutlet('');
+                    setModalContext("");
+                    setSelectedOutlet("");
                   }}
                   className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
                   title="Close"
@@ -997,7 +1194,7 @@ const GroupStockMovementReport = () => {
                 </div>
               ) : (
                 <>
-                  {modalContext === 'product' && modalData?.products && (
+                  {modalContext === "product" && modalData?.products && (
                     <div className="mb-6">
                       <h4 className="text-lg font-semibold mb-3 text-gray-800">
                         Product: {modalData.products[0]?.productName}
@@ -1009,13 +1206,13 @@ const GroupStockMovementReport = () => {
                         </div>
                         <div className="bg-gray-50 p-3 rounded">
                           <p className="text-sm text-gray-600">DP Price</p>
-                          <p className="font-medium">{modalData.products[0]?.dpPrice?.toFixed(2) || 'N/A'}</p>
+                          <p className="font-medium">{modalData.products[0]?.dpPrice?.toFixed(2) || "N/A"}</p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {modalData && Object.keys(modalData).filter(key => key !== 'products').length > 0 ? (
+                  {modalData && Object.keys(modalData).filter(key => key !== "products").length > 0 ? (
                     <>
                       {/* Outlet Filter */}
                       <div className="mb-6">
@@ -1028,7 +1225,7 @@ const GroupStockMovementReport = () => {
                           <option value="">All Outlets</option>
                           {(() => {
                             const allOutlets = new Set();
-                            Object.keys(modalData).filter(key => key !== 'products').forEach(date => {
+                            Object.keys(modalData).filter(key => key !== "products").forEach(date => {
                               modalData[date].forEach(t => allOutlets.add(t.outlet));
                             });
                             return Array.from(allOutlets).sort().map(outlet => (
@@ -1040,7 +1237,7 @@ const GroupStockMovementReport = () => {
                         </select>
                       </div>
 
-                      {Object.keys(modalData).filter(key => key !== 'products').sort().map((date) => {
+                      {Object.keys(modalData).filter(key => key !== "products").sort().map((date) => {
                         const transactions = modalData[date];
                         const filteredTransactions = selectedOutlet
                           ? transactions.filter(t => t.outlet === selectedOutlet)
@@ -1083,7 +1280,7 @@ const GroupStockMovementReport = () => {
                                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                       DP Value
                                     </th>
-                                    {modalContext === 'product' && (
+                                    {modalContext === "product" && (
                                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         TP Value
                                       </th>
@@ -1098,7 +1295,7 @@ const GroupStockMovementReport = () => {
                                       </td>
                                       <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
                                         {trans.productName}
-                                        {modalContext === 'product' && (
+                                        {modalContext === "product" && (
                                           <span className="block text-xs text-gray-500">
                                             {trans.barcode}
                                           </span>
@@ -1110,9 +1307,9 @@ const GroupStockMovementReport = () => {
                                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                                         {trans.valueDP?.toFixed(2)}
                                       </td>
-                                      {modalContext === 'product' && (
+                                      {modalContext === "product" && (
                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
-                                          {trans.valueTP?.toFixed(2) || 'N/A'}
+                                          {trans.valueTP?.toFixed(2) || "N/A"}
                                         </td>
                                       )}
                                     </tr>
@@ -1156,12 +1353,12 @@ const GroupStockMovementReport = () => {
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
-                  {modalContext === 'total' && (
+                  {modalContext === "total" && (
                     <>
                       Showing all {modalType.toLowerCase()} transactions across all products
                     </>
                   )}
-                  {modalContext === 'product' && (
+                  {modalContext === "product" && (
                     <>
                       Showing {modalType.toLowerCase()} transactions for specific product only
                     </>
@@ -1173,40 +1370,40 @@ const GroupStockMovementReport = () => {
                     onClick={() => {
                       setModalType(null);
                       setModalData(null);
-                      setModalContext('');
-                      setSelectedOutlet('');
+                      setModalContext("");
+                      setSelectedOutlet("");
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Close
                   </button>
-                  {modalData && Object.keys(modalData).filter(key => key !== 'products').length > 0 && (
+                  {modalData && Object.keys(modalData).filter(key => key !== "products").length > 0 && (
                     <button
                       onClick={() => {
                         // Export modal data to Excel (filtered)
                         const exportData = [];
-                        Object.keys(modalData).filter(key => key !== 'products').forEach(date => {
+                        Object.keys(modalData).filter(key => key !== "products").forEach(date => {
                           const filteredTrans = modalData[date].filter(t => !selectedOutlet || t.outlet === selectedOutlet);
                           filteredTrans.forEach(t => {
                             exportData.push([
-                              dayjs(date).format('DD-MM-YYYY'),
-                              dayjs(t.date).format('HH:mm:ss'),
+                              dayjs(date).format("DD-MM-YYYY"),
+                              dayjs(t.date).format("HH:mm:ss"),
                               t.outlet,
                               t.productName,
                               t.quantity,
                               t.valueDP?.toFixed(2),
-                              t.valueTP?.toFixed(2) || 'N/A'
+                              t.valueTP?.toFixed(2) || "N/A"
                             ]);
                           });
                         });
 
                         const wb = XLSX.utils.book_new();
                         const ws = XLSX.utils.aoa_to_sheet([
-                          ['Date', 'Time', 'Outlet', 'Product', 'Quantity', 'DP Value', 'TP Value'],
+                          ["Date", "Time", "Outlet", "Product", "Quantity", "DP Value", "TP Value"],
                           ...exportData
                         ]);
                         XLSX.utils.book_append_sheet(wb, ws, `${modalType} Details`);
-                        XLSX.writeFile(wb, `${modalType}_${selectedType}_${selectedArea}_${dateRange.start}${selectedOutlet ? `_${selectedOutlet}` : ''}.xlsx`);
+                        XLSX.writeFile(wb, `${modalType}_${selectedType}_${selectedArea}_${dateRange.start}${selectedOutlet ? `_${selectedOutlet}` : ""}.xlsx`);
                       }}
                       className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
