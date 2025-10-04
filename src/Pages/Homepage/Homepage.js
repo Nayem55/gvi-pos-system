@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import PrimaryRequest from "../PrimaryRequest";
 import toast from "react-hot-toast";
+import SlabVoucher from "../../Component/SlabVoucher";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -174,6 +175,7 @@ export default function Home() {
           <option value="payment">Payment</option>
           <option value="tada">TA/DA</option>
           <option value="attendance">Check In/Out</option>
+          <option value="slab">Slab Voucher</option>
         </select>
       </div>
 
@@ -275,6 +277,18 @@ export default function Home() {
       )}
       {selectedTab === "tada" && (
         <TadaVoucher
+          user={posUser}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
+          dataLoading={dataLoading}
+        />
+      )}
+      {selectedTab === "slab" && (
+        <SlabVoucher
           user={posUser}
           stock={stock}
           setStock={setStock}

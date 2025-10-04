@@ -51,6 +51,7 @@ import StockTransactionsReport from "../Pages/StockTransactionsReport";
 import ProductStockMovementReport from "../Pages/ProductStockMovementReport";
 import CategoryStockMovementReport from "../Pages/CategoryStockMovementReport";
 import BrandStockMovementReport from "../Pages/BrandStockMovementReport";
+import SlabDashboard from "../Pages/SlabDashboard";
 
 const router = createBrowserRouter([
   {
@@ -262,6 +263,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/payment-request",
         element: <PaymentRequests />,
+      },
+      {
+        path: "/admin/slab-report",
+        element: <SlabDashboard />,
       },
     ],
   },
