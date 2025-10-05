@@ -97,7 +97,7 @@ export default function SlabVoucher({ stock, setStock }) {
         pcs: selectedSlab.pure,
       });
       newCart.push({
-        _id: "fresh-citrus-id",
+        _id: "68b7ddb62d44c8c7769eb7c0",
         name: "Layer'r Wottagirl 135ML: Fresh Citrus",
         pcs: selectedSlab.fresh,
       });
