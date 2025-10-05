@@ -178,7 +178,7 @@ const SlabDashboard = () => {
                   <th className="p-3 text-left">RSM</th>
                   <th className="p-3 text-left">SOM</th>
                   <th className="p-3 text-left">Lifetime Quantity</th>
-                  <th className="p-3 text-left">Achieved Slab</th>
+                  {/* <th className="p-3 text-left">Achieved Slab</th> */}
                   <th className="p-3 text-left">Action</th>
                 </tr>
               </thead>
@@ -198,8 +198,8 @@ const SlabDashboard = () => {
                       <td className="p-3">{customer.asm || "-"}</td>
                       <td className="p-3">{customer.rsm || "-"}</td>
                       <td className="p-3">{customer.som || "-"}</td>
-                      <td className="p-3">{customer.lifetime_quantity?.toLocaleString() ?? "0"}</td>
-                      <td className="p-3">{customer.current_slab || getSlab(customer.lifetime_quantity)}</td>
+                      <td className="p-3">{customer.lifetime_quantity}</td>
+                      {/* <td className="p-3">{customer.current_slab || getSlab(customer.lifetime_quantity)}</td> */}
                       <td className="p-3">
                         <button
                           onClick={() => openModal(customer)}
@@ -226,7 +226,7 @@ const SlabDashboard = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-96">
               <h2 className="text-xl font-bold mb-4 text-gray-800">
-                Slab History for {selectedCustomer.owner_name}
+                Achieved slabs for {selectedCustomer.owner_name}
               </h2>
               <div className="max-h-60 overflow-y-auto">
                 {Object.entries(selectedCustomer.slab_history).length > 0 ? (

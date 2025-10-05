@@ -92,7 +92,7 @@ export default function SlabVoucher({ stock, setStock }) {
     if (selectedSlab) {
       const newCart = [];
       newCart.push({
-        _id: "pure-paradise-id",
+        _id: "68b7ddb62d44c8c7769eb7c3",
         name: "Layer'r Wottagirl 135ML: Pure Paradise",
         pcs: selectedSlab.pure,
       });
@@ -129,21 +129,25 @@ export default function SlabVoucher({ stock, setStock }) {
   const isValidSlabSelection = () => {
     if (!selectedSlab) return false;
     return (
-      pureQty === selectedSlab.pure &&
-      freshQty === selectedSlab.fresh &&
-      totalQty >= selectedSlab.tot
+      pureQty >= selectedSlab.pure && // Minimum required, can be more
+      freshQty >= selectedSlab.fresh && // Minimum required, can be more
+      totalQty >= selectedSlab.tot // Total must meet or exceed tot
     );
   };
 
   useEffect(() => {
     if (selectedSlab) {
-      if (pureQty !== selectedSlab.pure || freshQty !== selectedSlab.fresh) {
+      if (pureQty < selectedSlab.pure) {
         setSlabError(
-          "Required quantities for Pure Paradise and Fresh Citrus must match slab requirements."
+          `Minimum ${selectedSlab.pure} Pure Paradise required (Current: ${pureQty}).`
+        );
+      } else if (freshQty < selectedSlab.fresh) {
+        setSlabError(
+          `Minimum ${selectedSlab.fresh} Fresh Citrus required (Current: ${freshQty}).`
         );
       } else if (totalQty < selectedSlab.tot) {
         setSlabError(
-          `Add ${selectedSlab.other} more 'Other' items to meet the total of ${selectedSlab.tot} pieces.`
+          `Add ${selectedSlab.tot - totalQty} more items to meet the total of ${selectedSlab.tot} pieces.`
         );
       } else {
         setSlabError("");
@@ -185,6 +189,19 @@ export default function SlabVoucher({ stock, setStock }) {
 
   const removeFromCart = (id) => {
     setCart(cart.filter((item) => item._id !== id));
+  };
+
+  const updateCartQuantity = (id, newQty) => {
+    newQty = parseInt(newQty);
+    // if (isNaN(newQty) || newQty <= 0) {
+    //   toast.error("Enter a valid quantity greater than 0");
+    //   return;
+    // }
+    setCart(
+      cart.map((item) =>
+        item._id === id ? { ...item, pcs: newQty } : item
+      )
+    );
   };
 
   const handleCustomerSelect = (customer) => {
@@ -519,7 +536,7 @@ export default function SlabVoucher({ stock, setStock }) {
           />
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             Shop Photo
           </label>
@@ -605,7 +622,7 @@ export default function SlabVoucher({ stock, setStock }) {
               </button>
             </div>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div className="bg-white p-4 rounded-md shadow-md border">
@@ -631,8 +648,8 @@ export default function SlabVoucher({ stock, setStock }) {
         </select>
         {selectedSlab && (
           <p className="text-sm text-gray-600 mt-2">
-            Required: Pure Paradise: {selectedSlab.pure} | Fresh Citrus:{" "}
-            {selectedSlab.fresh} | Other: {selectedSlab.other}
+            Minimum Required: Pure Paradise: {selectedSlab.pure} | Fresh Citrus:{" "}
+            {selectedSlab.fresh} | Other: {selectedSlab.other} (Total: {selectedSlab.tot})
           </p>
         )}
       </div>
@@ -667,10 +684,11 @@ export default function SlabVoucher({ stock, setStock }) {
         ) : searchResults.length > 0 && (
           <div className="bg-white rounded-md shadow-md p-2 mt-2 max-h-40 overflow-y-auto">
             {searchResults.map((product) => {
-              const lowerName = product.name.toLowerCase();
+              const lowerName = product.name;
+              const brand = product.brand;
               if (
-                lowerName.includes("pure paradis") ||
-                lowerName.includes("fresh citrus")
+                lowerName.includes("Layer'r Shot 18ML") ||
+                brand !== "Adjavis Venture Ltd."
               )
                 return null;
               return (
@@ -718,7 +736,7 @@ export default function SlabVoucher({ stock, setStock }) {
         {cart.length === 0 ? (
           <p className="text-gray-500 text-sm">No items added</p>
         ) : (
-          <div className="max-h-40 overflow-y-auto">
+          <div className="">
             {cart.map((item) => (
               <div
                 key={item._id}
@@ -726,14 +744,16 @@ export default function SlabVoucher({ stock, setStock }) {
               >
                 <p className="font-medium text-sm">{item.name}</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm">Qty: {item.pcs}</p>
+                  <input
+                    type="number"
+                    value={item.pcs}
+                    onChange={(e) => updateCartQuantity(item._id, e.target.value)}
+                    className="w-16 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-center"
+                    min={1}
+                  />
                   <button
                     onClick={() => removeFromCart(item._id)}
                     className="text-red-500 hover:text-red-700"
-                    disabled={
-                      item.name.includes("Pure Paradise") ||
-                      item.name.includes("Fresh Citrus")
-                    }
                   >
                     <svg
                       className="w-4 h-4"

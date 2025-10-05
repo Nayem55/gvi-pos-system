@@ -115,7 +115,7 @@ const AdminSidebar = () => {
       icon: <Grid size={20} />,
       items: [
         { name: "POS", path: "/admin", icon: <ShoppingCart size={16} /> },
-        { name: "Slab Report", path: "/admin/slab-report", icon: <Sheet size={16} /> },
+        { name: "Slab Report", path: "/admin/slab-report", icon: <Sheet size={16} /> },  
         {
           name: "Attendance",
           path: "https://rl.luvit.com.bd/admin-panel",
