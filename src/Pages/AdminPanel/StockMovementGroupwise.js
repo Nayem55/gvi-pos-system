@@ -9,7 +9,7 @@ import autoTable from "jspdf-autotable";
 
 const GroupStockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
-  const [selectedType, setSelectedType] = useState("ASM"); // ASM, RSM, SOM, or Zone
+  const [selectedType, setSelectedType] = useState("ASM"); // Default to ASM, restricted for ASM role
   const [selectedArea, setSelectedArea] = useState("");
   const [areaOptions, setAreaOptions] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -32,7 +32,7 @@ const GroupStockMovementReport = () => {
   const [currentBarcode, setCurrentBarcode] = useState(null);
   const [selectedOutlet, setSelectedOutlet] = useState("");
 
-  // Fetch area options based on selected type
+  // Fetch area options based on selected type, restricted for ASM role
   useEffect(() => {
     const fetchAreaOptions = async () => {
       try {
@@ -43,7 +43,11 @@ const GroupStockMovementReport = () => {
         if (response.data?.success) {
           setAreaOptions(response.data.data);
           if (response.data.data.length > 0) {
-            setSelectedArea(response.data.data[0]);
+            if (user.role === "ASM") {
+              setSelectedArea(user.name); // Lock to user's name for ASM
+            } else {
+              setSelectedArea(response.data.data[0]);
+            }
           }
         }
       } catch (error) {
@@ -52,7 +56,7 @@ const GroupStockMovementReport = () => {
     };
 
     fetchAreaOptions();
-  }, [selectedType]);
+  }, [selectedType, user.role, user.name]);
 
   useEffect(() => {
     if (selectedArea && dateRange.start && dateRange.end) {
@@ -105,7 +109,6 @@ const GroupStockMovementReport = () => {
           );
         });
 
-        // Generate category and brand options
         const uniqueCategories = [...new Set(
           filteredData.map(item => item.category || "Uncategorized")
         )].sort();
@@ -183,7 +186,7 @@ const GroupStockMovementReport = () => {
   const fetchDetails = async (type, productBarcode = null, context = "total") => {
     setLoadingDetails(true);
     setModalData(null);
-    setModalType(type.charAt(0).toUpperCase() + type.slice(1)); // Capitalize for display
+    setModalType(type.charAt(0).toUpperCase() + type.slice(1));
     setModalContext(productBarcode ? "product" : context);
     setSelectedOutlet("");
     if (productBarcode) {
@@ -235,7 +238,6 @@ const GroupStockMovementReport = () => {
         }
       });
 
-      // Add products info from first transaction if available
       const allTrans = Object.values(filtered).flat();
       if (allTrans.length > 0) {
         const first = allTrans[0];
@@ -549,8 +551,8 @@ const GroupStockMovementReport = () => {
 
       const fileName = `Stock_Report_${selectedType}_${selectedArea || "all"}_${
         dayjs(dateRange.start).format("YYYY-MM-DD") +
-          " to " +
-          dayjs(dateRange.end).format("YYYY-MM-DD") || dayjs().format("MMMM")
+        " to " +
+        dayjs(dateRange.end).format("YYYY-MM-DD") || dayjs().format("MMMM")
       }_${dayjs().format("YYYYMMDD")}.pdf`;
       doc.save(fileName);
     } catch (error) {
@@ -600,7 +602,6 @@ const GroupStockMovementReport = () => {
     }
   );
 
-  // Get modal title based on context
   const getModalTitle = () => {
     let title = `${modalType} Transaction Details`;
     
@@ -697,7 +698,7 @@ const GroupStockMovementReport = () => {
 
   return (
     <div className="flex">
-      <AdminSidebar />
+      {user.role !== "ASM" && <AdminSidebar />}
 
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
         <div className="flex justify-between items-center mb-6">
@@ -758,17 +759,24 @@ const GroupStockMovementReport = () => {
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
             className="px-4 py-2 border rounded-md shadow-sm w-full md:w-48"
+            disabled={user.role === "ASM"} // Disable for ASM role
           >
-            <option value="ASM">ASM Wise</option>
-            {/* <option value="RSM">RSM Wise</option> */}
-            <option value="SOM">SOM Wise</option>
-            <option value="Zone">Zone Wise</option>
+            {user.role !== "ASM" ? (
+              <>
+                <option value="ASM">ASM Wise</option>
+                <option value="SOM">SOM Wise</option>
+                <option value="Zone">Zone Wise</option>
+              </>
+            ) : (
+              <option value="ASM">ASM Wise</option>
+            )}
           </select>
 
           <select
             value={selectedArea}
             onChange={(e) => setSelectedArea(e.target.value)}
             className="px-4 py-2 border rounded-md shadow-sm w-full md:w-48"
+            disabled={user.role === "ASM"} // Disable for ASM role
           >
             {areaOptions.map((area, index) => (
               <option key={index} value={area}>
@@ -1153,11 +1161,9 @@ const GroupStockMovementReport = () => {
         )}
       </div>
 
-      {/* Enhanced Modal */}
       {modalType && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
               <div className="flex justify-between items-center">
                 <div>
@@ -1183,7 +1189,6 @@ const GroupStockMovementReport = () => {
               </div>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[70vh]">
               {loadingDetails ? (
                 <div className="flex justify-center py-8">
@@ -1214,7 +1219,6 @@ const GroupStockMovementReport = () => {
 
                   {modalData && Object.keys(modalData).filter(key => key !== "products").length > 0 ? (
                     <>
-                      {/* Outlet Filter */}
                       <div className="mb-6">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Outlet</label>
                         <select
@@ -1250,7 +1254,6 @@ const GroupStockMovementReport = () => {
 
                         return (
                           <div key={date} className="mb-8 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                            {/* Date Header */}
                             <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                               <div className="flex justify-between items-center">
                                 <h4 className="text-lg font-semibold text-gray-800">
@@ -1263,7 +1266,6 @@ const GroupStockMovementReport = () => {
                               </div>
                             </div>
 
-                            {/* Transactions Table */}
                             <div className="overflow-x-auto">
                               <table className="min-w-full">
                                 <thead className="bg-white">
@@ -1318,7 +1320,6 @@ const GroupStockMovementReport = () => {
                               </table>
                             </div>
 
-                            {/* Date Footer */}
                             <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-700">
@@ -1349,7 +1350,6 @@ const GroupStockMovementReport = () => {
               )}
             </div>
 
-            {/* Modal Footer */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
@@ -1380,7 +1380,6 @@ const GroupStockMovementReport = () => {
                   {modalData && Object.keys(modalData).filter(key => key !== "products").length > 0 && (
                     <button
                       onClick={() => {
-                        // Export modal data to Excel (filtered)
                         const exportData = [];
                         Object.keys(modalData).filter(key => key !== "products").forEach(date => {
                           const filteredTrans = modalData[date].filter(t => !selectedOutlet || t.outlet === selectedOutlet);

@@ -129,9 +129,10 @@ export default function SlabVoucher({ stock, setStock }) {
   const isValidSlabSelection = () => {
     if (!selectedSlab) return false;
     return (
-      pureQty >= selectedSlab.pure && // Minimum required, can be more
-      freshQty >= selectedSlab.fresh && // Minimum required, can be more
-      totalQty >= selectedSlab.tot // Total must meet or exceed tot
+      pureQty >= selectedSlab.pure && // Minimum required
+      freshQty >= selectedSlab.fresh && // Minimum required
+      totalQty >= selectedSlab.tot && // Total must meet
+      totalQty <= selectedSlab.tot // Total must not exceed
     );
   };
 
@@ -148,6 +149,10 @@ export default function SlabVoucher({ stock, setStock }) {
       } else if (totalQty < selectedSlab.tot) {
         setSlabError(
           `Add ${selectedSlab.tot - totalQty} more items to meet the total of ${selectedSlab.tot} pieces.`
+        );
+      } else if (totalQty > selectedSlab.tot) {
+        setSlabError(
+          `Total quantity exceeds slab requirement by ${totalQty - selectedSlab.tot} pieces. Total must be exactly ${selectedSlab.tot}.`
         );
       } else {
         setSlabError("");
@@ -170,9 +175,19 @@ export default function SlabVoucher({ stock, setStock }) {
       return;
     }
 
+    const currentTotalQty = cart.reduce((sum, item) => sum + item.pcs, 0);
+    if (currentTotalQty + pcs > selectedSlab.tot) {
+      toast.error(`Cannot add ${pcs} items. Total quantity would exceed slab limit of ${selectedSlab.tot} pieces.`);
+      return;
+    }
+
     const existing = cart.find((item) => item._id === product._id);
     if (existing) {
       const newPcs = existing.pcs + pcs;
+      if (currentTotalQty - existing.pcs + newPcs > selectedSlab.tot) {
+        toast.error(`Cannot update quantity. Total would exceed slab limit of ${selectedSlab.tot} pieces.`);
+        return;
+      }
       setCart(
         cart.map((item) =>
           item._id === product._id ? { ...item, pcs: newPcs } : item
@@ -193,10 +208,17 @@ export default function SlabVoucher({ stock, setStock }) {
 
   const updateCartQuantity = (id, newQty) => {
     newQty = parseInt(newQty);
-    // if (isNaN(newQty) || newQty <= 0) {
-    //   toast.error("Enter a valid quantity greater than 0");
-    //   return;
-    // }
+    if (isNaN(newQty) || newQty <= 0) {
+      toast.error("Enter a valid quantity greater than 0");
+      return;
+    }
+
+    const currentTotalQty = cart.reduce((sum, item) => sum + (item._id === id ? 0 : item.pcs), 0);
+    if (currentTotalQty + newQty > selectedSlab.tot) {
+      toast.error(`Cannot set quantity to ${newQty}. Total would exceed slab limit of ${selectedSlab.tot} pieces.`);
+      return;
+    }
+
     setCart(
       cart.map((item) =>
         item._id === id ? { ...item, pcs: newQty } : item
@@ -535,94 +557,6 @@ export default function SlabVoucher({ stock, setStock }) {
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
         </div>
-
-        {/* <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Shop Photo
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleShopImageUpload}
-            className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          <p className="text-xs text-gray-500">Square image, max 2MB (JPG/PNG)</p>
-          {imageUrl && (
-            <div className="mt-2">
-              <img
-                src={imageUrl}
-                alt="Shop"
-                className="rounded-md shadow-md border object-cover"
-                style={{ width: "250px", height: "250px" }}
-              />
-              <button
-                onClick={() => {
-                  setImageUrl("");
-                  setImageFile(null);
-                }}
-                className="mt-2 text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Remove
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Product Photo
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleProductImageUpload}
-            className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          <p className="text-xs text-gray-500">Square image, max 2MB (JPG/PNG)</p>
-          {imageUrl1 && (
-            <div className="mt-2">
-              <img
-                src={imageUrl1}
-                alt="Product"
-                className="rounded-md shadow-md border object-cover"
-                style={{ width: "250px", height: "250px" }}
-              />
-              <button
-                onClick={() => {
-                  setImageUrl1("");
-                  setImageFile(null);
-                }}
-                className="mt-2 text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Remove
-              </button>
-            </div>
-          )}
-        </div> */}
       </div>
 
       <div className="bg-white p-4 rounded-md shadow-md border">

@@ -24,6 +24,7 @@ import {
   Settings,
   HelpCircle,
   Sheet,
+  Edit,
 } from "lucide-react";
 import { BiCategoryAlt, BiDetail, BiSolidReport } from "react-icons/bi";
 import { BsCash, BsCashCoin, BsShop } from "react-icons/bs";
@@ -297,9 +298,9 @@ const AdminSidebar = () => {
           icon: <FaTrademark size={16} />,
         },
         {
-          name: "Movement Details",
+          name: "Update Stock",
           path: "/admin/full-stock-report",
-          icon: <BiDetail size={16} />,
+          icon: <Edit size={16} />,
         },
       ],
     },

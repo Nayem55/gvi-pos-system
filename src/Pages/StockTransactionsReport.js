@@ -23,8 +23,10 @@ const StockTransactionsReport = () => {
   });
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
+  const [groupedData, setGroupedData] = useState({});
   const [error, setError] = useState(null);
   const [editingTxn, setEditingTxn] = useState(null);
+  const [editingDate, setEditingDate] = useState(null);
   const [editForm, setEditForm] = useState({
     quantity: "",
     type: "",
@@ -48,6 +50,20 @@ const StockTransactionsReport = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (reportData) {
+      const groups = {};
+      reportData.forEach((txn) => {
+        const dateKey = dayjs(txn.date).format("DD-MM-YY");
+        if (!groups[dateKey]) groups[dateKey] = [];
+        groups[dateKey].push(txn);
+      });
+      setGroupedData(groups);
+    } else {
+      setGroupedData({});
+    }
+  }, [reportData]);
 
   const fetchOutlets = async () => {
     try {
@@ -107,7 +123,7 @@ const StockTransactionsReport = () => {
         ).format("DD-MM-YY")}`,
       ],
       [],
-      ["Date", "Product", "Barcode", "Type", "Quantity", "Unit DP", "Unit TP", "Total DP", "Total TP", "Created By"],
+      ["Date", "Product", "Quantity", "Unit DP", "Unit TP", "Total DP", "Total TP"],
     ];
 
     reportData.forEach((txn) => {
@@ -116,14 +132,11 @@ const StockTransactionsReport = () => {
       excelData.push([
         dayjs(txn.date).format("DD-MM-YY"),
         txn.productName,
-        txn.barcode,
-        txn.type,
         txn.quantity,
         dp.toFixed(2),
         tp.toFixed(2),
         (txn.quantity * dp).toFixed(2),
         (txn.quantity * tp).toFixed(2),
-        txn.user,
       ]);
     });
 
@@ -140,7 +153,7 @@ const StockTransactionsReport = () => {
     if (!reportData) return;
 
     const doc = new jsPDF({ orientation: "landscape" });
-    const headers = [["Date", "Product", "Barcode", "Type", "Quantity", "Unit DP", "Unit TP", "Total DP", "Total TP", "Created By"]];
+    const headers = [["Date", "Product", "Quantity", "Unit DP", "Unit TP", "Total DP", "Total TP"]];
 
     const data = reportData.map((txn) => {
       const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
@@ -148,14 +161,11 @@ const StockTransactionsReport = () => {
       return [
         dayjs(txn.date).format("DD-MM-YY"),
         txn.productName,
-        txn.barcode,
-        txn.type,
         txn.quantity,
         dp.toFixed(2),
         tp.toFixed(2),
         (txn.quantity * dp).toFixed(2),
         (txn.quantity * tp).toFixed(2),
-        txn.user,
       ];
     });
 
@@ -163,7 +173,7 @@ const StockTransactionsReport = () => {
       head: headers,
       body: data,
       startY: 20,
-      styles: { fontSize: 8 },
+      styles: { fontSize: 7 },
     });
 
     doc.save(`Stock_Transactions_${selectedOutlet || "all"}_${dayjs().format("YYYYMMDD")}.pdf`);
@@ -267,24 +277,34 @@ const StockTransactionsReport = () => {
     setShowOutletDropdown(false);
   };
 
+  const getSortedDateKeys = () => {
+    return Object.keys(groupedData).sort((a, b) => {
+      const [ddA, mmA, yyA] = a.split("-");
+      const [ddB, mmB, yyB] = b.split("-");
+      const dateA = dayjs(`20${yyA}-${mmA}-${ddA}`);
+      const dateB = dayjs(`20${yyB}-${mmB}-${ddB}`);
+      return dateA.unix() - dateB.unix();
+    });
+  };
+
   return (
     <div className="flex">
       {!user?.outlet && <AdminSidebar />}
 
-      <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">
+      <div className="mx-auto px-4 py-6 w-full md:w-[80%]">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">
             Stock Transactions Breakdown
           </h2>
           <div className="relative">
             <button
               onClick={() => setExportDropdown(!exportDropdown)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
+              className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1.5 rounded flex items-center"
               disabled={!reportData}
             >
               Export
               <svg
-                className="w-4 h-4 ml-2"
+                className="w-3 h-3 ml-1.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -299,14 +319,14 @@ const StockTransactionsReport = () => {
             </button>
 
             {exportDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+              <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10">
                 <div className="py-1">
                   <button
                     onClick={() => {
                       exportToExcel();
                       setExportDropdown(false);
                     }}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
                   >
                     Export to Excel
                   </button>
@@ -315,7 +335,7 @@ const StockTransactionsReport = () => {
                       exportToPDF();
                       setExportDropdown(false);
                     }}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
                   >
                     Export to PDF
                   </button>
@@ -325,7 +345,7 @@ const StockTransactionsReport = () => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-3 mb-4">
           {!user?.outlet && (
             <div className="relative w-full max-w-xs" ref={outletDropdownRef}>
               <input
@@ -337,16 +357,16 @@ const StockTransactionsReport = () => {
                 }}
                 onFocus={() => setShowOutletDropdown(true)}
                 placeholder="Search Outlet..."
-                className="w-full px-4 py-2 border rounded-md shadow-sm"
+                className="w-full px-3 py-1.5 border rounded-md shadow-sm text-sm"
                 aria-label="Search Outlet"
               />
               {showOutletDropdown && filteredOutlets.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {filteredOutlets.map((outlet, index) => (
                     <div
                       key={index}
                       onClick={() => handleOutletSelect(outlet)}
-                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      className="px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
                       role="option"
                       aria-selected={selectedOutlet === outlet}
                     >
@@ -356,7 +376,7 @@ const StockTransactionsReport = () => {
                 </div>
               )}
               {showOutletDropdown && outletSearch && filteredOutlets.length === 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-3 py-1.5 text-xs text-gray-500">
                   No outlets found
                 </div>
               )}
@@ -364,11 +384,11 @@ const StockTransactionsReport = () => {
           )}
           <div className="flex flex-col md:flex-row gap-2">
             <div className="flex items-center gap-2">
-              <label className="text-sm">Type:</label>
+              <label className="text-xs">Type:</label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="px-4 py-2 border rounded-md shadow-sm"
+                className="px-3 py-1.5 border rounded-md shadow-sm text-sm"
               >
                 <option value="">All Types</option>
                 <option value="opening">Opening</option>
@@ -379,30 +399,30 @@ const StockTransactionsReport = () => {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm">From:</label>
+              <label className="text-xs">From:</label>
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) =>
                   setDateRange({ ...dateRange, start: e.target.value })
                 }
-                className="border rounded px-4 py-2"
+                className="border rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm">To:</label>
+              <label className="text-xs">To:</label>
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) =>
                   setDateRange({ ...dateRange, end: e.target.value })
                 }
-                className="border rounded px-4 py-2"
+                className="border rounded px-3 py-1.5 text-sm"
               />
             </div>
             <button
               onClick={fetchReportData}
-              className="bg-blue-900 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              className="bg-blue-900 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded"
               disabled={!selectedOutlet}
             >
               Apply Filter
@@ -411,40 +431,40 @@ const StockTransactionsReport = () => {
         </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500">
-            <p className="text-red-700">{error}</p>
+          <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500">
+            <p className="text-red-700 text-xs">{error}</p>
           </div>
         )}
 
         {!loading && movement && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
-              <p className="text-sm text-gray-600">Opening (DP)</p>
-              <p className="text-2xl font-semibold text-purple-700">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+            <div className="bg-white border-l-4 border-purple-600 p-3 rounded shadow">
+              <p className="text-xs text-gray-600">Opening (DP)</p>
+              <p className="text-lg font-semibold text-purple-700">
                 {movement.openingValue.toFixed(2)}
               </p>
             </div>
-            <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
-              <p className="text-sm text-gray-600">Primary (DP)</p>
-              <p className="text-2xl font-semibold text-blue-700">
+            <div className="bg-white border-l-4 border-blue-600 p-3 rounded shadow">
+              <p className="text-xs text-gray-600">Primary (DP)</p>
+              <p className="text-lg font-semibold text-blue-700">
                 {movement.primaryValue.toFixed(2)}
               </p>
             </div>
-            <div className="bg-white border-l-4 border-orange-600 p-4 rounded shadow">
-              <p className="text-sm text-gray-600">Secondary (DP)</p>
-              <p className="text-2xl font-semibold text-orange-700">
+            <div className="bg-white border-l-4 border-orange-600 p-3 rounded shadow">
+              <p className="text-xs text-gray-600">Secondary (DP)</p>
+              <p className="text-lg font-semibold text-orange-700">
                 {movement.secondaryValue.toFixed(2)}
               </p>
             </div>
-            <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
-              <p className="text-sm text-gray-600">Market Return (DP)</p>
-              <p className="text-2xl font-semibold text-green-700">
+            <div className="bg-white border-l-4 border-green-600 p-3 rounded shadow">
+              <p className="text-xs text-gray-600">Market Return (DP)</p>
+              <p className="text-lg font-semibold text-green-700">
                 {movement.marketReturnValue.toFixed(2)}
               </p>
             </div>
-            <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
-              <p className="text-sm text-gray-600">Office Return (DP)</p>
-              <p className="text-2xl font-semibold text-yellow-700">
+            <div className="bg-white border-l-4 border-yellow-600 p-3 rounded shadow">
+              <p className="text-xs text-gray-600">Office Return (DP)</p>
+              <p className="text-lg font-semibold text-yellow-700">
                 {movement.officeReturnValue.toFixed(2)}
               </p>
             </div>
@@ -452,71 +472,75 @@ const StockTransactionsReport = () => {
         )}
 
         {loading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="flex justify-center py-6">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         )}
 
         {!loading && reportData && (
-          <div className="bg-white p-4 rounded shadow-md mb-6">
-            <h3 className="text-lg font-bold mb-4">Transaction Details</h3>
+          <div className="bg-white p-3 rounded shadow-md mb-4">
+            <h3 className="text-base font-bold mb-3">Transaction Details</h3>
             <div className="overflow-x-auto">
-              <table className="min-w-full border">
+              <table className="min-w-full border text-xs">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border p-2">Date</th>
-                    <th className="border p-2">Product</th>
-                    <th className="border p-2">Barcode</th>
-                    <th className="border p-2">Type</th>
-                    <th className="border p-2">Quantity</th>
-                    <th className="border p-2">Unit DP</th>
-                    <th className="border p-2">Unit TP</th>
-                    <th className="border p-2">Total DP</th>
-                    <th className="border p-2">Total TP</th>
-                    <th className="border p-2">Created By</th>
-                    <th className="border p-2">Actions</th>
+                    <th className="border p-1.5">Date</th>
+                    <th className="border p-1.5">Product</th>
+                    <th className="border p-1.5">Quantity</th>
+                    <th className="border p-1.5">Unit DP</th>
+                    <th className="border p-1.5">Unit TP</th>
+                    <th className="border p-1.5">Total DP</th>
+                    <th className="border p-1.5">Total TP</th>
+                    <th className="border p-1.5">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.map((txn, index) => {
-                    const dp = isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
-                    const tp = isNaN(txn.tp) || txn.tp == null ? 0 : Number(txn.tp);
-                    return (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border p-2">
-                          {dayjs(txn.date).format("DD-MM-YY")}
-                        </td>
-                        <td className="border p-2">{txn.productName}</td>
-                        <td className="border p-2">{txn.barcode}</td>
-                        <td className="border p-2 capitalize">
-                          {txn.type.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
-                        </td>
-                        <td className="border p-2">{txn.quantity}</td>
-                        <td className="border p-2">{dp.toFixed(2)}</td>
-                        <td className="border p-2">{tp.toFixed(2)}</td>
-                        <td className="border p-2">{(txn.quantity * dp).toFixed(2)}</td>
-                        <td className="border p-2">{(txn.quantity * tp).toFixed(2)}</td>
-                        <td className="border p-2">{txn.user}</td>
-                        <td className="border p-2">
-                          {user.role === "super admin" && txn.type !== "secondary" && (
-                            <>
-                              <button
-                                onClick={() => handleEdit(txn)}
-                                className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(txn._id)}
-                                className="bg-red-600 text-white px-2 py-1 rounded"
-                              >
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    );
+                  {getSortedDateKeys().map((dateKey) => {
+                    const group = groupedData[dateKey];
+                    const canEditGroup =
+                      user.role === "super admin" &&
+                      group.some((txn) => txn.type !== "secondary");
+                    return group.map((txn, index) => {
+                      const dp =
+                        isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
+                      const tp =
+                        isNaN(txn.tp) || txn.tp == null ? 0 : Number(txn.tp);
+                      const isFirst = index === 0;
+                      return (
+                        <tr key={txn._id} className="hover:bg-gray-50">
+                          {isFirst ? (
+                            <td rowSpan={group.length} className="border p-1.5">
+                              {dateKey}
+                            </td>
+                          ) : null}
+                          <td className="border p-1.5">{txn.productName}</td>
+                          <td className="border p-1.5">{txn.quantity}</td>
+                          <td className="border p-1.5">{dp.toFixed(2)}</td>
+                          <td className="border p-1.5">{tp.toFixed(2)}</td>
+                          <td className="border p-1.5">
+                            {(txn.quantity * dp).toFixed(2)}
+                          </td>
+                          <td className="border p-1.5">
+                            {(txn.quantity * tp).toFixed(2)}
+                          </td>
+                          {isFirst ? (
+                            <td
+                              rowSpan={group.length}
+                              className="border p-1.5"
+                            >
+                              {canEditGroup && (
+                                <button
+                                  onClick={() => setEditingDate(dateKey)}
+                                  className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </td>
+                          ) : null}
+                        </tr>
+                      );
+                    });
                   })}
                 </tbody>
               </table>
@@ -525,56 +549,130 @@ const StockTransactionsReport = () => {
         )}
 
         {!loading && !reportData && selectedOutlet && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-6 text-gray-500 text-xs">
             No data available for selected period
+          </div>
+        )}
+
+        {editingDate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+            <div className="bg-white p-4 rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] overflow-y-auto">
+              <h3 className="text-base font-bold mb-3">
+                Edit Transactions for {editingDate}
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border text-xs">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border p-1.5">Product</th>
+                      <th className="border p-1.5">Quantity</th>
+                      <th className="border p-1.5">Unit DP</th>
+                      <th className="border p-1.5">Unit TP</th>
+                      <th className="border p-1.5">Total DP</th>
+                      <th className="border p-1.5">Total TP</th>
+                      <th className="border p-1.5">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupedData[editingDate].map((txn) => {
+                      const dp =
+                        isNaN(txn.dp) || txn.dp == null ? 0 : Number(txn.dp);
+                      const tp =
+                        isNaN(txn.tp) || txn.tp == null ? 0 : Number(txn.tp);
+                      return (
+                        <tr key={txn._id} className="hover:bg-gray-50">
+                          <td className="border p-1.5">{txn.productName}</td>
+                          <td className="border p-1.5">{txn.quantity}</td>
+                          <td className="border p-1.5">{dp.toFixed(2)}</td>
+                          <td className="border p-1.5">{tp.toFixed(2)}</td>
+                          <td className="border p-1.5">
+                            {(txn.quantity * dp).toFixed(2)}
+                          </td>
+                          <td className="border p-1.5">
+                            {(txn.quantity * tp).toFixed(2)}
+                          </td>
+                          <td className="border p-1.5">
+                            {user.role === "super admin" &&
+                              txn.type !== "secondary" && (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(txn)}
+                                    className="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(txn._id)}
+                                    className="bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end mt-3">
+                <button
+                  onClick={() => setEditingDate(null)}
+                  className="bg-gray-600 text-white px-3 py-1.5 rounded text-xs"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {editingTxn && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-              <h3 className="text-lg font-bold mb-4">Edit Stock Transaction</h3>
+            <div className="bg-white p-4 rounded-lg shadow-lg w-full max-w-md">
+              <h3 className="text-base font-bold mb-3">Edit Stock Transaction</h3>
               <form>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Quantity</label>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-1">Quantity</label>
                   <input
                     type="number"
                     name="quantity"
                     value={editForm.quantity}
                     onChange={handleEditChange}
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full p-2 border border-gray-300 rounded text-xs"
                     required
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">DP</label>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-1">DP</label>
                   <input
                     type="number"
                     name="dp"
                     step="0.01"
                     value={editForm.dp}
                     onChange={handleEditChange}
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full p-2 border border-gray-300 rounded text-xs"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">TP</label>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-1">TP</label>
                   <input
                     type="number"
                     name="tp"
                     step="0.01"
                     value={editForm.tp}
                     onChange={handleEditChange}
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full p-2 border border-gray-300 rounded text-xs"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Type</label>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-1">Type</label>
                   <select
                     name="type"
                     value={editForm.type}
                     onChange={handleEditChange}
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full p-2 border border-gray-300 rounded text-xs"
                   >
                     <option value="opening">Opening</option>
                     <option value="primary">Primary</option>
@@ -587,14 +685,14 @@ const StockTransactionsReport = () => {
                   <button
                     type="button"
                     onClick={() => setEditingTxn(null)}
-                    className="bg-gray-600 text-white px-4 py-2 rounded"
+                    className="bg-gray-600 text-white px-3 py-1.5 rounded text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleSaveEdit}
-                    className="bg-green-600 text-white px-4 py-2 rounded"
+                    className="bg-green-600 text-white px-3 py-1.5 rounded text-xs"
                   >
                     Save
                   </button>
