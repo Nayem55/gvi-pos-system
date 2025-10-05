@@ -67,9 +67,11 @@ const SlabDashboard = () => {
     ...new Set(customers.map((c) => c.so_zone).filter(Boolean)),
   ];
 
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      filteredCustomers.map((customer) => ({
+const exportToExcel = () => {
+  const worksheet = XLSX.utils.json_to_sheet(
+    filteredCustomers.map((customer) => {
+      const slabs = customer.slab_history || {};
+      return {
         "Customer Name": customer.owner_name || "-",
         "Customer Phone": customer.owner_number || "-",
         "Shop Name": customer.shop_name || "-",
@@ -83,14 +85,22 @@ const SlabDashboard = () => {
         RSM: customer.rsm || "-",
         SOM: customer.som || "-",
         "Lifetime Quantity": customer.lifetime_quantity || 0,
-        "Earned Slab": customer.current_slab || getSlab(customer.lifetime_quantity),
-      }))
-    );
+        "Slab #01": slabs["slab01"] ? slabs["slab01"] : 0,
+        "Slab #02": slabs["slab02"] ? slabs["slab02"] : 0,
+        "Slab #03": slabs["slab03"] ? slabs["slab03"] : 0,
+        "Slab #04": slabs["slab04"] ? slabs["slab04"] : 0,
+        "Slab #05": slabs["slab05"] ? slabs["slab05"] : 0,
+        "Slab #06": slabs["slab06"] ? slabs["slab06"] : 0,
+        "Slab #07": slabs["slab07"] ? slabs["slab07"] : 0,
+        "Slab #08": slabs["slab08"] ? slabs["slab08"] : 0,
+      };
+    })
+  );
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Summary");
-    XLSX.writeFile(workbook, "Customer_Summary_Lifetime.xlsx");
-  };
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Summary");
+  XLSX.writeFile(workbook, "Customer_Summary_Lifetime.xlsx");
+};
 
   const openModal = (customer) => {
     setSelectedCustomer(customer);
