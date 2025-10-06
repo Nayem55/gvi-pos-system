@@ -10,6 +10,7 @@ const SlabDashboard = () => {
   const [zoneFilter, setZoneFilter] = useState("All");
   const [loading, setLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [transactions, setTransactions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -43,18 +44,6 @@ const SlabDashboard = () => {
     setFilteredCustomers(filtered);
   }, [roleFilter, zoneFilter, customers]);
 
-  const getSlab = (lifetimeQuantity = 0) => {
-    if (lifetimeQuantity >= 800) return "Slab 8";
-    if (lifetimeQuantity >= 400) return "Slab 7";
-    if (lifetimeQuantity >= 192) return "Slab 6";
-    if (lifetimeQuantity >= 96) return "Slab 5";
-    if (lifetimeQuantity >= 48) return "Slab 4";
-    if (lifetimeQuantity >= 24) return "Slab 3";
-    if (lifetimeQuantity >= 12) return "Slab 2";
-    if (lifetimeQuantity >= 6) return "Slab 1";
-    return "No Slab";
-  };
-
   const handleRoleChange = (e) => setRoleFilter(e.target.value);
   const handleZoneChange = (e) => setZoneFilter(e.target.value);
 
@@ -67,48 +56,74 @@ const SlabDashboard = () => {
     ...new Set(customers.map((c) => c.so_zone).filter(Boolean)),
   ];
 
-const exportToExcel = () => {
-  const worksheet = XLSX.utils.json_to_sheet(
-    filteredCustomers.map((customer) => {
-      const slabs = customer.slab_history || {};
-      return {
-        "Customer Name": customer.owner_name || "-",
-        "Customer Phone": customer.owner_number || "-",
-        "Shop Name": customer.shop_name || "-",
-        "Shop Address": customer.shop_address || "-",
-        "Dealer Name": customer.dealer_name || "-",
-        "SO Name": customer.so_name || "-",
-        Role: customer.so_role || "-",
-        Zone: customer.so_zone || "-",
-        "SO Number": customer.so_number || "-",
-        ASM: customer.asm || "-",
-        RSM: customer.rsm || "-",
-        SOM: customer.som || "-",
-        "Lifetime Quantity": customer.lifetime_quantity || 0,
-        "Slab #01": slabs["slab01"] ? slabs["slab01"] : 0,
-        "Slab #02": slabs["slab02"] ? slabs["slab02"] : 0,
-        "Slab #03": slabs["slab03"] ? slabs["slab03"] : 0,
-        "Slab #04": slabs["slab04"] ? slabs["slab04"] : 0,
-        "Slab #05": slabs["slab05"] ? slabs["slab05"] : 0,
-        "Slab #06": slabs["slab06"] ? slabs["slab06"] : 0,
-        "Slab #07": slabs["slab07"] ? slabs["slab07"] : 0,
-        "Slab #08": slabs["slab08"] ? slabs["slab08"] : 0,
-      };
-    })
-  );
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      filteredCustomers.map((customer) => {
+        return {
+          "Customer Name": customer.owner_name || "-",
+          "Customer Phone": customer.owner_number || "-",
+          "Shop Name": customer.shop_name || "-",
+          "Shop Address": customer.shop_address || "-",
+          "Dealer Name": customer.dealer_name || "-",
+          "SO Name": customer.so_name || "-",
+          Role: customer.so_role || "-",
+          Zone: customer.so_zone || "-",
+          "SO Number": customer.so_number || "-",
+          ASM: customer.asm || "-",
+          RSM: customer.rsm || "-",
+          SOM: customer.som || "-",
+          "Lifetime Quantity": customer.lifetime_quantity || 0,
+        };
+      })
+    );
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Summary");
-  XLSX.writeFile(workbook, "Customer_Summary_Lifetime.xlsx");
-};
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Summary");
+    XLSX.writeFile(workbook, "Customer_Summary_Lifetime.xlsx");
+  };
 
-  const openModal = (customer) => {
+  const openModal = async (customer) => {
     setSelectedCustomer(customer);
     setIsModalOpen(true);
+    try {
+      const response = await fetch(
+        `http://175.29.181.245:5000/customer-transactions?owner_number=${customer.owner_number}`
+      );
+      const data = await response.json();
+      // Merge transactions by sale_date
+      const mergedTransactions = data.reduce((acc, tx) => {
+        const saleDate = tx.sale_date.split(' ')[0]; // Extract date part (YYYY-MM-DD)
+        const existing = acc.find((t) => t.sale_date === saleDate);
+        if (existing) {
+          existing.purchase_quantity += tx.purchase_quantity;
+          tx.products.forEach((prod) => {
+            const existingProd = existing.products.find(
+              (p) => p.product_name === prod.product_name
+            );
+            if (existingProd) {
+              existingProd.quantity += prod.quantity;
+            } else {
+              existing.products.push(prod);
+            }
+          });
+        } else {
+          acc.push({
+            sale_date: saleDate,
+            purchase_quantity: tx.purchase_quantity,
+            products: [...tx.products],
+          });
+        }
+        return acc;
+      }, []);
+      setTransactions(mergedTransactions);
+    } catch (error) {
+      console.error("Fetch transactions failed", error);
+    }
   };
 
   const closeModal = () => {
     setSelectedCustomer(null);
+    setTransactions([]);
     setIsModalOpen(false);
   };
 
@@ -158,14 +173,6 @@ const exportToExcel = () => {
           >
             Export to Excel
           </button>
-          {selectedCustomer && (
-            <button
-              onClick={() => openModal(selectedCustomer)}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow-md transition"
-            >
-              Slabs
-            </button>
-          )}
         </div>
 
         <div className="overflow-auto bg-white rounded-lg shadow p-4">
@@ -188,7 +195,6 @@ const exportToExcel = () => {
                   <th className="p-3 text-left">RSM</th>
                   <th className="p-3 text-left">SOM</th>
                   <th className="p-3 text-left">Lifetime Quantity</th>
-                  {/* <th className="p-3 text-left">Achieved Slab</th> */}
                   <th className="p-3 text-left">Action</th>
                 </tr>
               </thead>
@@ -209,20 +215,19 @@ const exportToExcel = () => {
                       <td className="p-3">{customer.rsm || "-"}</td>
                       <td className="p-3">{customer.som || "-"}</td>
                       <td className="p-3">{customer.lifetime_quantity}</td>
-                      {/* <td className="p-3">{customer.current_slab || getSlab(customer.lifetime_quantity)}</td> */}
                       <td className="p-3">
                         <button
                           onClick={() => openModal(customer)}
                           className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded transition"
                         >
-                          Slabs
+                          Details
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="15" className="p-6 text-center text-gray-500">
+                    <td colSpan="14" className="p-6 text-center text-gray-500">
                       No customers found for selected filters.
                     </td>
                   </tr>
@@ -234,22 +239,32 @@ const exportToExcel = () => {
 
         {isModalOpen && selectedCustomer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-[600px]">
               <h2 className="text-xl font-bold mb-4 text-gray-800">
-                Achieved slabs for {selectedCustomer.owner_name}
+                Transaction Details for {selectedCustomer.owner_name}
               </h2>
-              <div className="max-h-60 overflow-y-auto">
-                {Object.entries(selectedCustomer.slab_history).length > 0 ? (
-                  <ul className="text-sm text-gray-700">
-                    {Object.entries(selectedCustomer.slab_history).map(([slab, date]) => (
-                      <li key={slab} className="mb-2">
-                        <span className="font-medium">{slab.replace("slab", "Slab #")}: </span>
-                        {date || "No date recorded"}
-                      </li>
-                    ))}
-                  </ul>
+              <div className="max-h-96 overflow-y-auto">
+                {transactions.length > 0 ? (
+                  transactions.map((tx, idx) => (
+                    <div key={idx} className="mb-4 border-b pb-2 text-sm text-gray-700">
+                      <p>
+                        <span className="font-medium">Invoice Date:</span> {tx.sale_date}
+                      </p>
+                      <p>
+                        <span className="font-medium">Total Quantity:</span> {tx.purchase_quantity}
+                      </p>
+                      <p className="font-medium">Products:</p>
+                      <ul className="list-disc pl-5">
+                        {tx.products.map((prod, pidx) => (
+                          <li key={pidx}>
+                            {prod.product_name}: {prod.quantity}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))
                 ) : (
-                  <p className="text-sm text-gray-600">No slab history available.</p>
+                  <p className="text-sm text-gray-600">No transactions found.</p>
                 )}
               </div>
               <button

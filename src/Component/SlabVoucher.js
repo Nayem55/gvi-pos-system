@@ -23,22 +23,9 @@ export default function SlabVoucher({ stock, setStock }) {
   const [imageUrl, setImageUrl] = useState("");
   const [imageUrl1, setImageUrl1] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedSlab, setSelectedSlab] = useState(null);
-  const [slabError, setSlabError] = useState("");
 
   const user = JSON.parse(localStorage.getItem("pos-user"));
   const navigate = useNavigate();
-
-  const slabRequirements = [
-    { id: "01", name: "Slab #01", pure: 1, fresh: 1, other: 4, tot: 6 },
-    { id: "02", name: "Slab #02", pure: 2, fresh: 2, other: 8, tot: 12 },
-    { id: "03", name: "Slab #03", pure: 4, fresh: 4, other: 16, tot: 24 },
-    { id: "04", name: "Slab #04", pure: 8, fresh: 8, other: 32, tot: 48 },
-    { id: "05", name: "Slab #05", pure: 16, fresh: 16, other: 64, tot: 96 },
-    { id: "06", name: "Slab #06", pure: 32, fresh: 32, other: 128, tot: 192 },
-    { id: "07", name: "Slab #07", pure: 70, fresh: 70, other: 260, tot: 400 },
-    { id: "08", name: "Slab #08", pure: 140, fresh: 140, other: 520, tot: 800 },
-  ];
 
   useEffect(() => {
     if (!user) navigate("/login");
@@ -88,82 +75,6 @@ export default function SlabVoucher({ stock, setStock }) {
     fetchCustomers();
   }, [ownerNumber]);
 
-  useEffect(() => {
-    if (selectedSlab) {
-      const newCart = [];
-      newCart.push({
-        _id: "68b7ddb62d44c8c7769eb7c3",
-        name: "Layer'r Wottagirl 135ML: Pure Paradise",
-        pcs: selectedSlab.pure,
-      });
-      newCart.push({
-        _id: "68b7ddb62d44c8c7769eb7c0",
-        name: "Layer'r Wottagirl 135ML: Fresh Citrus",
-        pcs: selectedSlab.fresh,
-      });
-      setCart(newCart);
-    } else {
-      setCart([]);
-    }
-  }, [selectedSlab]);
-
-  const calculateCategoryQuantities = () => {
-    let pureQty = 0;
-    let freshQty = 0;
-    let otherQty = 0;
-    cart.forEach((item) => {
-      const lowerName = item.name.toLowerCase();
-      if (lowerName.includes("pure paradis")) {
-        pureQty += item.pcs;
-      } else if (lowerName.includes("fresh citrus")) {
-        freshQty += item.pcs;
-      } else {
-        otherQty += item.pcs;
-      }
-    });
-    return { pureQty, freshQty, otherQty, totalQty: pureQty + freshQty + otherQty };
-  };
-
-  const { pureQty, freshQty, otherQty, totalQty } = calculateCategoryQuantities();
-
-  const isValidSlabSelection = () => {
-    if (!selectedSlab) return false;
-    return (
-      pureQty >= selectedSlab.pure && // Minimum required
-      freshQty >= selectedSlab.fresh && // Minimum required
-      totalQty >= selectedSlab.tot && // Total must meet
-      totalQty <= selectedSlab.tot // Total must not exceed
-    );
-  };
-
-  useEffect(() => {
-    if (selectedSlab) {
-      if (pureQty < selectedSlab.pure) {
-        setSlabError(
-          `Minimum ${selectedSlab.pure} Pure Paradise required (Current: ${pureQty}).`
-        );
-      } else if (freshQty < selectedSlab.fresh) {
-        setSlabError(
-          `Minimum ${selectedSlab.fresh} Fresh Citrus required (Current: ${freshQty}).`
-        );
-      } else if (totalQty < selectedSlab.tot) {
-        setSlabError(
-          `Add ${selectedSlab.tot - totalQty} more items to meet the total of ${selectedSlab.tot} pieces.`
-        );
-      } else if (totalQty > selectedSlab.tot) {
-        setSlabError(
-          `Total quantity exceeds slab requirement by ${totalQty - selectedSlab.tot} pieces. Total must be exactly ${selectedSlab.tot}.`
-        );
-      } else {
-        setSlabError("");
-      }
-    }
-  }, [selectedSlab, pureQty, freshQty, totalQty]);
-
-  const getSelectedSlabs = () => {
-    return selectedSlab ? [{ [`slab${selectedSlab.id}`]: 1 }] : [];
-  };
-
   const addToCart = (product, pcs) => {
     pcs = parseInt(pcs);
     if (isNaN(pcs)) {
@@ -175,22 +86,11 @@ export default function SlabVoucher({ stock, setStock }) {
       return;
     }
 
-    const currentTotalQty = cart.reduce((sum, item) => sum + item.pcs, 0);
-    if (currentTotalQty + pcs > selectedSlab.tot) {
-      toast.error(`Cannot add ${pcs} items. Total quantity would exceed slab limit of ${selectedSlab.tot} pieces.`);
-      return;
-    }
-
     const existing = cart.find((item) => item._id === product._id);
     if (existing) {
-      const newPcs = existing.pcs + pcs;
-      if (currentTotalQty - existing.pcs + newPcs > selectedSlab.tot) {
-        toast.error(`Cannot update quantity. Total would exceed slab limit of ${selectedSlab.tot} pieces.`);
-        return;
-      }
       setCart(
         cart.map((item) =>
-          item._id === product._id ? { ...item, pcs: newPcs } : item
+          item._id === product._id ? { ...item, pcs: existing.pcs + pcs } : item
         )
       );
     } else {
@@ -210,12 +110,6 @@ export default function SlabVoucher({ stock, setStock }) {
     newQty = parseInt(newQty);
     if (isNaN(newQty) || newQty <= 0) {
       toast.error("Enter a valid quantity greater than 0");
-      return;
-    }
-
-    const currentTotalQty = cart.reduce((sum, item) => sum + (item._id === id ? 0 : item.pcs), 0);
-    if (currentTotalQty + newQty > selectedSlab.tot) {
-      toast.error(`Cannot set quantity to ${newQty}. Total would exceed slab limit of ${selectedSlab.tot} pieces.`);
       return;
     }
 
@@ -383,16 +277,8 @@ export default function SlabVoucher({ stock, setStock }) {
       toast.error("Shop address is required");
       return false;
     }
-    if (!selectedSlab) {
-      toast.error("Please select a slab.");
-      return false;
-    }
     if (cart.length === 0) {
-      toast.error("Cart is empty. Please ensure slab requirements are met.");
-      return false;
-    }
-    if (!isValidSlabSelection()) {
-      toast.error("Slab requirements not fully met.");
+      toast.error("Cart is empty. Please add products.");
       return false;
     }
     return true;
@@ -405,8 +291,7 @@ export default function SlabVoucher({ stock, setStock }) {
       setIsSubmitting(true);
       toast.loading("Submitting sale...", { id: "sale-submission" });
 
-      const totalQuantity = totalQty;
-
+      const totalQuantity = cart.reduce((sum, item) => sum + item.pcs, 0);
       const saleDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
 
       const payload = {
@@ -444,7 +329,6 @@ export default function SlabVoucher({ stock, setStock }) {
         asm: user.asm || "",
         rsm: user.rsm || "",
         som: user.som || "",
-        slabs: getSelectedSlabs(),
       });
 
       setCart([]);
@@ -459,8 +343,6 @@ export default function SlabVoucher({ stock, setStock }) {
       setSearch("");
       setSearchResults([]);
       setQuantities({});
-      setSelectedSlab(null);
-      setSlabError("");
 
       toast.success("Sale submitted successfully", { id: "sale-submission" });
     } catch (err) {
@@ -559,51 +441,9 @@ export default function SlabVoucher({ stock, setStock }) {
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-md shadow-md border">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Slab <span className="text-red-500">*</span>
-        </label>
-        <select
-          value={selectedSlab ? selectedSlab.id : ""}
-          onChange={(e) => {
-            const slab = slabRequirements.find((s) => s.id === e.target.value);
-            setSelectedSlab(slab);
-          }}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-        >
-          <option value="" disabled>
-            Choose a slab
-          </option>
-          {slabRequirements.map((slab) => (
-            <option key={slab.id} value={slab.id}>
-              {slab.name} (Total: {slab.tot} pcs)
-            </option>
-          ))}
-        </select>
-        {selectedSlab && (
-          <p className="text-sm text-gray-600 mt-2">
-            Minimum Required: Pure Paradise: {selectedSlab.pure} | Fresh Citrus:{" "}
-            {selectedSlab.fresh} | Other: {selectedSlab.other} (Total: {selectedSlab.tot})
-          </p>
-        )}
-      </div>
-
-      {slabError && (
-        <p className="text-sm text-red-600 flex items-center gap-1">
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-          {slabError}
-        </p>
-      )}
-
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Add Other Products
+          Add Products
         </label>
         <input
           type="text"
@@ -611,7 +451,6 @@ export default function SlabVoucher({ stock, setStock }) {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products..."
           className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          disabled={!selectedSlab}
         />
         {loadingSearch ? (
           <p className="text-center text-gray-500 py-2">Searching...</p>
@@ -644,14 +483,12 @@ export default function SlabVoucher({ stock, setStock }) {
                       className="w-16 p-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       placeholder="Qty"
                       min="1"
-                      disabled={!selectedSlab}
                     />
                     <button
                       onClick={() =>
                         addToCart(product, quantities[product._id] || 1)
                       }
                       className="px-2 py-1 bg-blue-500 text-white rounded-md text-xs hover:bg-blue-600"
-                      disabled={!selectedSlab}
                     >
                       Add
                     </button>
@@ -670,7 +507,7 @@ export default function SlabVoucher({ stock, setStock }) {
         {cart.length === 0 ? (
           <p className="text-gray-500 text-sm">No items added</p>
         ) : (
-          <div className="">
+          <div>
             {cart.map((item) => (
               <div
                 key={item._id}
@@ -704,7 +541,7 @@ export default function SlabVoucher({ stock, setStock }) {
               </div>
             ))}
             <p className="text-right font-medium mt-2 text-gray-700">
-              Total Qty: {totalQty}
+              Total Qty: {cart.reduce((sum, item) => sum + item.pcs, 0)}
             </p>
           </div>
         )}
@@ -712,9 +549,9 @@ export default function SlabVoucher({ stock, setStock }) {
 
       <button
         onClick={handleSubmit}
-        disabled={isSubmitting || !isValidSlabSelection()}
+        disabled={isSubmitting}
         className={`w-full py-2 rounded-md text-white font-medium transition-colors ${
-          isSubmitting || !isValidSlabSelection()
+          isSubmitting
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-blue-600 hover:bg-blue-700"
         }`}

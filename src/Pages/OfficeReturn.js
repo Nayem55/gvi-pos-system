@@ -460,11 +460,6 @@ export default function OfficeReturn({
       });
 
       const results = await Promise.all(updatePromises);
-      // const failedUpdates = results.filter(r => !r.success);
-
-      // if (failedUpdates.length > 0) {
-      //   throw new Error(`${failedUpdates.length} products failed to update`);
-      // }
 
       // Record money transaction for the office return with transaction_id
       await axios.post("http://175.29.181.245:5000/money-transfer", {
@@ -543,6 +538,22 @@ export default function OfficeReturn({
           </button>
         </div>
       )}
+
+      {/* Total Quantity and Value */}
+      <div className="bg-white p-4 shadow rounded-lg mb-4">
+        <div className="flex flex-row-reverse justify-between">
+          <span className="text-lg font-bold">
+            Total (DP):{" "}
+            {cart
+              .reduce((sum, item) => sum + item.editableDP * item.officeReturn, 0)
+              .toFixed(2)}{" "}
+            BDT
+          </span>
+          <span className="text-lg font-bold">
+            Total Quantity: {cart.reduce((sum, item) => sum + item.officeReturn, 0)}
+          </span>
+        </div>
+      </div>
 
       {/* Search Box */}
       <div className="relative mb-4">
@@ -664,16 +675,12 @@ export default function OfficeReturn({
         </div>
       </div>
 
-      {/* Overall Total & Submit Button */}
-      <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
-        <span className="text-lg font-bold">
-          Total: {cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)}{" "}
-          BDT
-        </span>
+      {/* Submit Button */}
+      <div className="bg-white p-4 shadow rounded-lg">
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full h-[40px] mx-auto"
         >
           {isSubmitting ? (
             <svg
