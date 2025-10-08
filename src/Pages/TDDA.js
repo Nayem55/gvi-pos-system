@@ -6,6 +6,8 @@ import axios from "axios";
 import AdminSidebar from "../Component/AdminSidebar";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const TDDAdminPanel = () => {
   const [users, setUsers] = useState([]);
@@ -15,33 +17,27 @@ const TDDAdminPanel = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-
-  // For edit modal
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-
-  // For delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
-
-  // For submission count and status modal
   const [selectedDateForCount, setSelectedDateForCount] = useState(dayjs().format("YYYY-MM-DD"));
   const [submissionsCount, setSubmissionsCount] = useState(null);
   const [submissionUsers, setSubmissionUsers] = useState([]);
   const [isCounting, setIsCounting] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [selectedZone, setSelectedZone] = useState(""); // Zone filter for status modal
-  const [selectedStatus, setSelectedStatus] = useState(""); // Status filter for status modal
+  const [selectedZone, setSelectedZone] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  console.log(exportDropdownOpen);
 
   // Fetch all users with TDDA records
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(
-          "http://175.29.181.245:5000/tdda/users"
-        );
+        const response = await axios.get("http://175.29.181.245:5000/tdda/users");
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -54,7 +50,7 @@ const TDDAdminPanel = () => {
     fetchUsers();
   }, []);
 
-  // Generate report
+  // Generate report for a single user
   const generateReport = async () => {
     if (!selectedUser) {
       toast.error("Please select a user");
@@ -63,15 +59,12 @@ const TDDAdminPanel = () => {
 
     try {
       setIsGenerating(true);
-      const response = await axios.get(
-        "http://175.29.181.245:5000/tdda/admin-report",
-        {
-          params: {
-            userId: selectedUser,
-            month: selectedMonth,
-          },
-        }
-      );
+      const response = await axios.get("http://175.29.181.245:5000/tdda/admin-report", {
+        params: {
+          userId: selectedUser,
+          month: selectedMonth,
+        },
+      });
 
       const fixedData = response.data;
       if (
@@ -100,6 +93,188 @@ const TDDAdminPanel = () => {
       toast.error(error.response?.data?.error || "Failed to generate report");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Fetch report data for a specific user
+  const fetchReportDataForUser = async (userId) => {
+    try {
+      const response = await axios.get("http://175.29.181.245:5000/tdda/admin-report", {
+        params: {
+          userId: userId,
+          month: selectedMonth,
+        },
+      });
+
+      const fixedData = response.data;
+      if (
+        !fixedData.summary.totalExpense ||
+        isNaN(parseFloat(fixedData.summary.totalExpense))
+      ) {
+        fixedData.summary.totalExpense = fixedData.dailyExpenses.reduce(
+          (sum, day) => {
+            const hqExHqTotal = Object.values(day.hqExHq || {})
+              .map((amount) => parseFloat(amount) || 0)
+              .reduce((s, a) => s + a, 0);
+            const transportTotal = Object.values(day.transport || {})
+              .map((amount) => parseFloat(amount) || 0)
+              .reduce((s, a) => s + a, 0);
+            const hotelBill = parseFloat(day.hotelBill) || 0;
+            return sum + hqExHqTotal + transportTotal + hotelBill;
+          },
+          0
+        );
+      }
+
+      return fixedData;
+    } catch (error) {
+      console.error(`Error fetching report data for user ${userId}:`, error);
+      return null;
+    }
+  };
+
+  // Generate PDF blob for a user's report
+  const generatePDFBlob = async (reportData) => {
+    try {
+      const doc = new jsPDF({
+        orientation: "landscape",
+      });
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(68, 114, 196);
+      doc.text("Employee TD/DA Report", doc.internal.pageSize.getWidth() / 2, 15, {
+        align: "center",
+      });
+
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Name: ${reportData.userInfo.name}`, 10, 25);
+      doc.text(`Designation: ${reportData.userInfo.designation}`, 90, 25);
+      doc.text(`Month: ${reportData.userInfo.month}`, 170, 25);
+      doc.text(`Area: ${reportData.userInfo.area}`, 240, 25);
+
+      autoTable(doc, {
+        startY: 35,
+        margin: { left: 10, right: 10 },
+        tableWidth: "auto",
+        head: [
+          [
+            { content: "Date" },
+            { content: "Visited Place", colSpan: 2 },
+            { content: "HQ" },
+            { content: "Ex. HQ" },
+            { content: "Transport Bill", colSpan: 4 },
+            { content: "Hotel Bill" },
+            { content: "Total" },
+          ],
+          [
+            "",
+            "From",
+            "To",
+            "",
+            "",
+            "Bus",
+            "CNG",
+            "Train",
+            "Other",
+            "",
+            "",
+          ],
+        ],
+        body: reportData.dailyExpenses.map((day) => [
+          day.date,
+          day.from,
+          day.to,
+          day.hqExHq?.hq ? parseFloat(day.hqExHq.hq).toFixed(2) : "-",
+          day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
+          day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
+          day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
+          day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-",
+          day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-",
+          day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
+          day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
+        ]),
+        headStyles: {
+          fillColor: [68, 114, 196],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+        },
+        styles: {
+          fontSize: 10,
+          halign: "center",
+          valign: "middle",
+          cellPadding: 2,
+        },
+        alternateRowStyles: {
+          fillColor: [242, 242, 242],
+        },
+        columnStyles: {
+          0: { cellWidth: 30 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 20 },
+          6: { cellWidth: 20 },
+          7: { cellWidth: 20 },
+          8: { cellWidth: 20 },
+          9: { cellWidth: 25 },
+          10: { cellWidth: 25 },
+        },
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Total Working Days: ${reportData.summary.totalWorkingDays}`, 10, finalY);
+      doc.text(
+        `Total Expense: ${parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}`,
+        90,
+        finalY
+      );
+
+      return doc.output("blob");
+    } catch (error) {
+      console.error("Error generating PDF blob:", error);
+      return null;
+    }
+  };
+
+  // Download all users' reports as PDFs in a ZIP file
+  const downloadAllPDFs = async () => {
+    if (!selectedMonth) {
+      toast.error("Please select a month");
+      return;
+    }
+
+    setDownloadingAll(true);
+    const zip = new JSZip();
+    const timestamp = dayjs().format("YYYYMMDD_HHmmss");
+
+    try {
+      for (const user of users) {
+        const reportData = await fetchReportDataForUser(user._id);
+        if (reportData && reportData.dailyExpenses.length > 0) {
+          const pdfBlob = await generatePDFBlob(reportData);
+          if (pdfBlob) {
+            const fileName = `TADA_Report_${reportData.userInfo.name.replace(/\s+/g, "_")}_${reportData.userInfo.month}.pdf`;
+            zip.file(fileName, pdfBlob);
+          }
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `All_Users_TADA_Reports_${timestamp}.zip`);
+      toast.success("All PDF reports downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading all PDFs:", error);
+      toast.error("Failed to download all PDF reports");
+    } finally {
+      setDownloadingAll(false);
     }
   };
 
@@ -216,8 +391,8 @@ const TDDAdminPanel = () => {
       });
       setSubmissionsCount(response.data.count);
       setSubmissionUsers(response.data.users);
-      setSelectedZone(""); // Reset zone filter
-      setSelectedStatus(""); // Reset status filter
+      setSelectedZone("");
+      setSelectedStatus("");
       setStatusModalOpen(true);
       toast.success("Submission data fetched successfully");
     } catch (error) {
@@ -252,7 +427,6 @@ const TDDAdminPanel = () => {
         ["User Name", "Zone", "Status"]
       ];
 
-      // Add user data
       filteredUsers.forEach(user => {
         data.push([
           user.name,
@@ -261,7 +435,6 @@ const TDDAdminPanel = () => {
         ]);
       });
 
-      // Add summary
       data.push([""]);
       data.push(["Total Users", submissionUsers.length]);
       data.push(["Submitted Users", submissionsCount]);
@@ -269,14 +442,12 @@ const TDDAdminPanel = () => {
 
       const ws = XLSX.utils.aoa_to_sheet(data);
 
-      // Set column widths
       ws["!cols"] = [
         { wch: 30 },
         { wch: 20 },
         { wch: 15 }
       ];
 
-      // Apply styles
       const borderStyle = {
         top: { style: "thin", color: { rgb: "000000" } },
         bottom: { style: "thin", color: { rgb: "000000" } },
@@ -327,7 +498,6 @@ const TDDAdminPanel = () => {
         }
       }
 
-      // Add merges for title
       ws["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
       ];
@@ -390,12 +560,8 @@ const TDDAdminPanel = () => {
           day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
           day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
           day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
-          day.transport?.train
-            ? parseFloat(day.transport.train).toFixed(2)
-            : "-",
-          day.transport?.other
-            ? parseFloat(day.transport.other).toFixed(2)
-            : "-",
+          day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-",
+          day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-",
           day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
           day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
         ]),
@@ -563,14 +729,9 @@ const TDDAdminPanel = () => {
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(68, 114, 196);
-      doc.text(
-        "Employee TD/DA Report",
-        doc.internal.pageSize.getWidth() / 2,
-        15,
-        {
-          align: "center",
-        }
-      );
+      doc.text("Employee TD/DA Report", doc.internal.pageSize.getWidth() / 2, 15, {
+        align: "center",
+      });
 
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
@@ -616,12 +777,8 @@ const TDDAdminPanel = () => {
           day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
           day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
           day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
-          day.transport?.train
-            ? parseFloat(day.transport.train).toFixed(2)
-            : "-",
-          day.transport?.other
-            ? parseFloat(day.transport.other).toFixed(2)
-            : "-",
+          day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-",
+          day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-",
           day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
           day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
         ]),
@@ -659,15 +816,9 @@ const TDDAdminPanel = () => {
       const finalY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
+      doc.text(`Total Working Days: ${reportData.summary.totalWorkingDays}`, 10, finalY);
       doc.text(
-        `Total Working Days: ${reportData.summary.totalWorkingDays}`,
-        10,
-        finalY
-      );
-      doc.text(
-        `Total Expense: ${parseFloat(
-          reportData.summary.totalExpense || 0
-        ).toFixed(2)}`,
+        `Total Expense: ${parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}`,
         90,
         finalY
       );
@@ -779,11 +930,11 @@ const TDDAdminPanel = () => {
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end space-x-4">
                 <button
                   onClick={getSubmissionCount}
                   disabled={isCounting}
-                  className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
+                  className={`flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
                     isCounting ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
@@ -804,7 +955,7 @@ const TDDAdminPanel = () => {
                           strokeWidth="4"
                         ></circle>
                         <path
-                          className= "opacity-75"
+                          className="opacity-75"
                           fill="currentColor"
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
@@ -815,6 +966,85 @@ const TDDAdminPanel = () => {
                     "Get Count"
                   )}
                 </button>
+                <div className="relative flex-1">
+                  <button
+                    onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Export
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                  {exportDropdownOpen && (
+                    <div className="absolute top-[-80px] left-[170px] mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                      <div
+                        className="py-1"
+                        role="menu"
+                        aria-orientation="vertical"
+                      >
+                        <button
+                          onClick={() => {
+                            exportToExcel();
+                            setExportDropdownOpen(false);
+                          }}
+                          disabled={!reportData}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          role="menuitem"
+                        >
+                          Export to Excel
+                        </button>
+                        <button
+                          onClick={() => {
+                            exportToPDF();
+                            setExportDropdownOpen(false);
+                          }}
+                          disabled={!reportData}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          role="menuitem"
+                        >
+                          Export to PDF
+                        </button>
+                        <button
+                          onClick={() => {
+                            downloadAllPDFs();
+                            setExportDropdownOpen(false);
+                          }}
+                          disabled={downloadingAll}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          role="menuitem"
+                        >
+                          {downloadingAll ? "Downloading..." : "Download All PDFs"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               {submissionsCount !== null && (
                 <div className="bg-blue-50 p-3 rounded-md shadow-sm">
@@ -862,72 +1092,6 @@ const TDDAdminPanel = () => {
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end relative">
-                <button
-                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                  className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  Export
-                  <svg
-                    className="w-4 h-4 ml-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-                {exportDropdownOpen && (
-                  <div className="absolute top-12 right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <div
-                      className="py-1"
-                      role="menu"
-                      aria-orientation="vertical"
-                    >
-                      <button
-                        onClick={() => {
-                          exportToExcel();
-                          setExportDropdownOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        role="menuitem"
-                      >
-                        Export to Excel
-                      </button>
-                      <button
-                        onClick={() => {
-                          exportToPDF();
-                          setExportDropdownOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        role="menuitem"
-                      >
-                        Export to PDF
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
