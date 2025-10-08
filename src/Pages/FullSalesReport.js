@@ -8,9 +8,24 @@ import AdminSidebar from "../Component/AdminSidebar";
 const FullSalesReport = () => {
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [reportData, setReportData] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedZone, setSelectedZone] = useState("");
   const [uniqueZones, setUniqueZones] = useState([]);
+
+  // Fetch all users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get("http://175.29.181.245:5000/getAlluser");
+        setAllUsers(response.data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast.error("Failed to load users");
+      }
+    };
+    fetchUsers();
+  }, []);
 
   // Generate report
   const generateReport = async () => {
@@ -19,8 +34,29 @@ const FullSalesReport = () => {
       const response = await axios.get("http://175.29.181.245:5000/sales/full-report", {
         params: { month: selectedMonth },
       });
-      setReportData(response.data);
-      const zones = [...new Set(response.data.users.map((u) => u.zone))].sort();
+
+      // Merge report data with all users to include non-submitters
+      const reportUsers = response.data.users;
+      const mergedUsers = allUsers.map((user) => {
+        const reportUser = reportUsers.find((ru) => ru.userId === user._id);
+        return reportUser
+          ? { ...reportUser, hasReport: true }
+          : {
+              userId: user._id,
+              name: user.name,
+              zone: user.zone,
+              outlet: user.outlet || "-",
+              dailyTotals: Array(response.data.days.length).fill(0),
+              total: 0,
+              hasReport: false,
+            };
+      });
+
+      setReportData({
+        ...response.data,
+        users: mergedUsers,
+      });
+      const zones = [...new Set(mergedUsers.map((u) => u.zone))].sort();
       setUniqueZones(zones);
       setSelectedZone("");
       toast.success("Full report generated successfully");
@@ -33,9 +69,9 @@ const FullSalesReport = () => {
   };
 
   // Filtered users based on zone
-  const filteredUsers = reportData?.users.filter(
-    (user) => !selectedZone || user.zone === selectedZone
-  ) || [];
+  const filteredUsers = reportData
+    ? reportData.users.filter((user) => !selectedZone || user.zone === selectedZone)
+    : [];
 
   // Calculate summary
   const calculateSummary = () => {
@@ -78,7 +114,7 @@ const FullSalesReport = () => {
           user.name,
           user.zone,
           user.outlet,
-          ...user.dailyTotals.map((t) => (t > 0 ? t.toFixed(2) : "-")),
+          ...user.dailyTotals.map((t) => (t > 0 ? t.toFixed(2) : user.hasReport ? "-" : "No Report")),
           user.total.toFixed(2),
         ]),
         [""],
@@ -144,6 +180,11 @@ const FullSalesReport = () => {
           t: "n",
           z: "#,##0.00",
         },
+        noReport: {
+          font: { color: { rgb: "FF0000" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: borderStyle,
+        },
       };
 
       for (let i = 0; i < data.length; i++) {
@@ -158,8 +199,11 @@ const FullSalesReport = () => {
           } else if (i === 3) {
             ws[cellAddress].s = styles.header;
           } else if (i >= 4 && i < data.length - 1) {
+            const user = filteredUsers[i - 4];
             ws[cellAddress].s = i % 2 === 0 ? styles.dataEven : styles.dataOdd;
-            if (j >= 3) {
+            if (j >= 3 && j < data[i].length - 1 && data[i][j] === "No Report") {
+              ws[cellAddress].s = { ...ws[cellAddress].s, ...styles.noReport };
+            } else if (j >= 3) {
               ws[cellAddress].t = styles.numberFormat.t;
               ws[cellAddress].z = styles.numberFormat.z;
             }
@@ -342,9 +386,15 @@ const FullSalesReport = () => {
                         {user.dailyTotals.map((total, dayIndex) => (
                           <td
                             key={dayIndex}
-                            className="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900"
+                            className={`px-3 py-4 whitespace-nowrap text-sm text-right ${
+                              user.hasReport ? "text-gray-900" : "text-red-600 font-medium"
+                            }`}
                           >
-                            {total > 0 ? total.toFixed(2) : "-"}
+                            {user.hasReport
+                              ? total > 0
+                                ? total.toFixed(2)
+                                : "-"
+                              : "No Report"}
                           </td>
                         ))}
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900">
@@ -361,16 +411,27 @@ const FullSalesReport = () => {
                       >
                         Total
                       </td>
-                      {summary.dailySums.map((sum, index) => (
-                        <td
-                          key={index}
-                          className="px-3 py-4 text-sm font-bold text-right text-gray-900"
-                        >
-                          {sum.toFixed(2)}
-                        </td>
-                      ))}
+                      {summary ? (
+                        summary.dailySums.map((sum, index) => (
+                          <td
+                            key={index}
+                            className="px-3 py-4 text-sm font-bold text-right text-gray-900"
+                          >
+                            {sum.toFixed(2)}
+                          </td>
+                        ))
+                      ) : (
+                        reportData.days.map((_, index) => (
+                          <td
+                            key={index}
+                            className="px-3 py-4 text-sm font-bold text-right text-gray-900"
+                          >
+                            0.00
+                          </td>
+                        ))
+                      )}
                       <td className="px-6 py-4 text-sm font-bold text-right text-gray-900">
-                        {summary.grandTotal.toFixed(2)}
+                        {summary ? summary.grandTotal.toFixed(2) : "0.00"}
                       </td>
                     </tr>
                   </tfoot>
