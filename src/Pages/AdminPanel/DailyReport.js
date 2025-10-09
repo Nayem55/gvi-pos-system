@@ -548,7 +548,7 @@ const DailyReport = () => {
               />
             </div>
             <button
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+              className="bg-blue-900 text-white px-4 py-2 rounded hover:bg-indigo-700"
               onClick={() => {
                 setFilterMonth(selectedMonth);
                 setFilterStartDate(startDate);
@@ -679,7 +679,7 @@ const DailyReport = () => {
                 Daily Sales
               </h3>
               <table className="min-w-full table-auto border-collapse">
-                <thead className="bg-indigo-600 text-white">
+                <thead className="bg-blue-900 text-white">
                   <tr>
                     <th className="p-4 text-left font-medium">Date</th>
                     <th className="p-4 text-left font-medium">Products Sold</th>
@@ -923,7 +923,7 @@ const DailyReport = () => {
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-2 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700"
+                        className="px-4 py-2 bg-blue-900 rounded-md text-sm font-medium text-white hover:bg-indigo-700"
                         disabled={userLoading}
                       >
                         Save Changes
