@@ -12,6 +12,8 @@ import { saveAs } from "file-saver";
 const TDDAdminPanel = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
   const [reportData, setReportData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +51,25 @@ const TDDAdminPanel = () => {
 
     fetchUsers();
   }, []);
+
+  // Filter users based on search term
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.designation || user.role || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Handle user selection
+  const handleUserSelect = (userId) => {
+    setSelectedUser(userId);
+    setSearchTerm("");
+    setIsDropdownOpen(false);
+  };
+
+  // Get display name for selected user
+  const getSelectedUserName = () => {
+    const user = users.find(u => u._id === selectedUser);
+    return user ? `${user.name} (${user.designation || user.role})` : "Select a user";
+  };
 
   // Generate report for a single user
   const generateReport = async () => {
@@ -407,7 +428,7 @@ const TDDAdminPanel = () => {
   const uniqueZones = [...new Set(submissionUsers.map(user => user.zone))].sort();
 
   // Filter users by selected zone and status
-  const filteredUsers = submissionUsers.filter(user => {
+  const filteredUsersForStatus = submissionUsers.filter(user => {
     const zoneMatch = !selectedZone || user.zone === selectedZone;
     const statusMatch = !selectedStatus || 
       (selectedStatus === "submitted" && user.submitted) ||
@@ -427,7 +448,7 @@ const TDDAdminPanel = () => {
         ["User Name", "Zone", "Status"]
       ];
 
-      filteredUsers.forEach(user => {
+      filteredUsersForStatus.forEach(user => {
         data.push([
           user.name,
           user.zone,
@@ -846,23 +867,63 @@ const TDDAdminPanel = () => {
           </div>
           <div className="p-6 border-b border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select User
                 </label>
-                <select
-                  value={selectedUser}
-                  onChange={(e) => setSelectedUser(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isLoading}
-                >
-                  <option value="">Select a user</option>
-                  {users?.map((user) => (
-                    <option key={user._id} value={user._id}>
-                      {user.name} ({user.designation || user.role})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white text-left flex justify-between items-center"
+                    disabled={isLoading}
+                  >
+                    <span>{getSelectedUserName()}</span>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                  {isDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div className="p-2">
+                        <input
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="Search users..."
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => (
+                          <button
+                            key={user._id}
+                            type="button"
+                            onClick={() => handleUserSelect(user._id)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            {user.name} ({user.designation || user.role})
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          No users found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1513,7 +1574,7 @@ const TDDAdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user, index) => (
+                  {filteredUsersForStatus.map((user, index) => (
                     <tr
                       key={user.userId}
                       className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100`}
