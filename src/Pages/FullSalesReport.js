@@ -365,7 +365,7 @@ const FullSalesReport = () => {
         );
       });
 
-      const fileName = `Detailed_Sales_Report_${selectedMonth}_${dayjs().format("YYYYMMDD_HHmmss")}.pdf`;
+      const fileName = `Detailed_Sales_Report_${selectedZone}.pdf`;
       doc.save(fileName);
       toast.success("Detailed report exported to PDF successfully");
     } catch (error) {
@@ -490,7 +490,7 @@ const FullSalesReport = () => {
         })
       );
 
-      const zipFileName = `All_Sales_Reports_${selectedMonth}_${dayjs().format("YYYYMMDD_HHmmss")}.zip`;
+      const zipFileName = `All_Sales_Reports_${selectedZone}.zip`;
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, zipFileName);
       toast.success("All reports exported as ZIP successfully");
