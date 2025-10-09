@@ -4,6 +4,10 @@ import * as XLSX from "xlsx";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import AdminSidebar from "../Component/AdminSidebar";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const FullSalesReport = () => {
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"));
@@ -12,6 +16,7 @@ const FullSalesReport = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedZone, setSelectedZone] = useState("");
   const [uniqueZones, setUniqueZones] = useState([]);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   // Fetch all users
   useEffect(() => {
@@ -90,150 +95,408 @@ const FullSalesReport = () => {
 
   const summary = calculateSummary();
 
-  // Export to Excel
-  const exportToExcel = () => {
-    if (!reportData) return;
+  // Fetch detailed reports for a user
+  const fetchUserReports = async (userId) => {
+    try {
+      const response = await axios.get(
+        `http://175.29.181.245:5000/sales-reports/${userId}`,
+        { params: { month: selectedMonth } }
+      );
+      return Array.isArray(response.data) ? response.data : [response.data];
+    } catch (error) {
+      console.error(`Error fetching reports for user ${userId}:`, error);
+      return [];
+    }
+  };
+
+  // Export to Excel (Detailed Report)
+  const exportToExcel = async () => {
+    if (!reportData || !filteredUsers.length) {
+      toast.error("No data available to export");
+      return;
+    }
 
     try {
       const wb = XLSX.utils.book_new();
+      const headers = ["Date", "Products Sold", "Route", "Memo", "Total TP"];
+      const period = `Month: ${dayjs(selectedMonth).format("MMMM YYYY")}`;
 
-      const headers = [
-        "User Name",
-        "Zone",
-        "Outlet",
-        ...reportData.days.map((day) => dayjs(day).format("D")),
-        "Total",
-      ];
+      // Fetch detailed reports for all filtered users
+      const userReports = await Promise.all(
+        filteredUsers.map(async (user) => ({
+          user,
+          reports: await fetchUserReports(user.userId),
+        }))
+      );
 
-      const data = [
-        ["Full Sales Report"],
-        [`Month: ${dayjs(reportData.month).format("MMMM YYYY")}`],
-        [""],
-        headers,
-        ...filteredUsers.map((user) => [
-          user.name,
-          user.zone,
-          user.outlet,
-          ...user.dailyTotals.map((t) => (t > 0 ? t.toFixed(2) : user.hasReport ? "-" : "No Report")),
-          user.total.toFixed(2),
-        ]),
-        [""],
-        [
-          "Total",
-          "",
-          "",
-          ...summary.dailySums.map((s) => s.toFixed(2)),
-          summary.grandTotal.toFixed(2),
-        ],
-      ];
+      // Create a worksheet for each user
+      userReports.forEach(({ user, reports }) => {
+        if (!reports.length) return;
 
-      const ws = XLSX.utils.aoa_to_sheet(data);
+        const data = [
+          [`${user.name}'s Sales Report`],
+          [period],
+          [`Zone: ${user.zone}`, `Outlet: ${user.outlet}`],
+          [""],
+          headers,
+          ...reports.map((report) => [
+            dayjs(report.sale_date).format("YYYY-MM-DD"),
+            report.products
+              .map((p) => `• ${p.product_name} x ${p.quantity}`)
+              .join("\n"),
+            report.route || "N/A",
+            report.memo || "N/A",
+            `৳${report.total_tp.toFixed(2)}`,
+          ]),
+          ["", "", "", "", "Summary"],
+          [
+            "Total",
+            reports.reduce(
+              (sum, r) =>
+                sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
+              0
+            ),
+            "",
+            "",
+            `৳${reports.reduce((sum, r) => sum + (r.total_tp || 0), 0).toFixed(2)}`,
+          ],
+        ];
 
-      ws["!cols"] = [
-        { wch: 30 },
-        { wch: 20 },
-        { wch: 25 },
-        ...reportData.days.map(() => ({ wch: 10 })),
-        { wch: 15 },
-      ];
+        const ws = XLSX.utils.aoa_to_sheet(data);
 
-      const borderStyle = {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } },
-      };
+        ws["!cols"] = [
+          { wch: 15 }, // Date
+          { wch: 60 }, // Products Sold
+          { wch: 25 }, // Route
+          { wch: 35 }, // Memo
+          { wch: 15 }, // Total TP
+        ];
 
-      const styles = {
-        title: {
-          font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "4472C4" } },
-          alignment: { horizontal: "center", vertical: "center" },
-          border: borderStyle,
-        },
-        info: {
-          font: { bold: true, sz: 12 },
-          border: borderStyle,
-        },
-        header: {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "4472C4" } },
-          alignment: { horizontal: "center", vertical: "center" },
-          border: borderStyle,
-        },
-        dataEven: {
-          alignment: { horizontal: "center", vertical: "center" },
-          border: borderStyle,
-        },
-        dataOdd: {
-          fill: { fgColor: { rgb: "F2F2F2" } },
-          alignment: { horizontal: "center", vertical: "center" },
-          border: borderStyle,
-        },
-        total: {
-          font: { bold: true },
-          fill: { fgColor: { rgb: "FCE4D6" } },
-          alignment: { horizontal: "center", vertical: "center" },
-          border: borderStyle,
-        },
-        numberFormat: {
-          t: "n",
-          z: "#,##0.00",
-        },
-        noReport: {
-          font: { color: { rgb: "FF0000" } },
-          alignment: { horizontal: "center", vertical: "center" },
-          border: borderStyle,
-        },
-      };
+        const borderStyle = {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        };
 
-      for (let i = 0; i < data.length; i++) {
-        for (let j = 0; j < data[i].length; j++) {
-          const cellAddress = XLSX.utils.encode_cell({ r: i, c: j });
-          if (!ws[cellAddress]) continue;
+        const styles = {
+          title: {
+            font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "1E3A8A" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: borderStyle,
+          },
+          info: {
+            font: { bold: true, sz: 12, color: { rgb: "1F2937" } },
+            border: borderStyle,
+          },
+          header: {
+            font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "1E3A8A" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: borderStyle,
+          },
+          dataEven: {
+            font: { sz: 10 },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: borderStyle,
+          },
+          dataOdd: {
+            font: { sz: 10 },
+            fill: { fgColor: { rgb: "F3F4F6" } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: borderStyle,
+          },
+          total: {
+            font: { bold: true, sz: 11 },
+            fill: { fgColor: { rgb: "FEF3C7" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: borderStyle,
+          },
+        };
 
-          if (i === 0) {
-            ws[cellAddress].s = styles.title;
-          } else if (i === 1) {
-            ws[cellAddress].s = styles.info;
-          } else if (i === 3) {
-            ws[cellAddress].s = styles.header;
-          } else if (i >= 4 && i < data.length - 1) {
-            const user = filteredUsers[i - 4];
-            ws[cellAddress].s = i % 2 === 0 ? styles.dataEven : styles.dataOdd;
-            if (j >= 3 && j < data[i].length - 1 && data[i][j] === "No Report") {
-              ws[cellAddress].s = { ...ws[cellAddress].s, ...styles.noReport };
-            } else if (j >= 3) {
-              ws[cellAddress].t = styles.numberFormat.t;
-              ws[cellAddress].z = styles.numberFormat.z;
+        for (let i = 0; i < data.length; i++) {
+          for (let j = 0; j < data[i].length; j++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: i, c: j });
+            if (!ws[cellAddress]) continue;
+
+            if (i === 0) {
+              ws[cellAddress].s = styles.title;
+            } else if (i === 1 || i === 2) {
+              ws[cellAddress].s = styles.info;
+            } else if (i === 4) {
+              ws[cellAddress].s = styles.header;
+            } else if (i >= 5 && i < data.length - 2) {
+              ws[cellAddress].s = i % 2 === 0 ? styles.dataOdd : styles.dataEven;
+            } else if (i >= data.length - 2) {
+              ws[cellAddress].s = styles.total;
+            } else {
+              ws[cellAddress].s = { border: borderStyle };
             }
-          } else if (i === data.length - 1) {
-            ws[cellAddress].s = styles.total;
-            if (j >= 3) {
-              ws[cellAddress].t = styles.numberFormat.t;
-              ws[cellAddress].z = styles.numberFormat.z;
-            }
-          } else {
-            ws[cellAddress].s = { border: borderStyle };
           }
         }
-      }
 
-      ws["!merges"] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-        { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-        { s: { r: data.length - 1, c: 0 }, e: { r: data.length - 1, c: 2 } },
-      ];
+        ws["!merges"] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+          { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } },
+          { s: { r: data.length - 2, c: 0 }, e: { r: data.length - 2, c: headers.length - 1 } },
+          { s: { r: data.length - 1, c: 0 }, e: { r: data.length - 1, c: 0 } },
+        ];
 
-      XLSX.utils.book_append_sheet(wb, ws, "Full Sales Report");
+        XLSX.utils.book_append_sheet(wb, ws, `${user.name.replace(/[^a-zA-Z0-9]/g, "_")}`);
+      });
 
-      const fileName = `Full_Sales_Report_${reportData.month}.xlsx`;
+      const fileName = `Detailed_Sales_Report_${selectedMonth}_${dayjs().format("YYYYMMDD_HHmmss")}.xlsx`;
       XLSX.writeFile(wb, fileName);
-
-      toast.success("Full report exported to Excel successfully");
+      toast.success("Detailed report exported to Excel successfully");
     } catch (error) {
-      console.error("Error exporting full report to Excel:", error);
-      toast.error("Failed to export report");
+      console.error("Error exporting to Excel:", error);
+      toast.error("Failed to export detailed report");
+    }
+  };
+
+  // Export to PDF (Detailed Report)
+  const exportToPDF = async () => {
+    if (!reportData || !filteredUsers.length) {
+      toast.error("No data available to export");
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const period = `Month: ${dayjs(selectedMonth).format("MMMM YYYY")}`;
+      let currentY = 15;
+
+      // Fetch detailed reports for all filtered users
+      const userReports = await Promise.all(
+        filteredUsers.map(async (user) => ({
+          user,
+          reports: await fetchUserReports(user.userId),
+        }))
+      );
+
+      userReports.forEach(({ user, reports }, index) => {
+        if (!reports.length) return;
+
+        if (index > 0) {
+          doc.addPage();
+          currentY = 15;
+        }
+
+        // Header
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 64, 175);
+        doc.text(`${user.name}'s Sales Report`, doc.internal.pageSize.getWidth() / 2, currentY, {
+          align: "center",
+        });
+
+        doc.setFontSize(12);
+        doc.setTextColor(31, 41, 55);
+        doc.setFont("helvetica", "normal");
+        doc.text(period, 14, currentY + 10);
+        doc.text(`Zone: ${user.zone} | Outlet: ${user.outlet}`, 14, currentY + 20);
+
+        // Table
+        autoTable(doc, {
+          startY: currentY + 30,
+          margin: { left: 14, right: 14 },
+          head: [["Date", "Products Sold", "Route", "Memo", "Total TP"]],
+          body: reports.map((report) => [
+            dayjs(report.sale_date).format("YYYY-MM-DD"),
+            report.products
+              .map((p) => `• ${p.product_name} x ${p.quantity}`)
+              .join("\n"),
+            report.route || "N/A",
+            report.memo || "N/A",
+            `${report.total_tp.toFixed(2)}`,
+          ]),
+          headStyles: {
+            fillColor: [30, 64, 175],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+            fontSize: 11,
+            halign: "center",
+            valign: "middle",
+            cellPadding: 3,
+          },
+          styles: {
+            fontSize: 10,
+            halign: "center",
+            valign: "middle",
+            cellPadding: 3,
+            lineWidth: 0.1,
+            lineColor: [55, 65, 81],
+          },
+          alternateRowStyles: {
+            fillColor: [243, 244, 246],
+          },
+          columnStyles: {
+            0: { cellWidth: 25, halign: "center" },
+            1: { cellWidth: 70, halign: "left" },
+            2: { cellWidth: 25, halign: "center" },
+            3: { cellWidth: 40, halign: "center" },
+            4: { cellWidth: 20, halign: "center" },
+          },
+          didParseCell: (data) => {
+            if (data.section === "body" && data.column.index === 1) {
+              data.cell.styles.halign = "left";
+            }
+          },
+        });
+
+        // Summary
+        currentY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(
+          `Total Products Sold: ${reports.reduce(
+            (sum, r) => sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
+            0
+          )}`,
+          14,
+          currentY
+        );
+        doc.text(
+          `Total TP: ${reports.reduce((sum, r) => sum + (r.total_tp || 0), 0).toFixed(2)}`,
+          14,
+          currentY + 10
+        );
+      });
+
+      const fileName = `Detailed_Sales_Report_${selectedMonth}_${dayjs().format("YYYYMMDD_HHmmss")}.pdf`;
+      doc.save(fileName);
+      toast.success("Detailed report exported to PDF successfully");
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+      toast.error("Failed to export detailed report");
+    }
+  };
+
+  // Export All Reports (ZIP of PDFs)
+  const exportAllReports = async () => {
+    if (!reportData || !filteredUsers.length) {
+      toast.error("No data available to export");
+      return;
+    }
+
+    try {
+      const zip = new JSZip();
+      const headers = ["Date", "Products Sold", "Route", "Memo", "Total TP"];
+      const period = `Month: ${dayjs(selectedMonth).format("MMMM YYYY")}`;
+
+      // Fetch detailed reports for all filtered users
+      const userReports = await Promise.all(
+        filteredUsers.map(async (user) => ({
+          user,
+          reports: await fetchUserReports(user.userId),
+        }))
+      );
+
+      await Promise.all(
+        userReports.map(async ({ user, reports }) => {
+          if (!reports.length) return;
+
+          const doc = new jsPDF();
+          let currentY = 15;
+
+          // Header
+          doc.setFontSize(16);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(30, 64, 175);
+          doc.text(`${user.name}'s Sales Report`, doc.internal.pageSize.getWidth() / 2, currentY, {
+            align: "center",
+          });
+
+          doc.setFontSize(12);
+          doc.setTextColor(31, 41, 55);
+          doc.setFont("helvetica", "normal");
+          doc.text(period, 14, currentY + 10);
+          doc.text(`Zone: ${user.zone} | Outlet: ${user.outlet}`, 14, currentY + 20);
+
+          // Table
+          autoTable(doc, {
+            startY: currentY + 30,
+            margin: { left: 14, right: 14 },
+            head: [headers],
+            body: reports.map((report) => [
+              dayjs(report.sale_date).format("YYYY-MM-DD"),
+              report.products
+                .map((p) => `• ${p.product_name} x ${p.quantity}`)
+                .join("\n"),
+              report.route || "N/A",
+              report.memo || "N/A",
+              `${report.total_tp.toFixed(2)}`,
+            ]),
+            headStyles: {
+              fillColor: [30, 64, 175],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+              fontSize: 11,
+              halign: "center",
+              valign: "middle",
+              cellPadding: 3,
+            },
+            styles: {
+              fontSize: 10,
+              halign: "center",
+              valign: "middle",
+              cellPadding: 3,
+              lineWidth: 0.1,
+              lineColor: [55, 65, 81],
+            },
+            alternateRowStyles: {
+              fillColor: [243, 244, 246],
+            },
+            columnStyles: {
+              0: { cellWidth: 25, halign: "center" },
+              1: { cellWidth: 70, halign: "left" },
+              2: { cellWidth: 25, halign: "center" },
+              3: { cellWidth: 40, halign: "center" },
+              4: { cellWidth: 20, halign: "center" },
+            },
+            didParseCell: (data) => {
+              if (data.section === "body" && data.column.index === 1) {
+                data.cell.styles.halign = "left";
+              }
+            },
+          });
+
+          // Summary
+          currentY = doc.lastAutoTable.finalY + 10;
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text(
+            `Total Products Sold: ${reports.reduce(
+              (sum, r) => sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
+              0
+            )}`,
+            14,
+            currentY
+          );
+          doc.text(
+            `Total TP: ${reports.reduce((sum, r) => sum + (r.total_tp || 0), 0).toFixed(2)}`,
+            14,
+            currentY + 10
+          );
+
+          // Save PDF to buffer
+          const pdfBuffer = doc.output("arraybuffer");
+          zip.file(
+            `${user.name.replace(/[^a-zA-Z0-9]/g, "_")}_Sales_Report_${selectedMonth}.pdf`,
+            pdfBuffer
+          );
+        })
+      );
+
+      const zipFileName = `All_Sales_Reports_${selectedMonth}_${dayjs().format("YYYYMMDD_HHmmss")}.zip`;
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, zipFileName);
+      toast.success("All reports exported as ZIP successfully");
+    } catch (error) {
+      console.error("Error exporting all reports:", error);
+      toast.error("Failed to export all reports");
     }
   };
 
@@ -246,7 +509,7 @@ const FullSalesReport = () => {
             <h1 className="text-2xl font-bold text-white">Full Sales Report</h1>
           </div>
           <div className="p-6 border-b border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select Month
@@ -255,7 +518,7 @@ const FullSalesReport = () => {
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-500 focus:border-gray-500"
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -265,7 +528,7 @@ const FullSalesReport = () => {
                 <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-500 focus:border-gray-500"
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   disabled={!reportData}
                 >
                   <option value="">All Zones</option>
@@ -276,11 +539,11 @@ const FullSalesReport = () => {
                   ))}
                 </select>
               </div>
-              <div className="flex items-end">
+              <div>
                 <button
                   onClick={generateReport}
                   disabled={isGenerating}
-                  className={`w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
+                  className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center ${
                     isGenerating ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
@@ -313,17 +576,11 @@ const FullSalesReport = () => {
                   )}
                 </button>
               </div>
-            </div>
-          </div>
-          {reportData && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Report for {dayjs(reportData.month).format("MMMM YYYY")}
-                </h2>
+              <div className="relative">
                 <button
-                  onClick={exportToExcel}
-                  className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
+                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                  className="w-48 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
+                  disabled={!reportData}
                 >
                   <svg
                     className="w-4 h-4 mr-2"
@@ -339,31 +596,93 @@ const FullSalesReport = () => {
                       d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  Export to Excel
+                  Export
+                  <svg
+                    className="w-4 h-4 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
                 </button>
+                {exportDropdownOpen && (
+                  <div className="absolute top-0 right-6 mt-2 w-48 bg-white rounded-md shadow-lg z-32">
+                    <div className="py-1" role="menu" aria-orientation="vertical">
+                      <button
+                        onClick={() => {
+                          exportToExcel();
+                          setExportDropdownOpen(false);
+                        }}
+                        disabled={!reportData}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        role="menuitem"
+                      >
+                        Export to Excel
+                      </button>
+                      <button
+                        onClick={() => {
+                          exportToPDF();
+                          setExportDropdownOpen(false);
+                        }}
+                        disabled={!reportData}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        role="menuitem"
+                      >
+                        Export to PDF
+                      </button>
+                      <button
+                        onClick={() => {
+                          exportAllReports();
+                          setExportDropdownOpen(false);
+                        }}
+                        disabled={!reportData}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        role="menuitem"
+                      >
+                        Export All Reports (ZIP)
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          {reportData && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Report for {dayjs(reportData.month).format("MMMM YYYY")}
+                </h2>
               </div>
               <div className="overflow-x-auto shadow-md rounded-lg max-h-[60vh]">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-600 sticky top-0 z-10">
+                  <thead className="bg-indigo-600 text-white sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         User Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Zone
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Outlet
                       </th>
                       {reportData.days.map((day) => (
                         <th
                           key={day}
-                          className="px-3 py-3 text-center text-xs font-medium text-white uppercase tracking-wider"
+                          className="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider"
                         >
                           {dayjs(day).format("D")}
                         </th>
                       ))}
-                      <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
                         Total
                       </th>
                     </tr>
