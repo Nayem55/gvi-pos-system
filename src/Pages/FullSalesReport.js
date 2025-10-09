@@ -22,7 +22,9 @@ const FullSalesReport = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://175.29.181.245:5000/getAlluser");
+        const response = await axios.get(
+          "http://175.29.181.245:5000/getAlluser"
+        );
         setAllUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -36,9 +38,12 @@ const FullSalesReport = () => {
   const generateReport = async () => {
     try {
       setIsGenerating(true);
-      const response = await axios.get("http://175.29.181.245:5000/sales/full-report", {
-        params: { month: selectedMonth },
-      });
+      const response = await axios.get(
+        "http://175.29.181.245:5000/sales/full-report",
+        {
+          params: { month: selectedMonth },
+        }
+      );
 
       // Merge report data with all users to include non-submitters
       const reportUsers = response.data.users;
@@ -75,7 +80,9 @@ const FullSalesReport = () => {
 
   // Filtered users based on zone
   const filteredUsers = reportData
-    ? reportData.users.filter((user) => !selectedZone || user.zone === selectedZone)
+    ? reportData.users.filter(
+        (user) => !selectedZone || user.zone === selectedZone
+      )
     : [];
 
   // Calculate summary
@@ -158,7 +165,9 @@ const FullSalesReport = () => {
             ),
             "",
             "",
-            `৳${reports.reduce((sum, r) => sum + (r.total_tp || 0), 0).toFixed(2)}`,
+            `৳${reports
+              .reduce((sum, r) => sum + (r.total_tp || 0), 0)
+              .toFixed(2)}`,
           ],
         ];
 
@@ -198,13 +207,21 @@ const FullSalesReport = () => {
           },
           dataEven: {
             font: { sz: 10 },
-            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            alignment: {
+              horizontal: "center",
+              vertical: "center",
+              wrapText: true,
+            },
             border: borderStyle,
           },
           dataOdd: {
             font: { sz: 10 },
             fill: { fgColor: { rgb: "F3F4F6" } },
-            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            alignment: {
+              horizontal: "center",
+              vertical: "center",
+              wrapText: true,
+            },
             border: borderStyle,
           },
           total: {
@@ -227,7 +244,8 @@ const FullSalesReport = () => {
             } else if (i === 4) {
               ws[cellAddress].s = styles.header;
             } else if (i >= 5 && i < data.length - 2) {
-              ws[cellAddress].s = i % 2 === 0 ? styles.dataOdd : styles.dataEven;
+              ws[cellAddress].s =
+                i % 2 === 0 ? styles.dataOdd : styles.dataEven;
             } else if (i >= data.length - 2) {
               ws[cellAddress].s = styles.total;
             } else {
@@ -240,14 +258,23 @@ const FullSalesReport = () => {
           { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
           { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
           { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } },
-          { s: { r: data.length - 2, c: 0 }, e: { r: data.length - 2, c: headers.length - 1 } },
+          {
+            s: { r: data.length - 2, c: 0 },
+            e: { r: data.length - 2, c: headers.length - 1 },
+          },
           { s: { r: data.length - 1, c: 0 }, e: { r: data.length - 1, c: 0 } },
         ];
 
-        XLSX.utils.book_append_sheet(wb, ws, `${user.name.replace(/[^a-zA-Z0-9]/g, "_")}`);
+        XLSX.utils.book_append_sheet(
+          wb,
+          ws,
+          `${user.name.replace(/[^a-zA-Z0-9]/g, "_")}`
+        );
       });
 
-      const fileName = `Detailed_Sales_Report_${selectedMonth}_${dayjs().format("YYYYMMDD_HHmmss")}.xlsx`;
+      const fileName = `Detailed_Sales_Report_${selectedMonth}_${dayjs().format(
+        "YYYYMMDD_HHmmss"
+      )}.xlsx`;
       XLSX.writeFile(wb, fileName);
       toast.success("Detailed report exported to Excel successfully");
     } catch (error) {
@@ -288,15 +315,24 @@ const FullSalesReport = () => {
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 64, 175);
-        doc.text(`${user.name}'s Sales Report`, doc.internal.pageSize.getWidth() / 2, currentY, {
-          align: "center",
-        });
+        doc.text(
+          `${user.name}'s Sales Report`,
+          doc.internal.pageSize.getWidth() / 2,
+          currentY,
+          {
+            align: "center",
+          }
+        );
 
         doc.setFontSize(12);
         doc.setTextColor(31, 41, 55);
         doc.setFont("helvetica", "normal");
         doc.text(period, 14, currentY + 10);
-        doc.text(`Zone: ${user.zone} | Outlet: ${user.outlet}`, 14, currentY + 20);
+        doc.text(
+          `Zone: ${user.zone} | Outlet: ${user.outlet}`,
+          14,
+          currentY + 20
+        );
 
         // Table
         autoTable(doc, {
@@ -352,14 +388,17 @@ const FullSalesReport = () => {
         doc.setFont("helvetica", "bold");
         doc.text(
           `Total Products Sold: ${reports.reduce(
-            (sum, r) => sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
+            (sum, r) =>
+              sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
             0
           )}`,
           14,
           currentY
         );
         doc.text(
-          `Total TP: ${reports.reduce((sum, r) => sum + (r.total_tp || 0), 0).toFixed(2)}`,
+          `Total TP: ${reports
+            .reduce((sum, r) => sum + (r.total_tp || 0), 0)
+            .toFixed(2)}`,
           14,
           currentY + 10
         );
@@ -405,15 +444,24 @@ const FullSalesReport = () => {
           doc.setFontSize(16);
           doc.setFont("helvetica", "bold");
           doc.setTextColor(30, 64, 175);
-          doc.text(`${user.name}'s Sales Report`, doc.internal.pageSize.getWidth() / 2, currentY, {
-            align: "center",
-          });
+          doc.text(
+            `${user.name}'s Sales Report`,
+            doc.internal.pageSize.getWidth() / 2,
+            currentY,
+            {
+              align: "center",
+            }
+          );
 
           doc.setFontSize(12);
           doc.setTextColor(31, 41, 55);
           doc.setFont("helvetica", "normal");
           doc.text(period, 14, currentY + 10);
-          doc.text(`Zone: ${user.zone} | Outlet: ${user.outlet}`, 14, currentY + 20);
+          doc.text(
+            `Zone: ${user.zone} | Outlet: ${user.outlet}`,
+            14,
+            currentY + 20
+          );
 
           // Table
           autoTable(doc, {
@@ -469,14 +517,17 @@ const FullSalesReport = () => {
           doc.setFont("helvetica", "bold");
           doc.text(
             `Total Products Sold: ${reports.reduce(
-              (sum, r) => sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
+              (sum, r) =>
+                sum + r.products.reduce((s, p) => s + (p.quantity || 0), 0),
               0
             )}`,
             14,
             currentY
           );
           doc.text(
-            `Total TP: ${reports.reduce((sum, r) => sum + (r.total_tp || 0), 0).toFixed(2)}`,
+            `Total TP: ${reports
+              .reduce((sum, r) => sum + (r.total_tp || 0), 0)
+              .toFixed(2)}`,
             14,
             currentY + 10
           );
@@ -484,7 +535,10 @@ const FullSalesReport = () => {
           // Save PDF to buffer
           const pdfBuffer = doc.output("arraybuffer");
           zip.file(
-            `${user.name.replace(/[^a-zA-Z0-9]/g, "_")}_Sales_Report_${selectedMonth}.pdf`,
+            `${user.name.replace(
+              /[^a-zA-Z0-9]/g,
+              "_"
+            )}_Sales_Report_${selectedMonth}.pdf`,
             pdfBuffer
           );
         })
@@ -531,12 +585,24 @@ const FullSalesReport = () => {
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   disabled={!reportData}
                 >
-                  <option value="">All Zones</option>
+                  {/* <option value="">All Zones</option>
                   {uniqueZones.map((zone) => (
                     <option key={zone} value={zone}>
                       {zone}
                     </option>
-                  ))}
+                  ))} */}
+                  <option value="">All Zones</option>
+                  <option value="DHAKA-01-ZONE-01">DHAKA-01-ZONE-01</option>
+                  <option value="DHAKA-02-ZONE-01">DHAKA-02-ZONE-01</option>
+                  <option value="DHAKA-02-ZONE-03">DHAKA-02-ZONE-03</option>
+                  <option value="DHAKA-03-ZONE-03">DHAKA-03-ZONE-03</option>
+                  <option value="KHULNA-ZONE-01 ">KHULNA-ZONE-01</option>
+                  <option value="COMILLA-ZONE-03">COMILLA-ZONE-03</option>
+                  <option value="CHITTAGONG-ZONE-03">CHITTAGONG-ZONE-03</option>
+                  <option value="RANGPUR-ZONE-01">RANGPUR-ZONE-01</option>
+                  <option value="BARISAL-ZONE-03">BARISAL-ZONE-03</option>
+                  <option value="BOGURA-ZONE-01">BOGURA-ZONE-01</option>
+                  <option value="MYMENSINGH-ZONE-01">MYMENSINGH-ZONE-01</option>
                 </select>
               </div>
               <div>
@@ -614,7 +680,11 @@ const FullSalesReport = () => {
                 </button>
                 {exportDropdownOpen && (
                   <div className="absolute top-0 right-6 mt-2 w-48 bg-white rounded-md shadow-lg z-32">
-                    <div className="py-1" role="menu" aria-orientation="vertical">
+                    <div
+                      className="py-1"
+                      role="menu"
+                      aria-orientation="vertical"
+                    >
                       <button
                         onClick={() => {
                           exportToExcel();
@@ -706,7 +776,9 @@ const FullSalesReport = () => {
                           <td
                             key={dayIndex}
                             className={`px-3 py-4 whitespace-nowrap text-sm text-right ${
-                              user.hasReport ? "text-gray-900" : "text-red-600 font-medium"
+                              user.hasReport
+                                ? "text-gray-900"
+                                : "text-red-600 font-medium"
                             }`}
                           >
                             {user.hasReport
@@ -730,25 +802,23 @@ const FullSalesReport = () => {
                       >
                         Total
                       </td>
-                      {summary ? (
-                        summary.dailySums.map((sum, index) => (
-                          <td
-                            key={index}
-                            className="px-3 py-4 text-sm font-bold text-right text-gray-900"
-                          >
-                            {sum.toFixed(2)}
-                          </td>
-                        ))
-                      ) : (
-                        reportData.days.map((_, index) => (
-                          <td
-                            key={index}
-                            className="px-3 py-4 text-sm font-bold text-right text-gray-900"
-                          >
-                            0.00
-                          </td>
-                        ))
-                      )}
+                      {summary
+                        ? summary.dailySums.map((sum, index) => (
+                            <td
+                              key={index}
+                              className="px-3 py-4 text-sm font-bold text-right text-gray-900"
+                            >
+                              {sum.toFixed(2)}
+                            </td>
+                          ))
+                        : reportData.days.map((_, index) => (
+                            <td
+                              key={index}
+                              className="px-3 py-4 text-sm font-bold text-right text-gray-900"
+                            >
+                              0.00
+                            </td>
+                          ))}
                       <td className="px-6 py-4 text-sm font-bold text-right text-gray-900">
                         {summary ? summary.grandTotal.toFixed(2) : "0.00"}
                       </td>

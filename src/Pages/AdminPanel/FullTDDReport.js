@@ -44,12 +44,15 @@ const FullTDDReport = () => {
   // Fetch detailed report data for a specific user
   const fetchReportDataForUser = async (userId) => {
     try {
-      const response = await axios.get("http://175.29.181.245:5000/tdda/admin-report", {
-        params: {
-          userId: userId,
-          month: selectedMonth,
-        },
-      });
+      const response = await axios.get(
+        "http://175.29.181.245:5000/tdda/admin-report",
+        {
+          params: {
+            userId: userId,
+            month: selectedMonth,
+          },
+        }
+      );
 
       const fixedData = response.data;
       if (
@@ -88,9 +91,14 @@ const FullTDDReport = () => {
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(68, 114, 196);
-      doc.text("Employee TD/DA Report", doc.internal.pageSize.getWidth() / 2, 15, {
-        align: "center",
-      });
+      doc.text(
+        "Employee TD/DA Report",
+        doc.internal.pageSize.getWidth() / 2,
+        15,
+        {
+          align: "center",
+        }
+      );
 
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
@@ -114,19 +122,7 @@ const FullTDDReport = () => {
             { content: "Hotel Bill" },
             { content: "Total" },
           ],
-          [
-            "",
-            "From",
-            "To",
-            "",
-            "",
-            "Bus",
-            "CNG",
-            "Train",
-            "Other",
-            "",
-            "",
-          ],
+          ["", "From", "To", "", "", "Bus", "CNG", "Train", "Other", "", ""],
         ],
         body: reportData.dailyExpenses.map((day) => [
           day.date,
@@ -136,8 +132,12 @@ const FullTDDReport = () => {
           day.hqExHq?.exHq ? parseFloat(day.hqExHq.exHq).toFixed(2) : "-",
           day.transport?.bus ? parseFloat(day.transport.bus).toFixed(2) : "-",
           day.transport?.cng ? parseFloat(day.transport.cng).toFixed(2) : "-",
-          day.transport?.train ? parseFloat(day.transport.train).toFixed(2) : "-",
-          day.transport?.other ? parseFloat(day.transport.other).toFixed(2) : "-",
+          day.transport?.train
+            ? parseFloat(day.transport.train).toFixed(2)
+            : "-",
+          day.transport?.other
+            ? parseFloat(day.transport.other).toFixed(2)
+            : "-",
           day.hotelBill ? parseFloat(day.hotelBill).toFixed(2) : "-",
           day.totalExpense ? parseFloat(day.totalExpense).toFixed(2) : "-",
         ]),
@@ -175,9 +175,15 @@ const FullTDDReport = () => {
       const finalY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`Total Working Days: ${reportData.summary.totalWorkingDays}`, 10, finalY);
       doc.text(
-        `Total Expense: ${parseFloat(reportData.summary.totalExpense || 0).toFixed(2)}`,
+        `Total Working Days: ${reportData.summary.totalWorkingDays}`,
+        10,
+        finalY
+      );
+      doc.text(
+        `Total Expense: ${parseFloat(
+          reportData.summary.totalExpense || 0
+        ).toFixed(2)}`,
         90,
         finalY
       );
@@ -215,7 +221,10 @@ const FullTDDReport = () => {
         if (detailedReport && detailedReport.dailyExpenses.length > 0) {
           const pdfBlob = await generatePDFBlob(detailedReport);
           if (pdfBlob) {
-            const fileName = `TADA_Report_${detailedReport.userInfo.name.replace(/\s+/g, "_")}_${detailedReport.userInfo.month}.pdf`;
+            const fileName = `TADA_Report_${detailedReport.userInfo.name.replace(
+              /\s+/g,
+              "_"
+            )}_${detailedReport.userInfo.month}.pdf`;
             zip.file(fileName, pdfBlob);
           }
         }
@@ -434,12 +443,24 @@ const FullTDDReport = () => {
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   disabled={!reportData}
                 >
-                  <option value="">All Zones</option>
+                  {/* <option value="">All Zones</option>
                   {uniqueZones.map((zone) => (
                     <option key={zone} value={zone}>
                       {zone}
                     </option>
-                  ))}
+                  ))} */}
+                  <option value="">All Zones</option>
+                  <option value="DHAKA-01-ZONE-01">DHAKA-01-ZONE-01</option>
+                  <option value="DHAKA-02-ZONE-01">DHAKA-02-ZONE-01</option>
+                  <option value="DHAKA-02-ZONE-03">DHAKA-02-ZONE-03</option>
+                  <option value="DHAKA-03-ZONE-03">DHAKA-03-ZONE-03</option>
+                  <option value="KHULNA-ZONE-01 ">KHULNA-ZONE-01</option>
+                  <option value="COMILLA-ZONE-03">COMILLA-ZONE-03</option>
+                  <option value="CHITTAGONG-ZONE-03">CHITTAGONG-ZONE-03</option>
+                  <option value="RANGPUR-ZONE-01">RANGPUR-ZONE-01</option>
+                  <option value="BARISAL-ZONE-03">BARISAL-ZONE-03</option>
+                  <option value="BOGURA-ZONE-01">BOGURA-ZONE-01</option>
+                  <option value="MYMENSINGH-ZONE-01">MYMENSINGH-ZONE-01</option>
                 </select>
               </div>
               <div className="flex items-end space-x-4">
@@ -536,11 +557,15 @@ const FullTDDReport = () => {
                             downloadAllPDFs();
                             setExportDropdownOpen(false);
                           }}
-                          disabled={downloadingAll || !reportData || !selectedMonth}
+                          disabled={
+                            downloadingAll || !reportData || !selectedMonth
+                          }
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                           role="menuitem"
                         >
-                          {downloadingAll ? "Downloading..." : "Download All PDF"}
+                          {downloadingAll
+                            ? "Downloading..."
+                            : "Download All PDF"}
                         </button>
                       </div>
                     </div>
