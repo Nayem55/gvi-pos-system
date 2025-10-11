@@ -201,12 +201,6 @@ export default function AdminHomePage() {
       secondarySales: r.secondarySales || [],
       marketReturnTransfers: r.marketReturnTransfers || [],
       officeReturnTransfers: r.officeReturnTransfers || [],
-      openingValueDP: num(r.openingValueDP),
-      primaryValueDP: num(r.primaryValueDP),
-      secondaryValueDP: num(r.secondaryValueDP),
-      marketReturnValueDP: num(r.marketReturnValueDP),
-      officeReturnValueDP: num(r.officeReturnValueDP),
-      closingValueDP: num(r.closingValueDP),
     }));
   }, []);
 
@@ -287,21 +281,21 @@ export default function AdminHomePage() {
   const totals = useMemo(() => sumRows(categoryRows), [categoryRows]);
 
   // Movement & insights
-  const topOutwards = useMemo(() => [...filteredSkuRows].sort((a, b) => b.secondaryValueDP - a.secondaryValueDP), [filteredSkuRows]);
-  const notMoving = useMemo(() => filteredSkuRows.filter((r) => r.primaryValueDP === 0 && r.secondaryValueDP === 0).sort((a, b) => a.productName.localeCompare(b.productName)), [filteredSkuRows]);
-  const minStock = useMemo(() => [...filteredSkuRows].sort((a, b) => a.closingValueDP - b.closingValueDP).filter(s => s.closingValueDP > 0), [filteredSkuRows]);
-  const overStockTop100 = useMemo(() => [...filteredSkuRows].sort((a, b) => b.closingValueDP - a.closingValueDP).slice(0, 100), [filteredSkuRows]);
+  const topOutwards = useMemo(() => [...filteredSkuRows].sort((a, b) => b.secondary - a.secondary), [filteredSkuRows]);
+  const notMoving = useMemo(() => filteredSkuRows.filter((r) => r.primary === 0 && r.secondary === 0).sort((a, b) => a.productName.localeCompare(b.productName)), [filteredSkuRows]);
+  const minStock = useMemo(() => [...filteredSkuRows].sort((a, b) => a.closingStock - b.closingStock).filter(s => s.closingStock > 0), [filteredSkuRows]);
+  const overStockTop100 = useMemo(() => [...filteredSkuRows].sort((a, b) => b.closingStock - a.closingStock).slice(0, 100), [filteredSkuRows]);
   const outwardsVsStock = useMemo(() => filteredSkuRows.map((r) => outwardsStockRow(r, periodDays)).filter(r => r.onhand > 0 && r.outwards > 0).sort((a, b) => b.coverDays - a.coverDays), [filteredSkuRows, periodDays]);
 
   const kpis = useMemo(
     () => [
-      { key: "opening", label: "Opening Stock (DP)", value: totals.opening, icon: Boxes, tone: "from-blue-500/10 to-blue-500/5", text: "text-blue-600" },
-      { key: "primary", label: "Primary Sales (DP)", value: totals.inwards, icon: TrendingUp, tone: "from-emerald-500/10 to-emerald-500/5", text: "text-emerald-600", clickable: true },
-      { key: "secondary", label: "Secondary Sales (DP)", value: totals.outwards, icon: TrendingDown, tone: "from-rose-500/10 to-rose-500/5", text: "text-rose-600", clickable: true },
-      { key: "marketReturn", label: "Market Return (DP)", value: totals.transferIn, icon: RefreshCw, tone: "from-cyan-500/10 to-cyan-500/5", text: "text-cyan-600", clickable: true },
-      { key: "officeReturn", label: "Office Return (DP)", value: totals.transferOut, icon: RefreshCw, tone: "from-red-500/10 to-red-500/5", text: "text-red-600", clickable: true },
-      { key: "actualSecondary", label: "Actual Secondary (DP)", value: totals.outwards - totals.transferIn, icon: TrendingDown, tone: "from-indigo-500/10 to-indigo-500/5", text: "text-indigo-600" },
-      { key: "closing", label: "Closing Stock (DP)", value: totals.closing, icon: PackageSearch, tone: "from-violet-500/10 to-violet-500/5", text: "text-violet-700" },
+      { key: "opening", label: "Opening Stock", value: totals.opening, icon: Boxes, tone: "from-blue-500/10 to-blue-500/5", text: "text-blue-600" },
+      { key: "primary", label: "Primary Sales", value: totals.inwards, icon: TrendingUp, tone: "from-emerald-500/10 to-emerald-500/5", text: "text-emerald-600", clickable: true },
+      { key: "secondary", label: "Secondary Sales", value: totals.outwards, icon: TrendingDown, tone: "from-rose-500/10 to-rose-500/5", text: "text-rose-600", clickable: true },
+      { key: "marketReturn", label: "Market Return", value: totals.transferIn, icon: RefreshCw, tone: "from-cyan-500/10 to-cyan-500/5", text: "text-cyan-600", clickable: true },
+      { key: "officeReturn", label: "Office Return", value: totals.transferOut, icon: RefreshCw, tone: "from-red-500/10 to-red-500/5", text: "text-red-600", clickable: true },
+      { key: "actualSecondary", label: "Actual Secondary", value: totals.outwards - totals.transferIn, icon: TrendingDown, tone: "from-indigo-500/10 to-indigo-500/5", text: "text-indigo-600" },
+      { key: "closing", label: "Closing Stock", value: totals.closing, icon: PackageSearch, tone: "from-violet-500/10 to-violet-500/5", text: "text-violet-700" },
     ],
     [totals]
   );
@@ -325,12 +319,12 @@ export default function AdminHomePage() {
 
     if (isDetailsView) {
       const sortedDetails = [...modalData.details].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const headers = ["Date", ...(hasInvoice ? ["Invoice"] : []), ...(isAllZones ? ["Zone"] : []), "Value (DP)"];
+      const headers = ["Date", ...(hasInvoice ? ["Invoice"] : []), ...(isAllZones ? ["Zone"] : []), "Quantity"];
       const dataRows = sortedDetails.map(detail => [
         dayjs(detail.date).format("DD-MM-YYYY"),
         ...(hasInvoice ? [detail.invoice || "N/A"] : []),
         ...(isAllZones ? [detail.outlet || "N/A"] : []),
-        `${detail.valueDP?.toFixed(2)}`
+        `${detail.quantity?.toFixed(2)}`
       ]);
 
       excelData = [
@@ -345,14 +339,14 @@ export default function AdminHomePage() {
         if (!acc[key]) {
           acc[key] = { name: key, value: 0, details: [] };
         }
-        acc[key].value += detail.valueDP || 0;
+        acc[key].value += detail.quantity || 0;
         acc[key].details.push(detail);
         return acc;
       }, {});
 
       const sortedGroups = Object.values(groupedDetails).sort((a, b) => a.name.localeCompare(b.name));
       const groupKey = getGroupKey(exportType);
-      const headers = [groupKey, "Value (DP)"];
+      const headers = [groupKey, "Quantity"];
       const dataRows = sortedGroups.map(group => [
         group.name,
         `${group.value?.toFixed(2)}`
@@ -408,13 +402,13 @@ export default function AdminHomePage() {
       ["", "", "", "", "", "", "", "", ""],
       [
         "Category",
-        "Opening Stock (DP)",
-        "Primary Sales (DP)",
-        "Secondary Sales (DP)",
-        "Market Return (DP)",
-        "Office Return (DP)",
-        "Actual Secondary (DP)",
-        "Closing Stock (DP)",
+        "Opening Stock",
+        "Primary Sales",
+        "Secondary Sales",
+        "Market Return",
+        "Office Return",
+        "Actual Secondary",
+        "Closing Stock",
       ],
     ];
 
@@ -475,13 +469,13 @@ export default function AdminHomePage() {
 
       const headers = [[
         "Category",
-        "Opening Stock (DP)",
-        "Primary Sales (DP)",
-        "Secondary Sales (DP)",
-        "Market Return (DP)",
-        "Office Return (DP)",
-        "Actual Secondary (DP)",
-        "Closing Stock (DP)",
+        "Opening Stock",
+        "Primary Sales",
+        "Secondary Sales",
+        "Market Return",
+        "Office Return",
+        "Actual Secondary",
+        "Closing Stock",
       ]];
 
       const data = categoryRows.map(c => [
@@ -713,7 +707,7 @@ export default function AdminHomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <Card
             title="Sales by Category"
-            subtitle="Opening / Primary / Secondary / Market Return / Office Return / Actual Secondary / Closing (DP)"
+            subtitle="Opening / Primary / Secondary / Market Return / Office Return / Actual Secondary / Closing"
             searchValue={categorySearch}
             onSearchChange={setCategorySearch}
           >
@@ -767,7 +761,7 @@ export default function AdminHomePage() {
 
           <Card 
             title="Sales by Brand" 
-            subtitle="Opening / Primary / Secondary / Market Return / Office Return / Actual Secondary / Closing (DP)"
+            subtitle="Opening / Primary / Secondary / Market Return / Office Return / Actual Secondary / Closing"
             searchValue={brandSearch}
             onSearchChange={setBrandSearch}
           >
@@ -822,7 +816,7 @@ export default function AdminHomePage() {
 
         {/* Movement blocks */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-          <Card title="Top Sales SKUs" subtitle="By secondary sales (DP)">
+          <Card title="Top Sales SKUs" subtitle="By secondary sales">
             <div className="h-80 overflow-y-auto relative">
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -835,7 +829,7 @@ export default function AdminHomePage() {
                       <div>
                         <div className="text-sm font-medium text-gray-900">{m.productName}</div>
                       </div>
-                      <div className="text-sm font-semibold text-gray-900">{fmt(m.secondaryValueDP?.toFixed(2))}</div>
+                      <div className="text-sm font-semibold text-gray-900">{fmt(m.secondary?.toFixed(2))}</div>
                     </li>
                   ))}
                 </ul>
@@ -843,7 +837,7 @@ export default function AdminHomePage() {
             </div>
           </Card>
 
-          <Card title="Not Moving SKUs" subtitle="No Primary/Secondary (DP)">
+          <Card title="Not Moving SKUs" subtitle="No Primary/Secondary">
             <div className="h-80 overflow-y-auto relative">
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -864,7 +858,7 @@ export default function AdminHomePage() {
             </div>
           </Card>
 
-          <Card title="Minimum Stock SKUs" subtitle="Lowest on-hand (DP)">
+          <Card title="Minimum Stock SKUs" subtitle="Lowest on-hand">
             <div className="h-80 overflow-y-auto relative">
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -877,7 +871,7 @@ export default function AdminHomePage() {
                       <div>
                         <div className="text-sm font-medium text-gray-900">{s.productName}</div>
                       </div>
-                      <div className="text-sm font-semibold text-gray-900">{fmt(s.closingValueDP?.toFixed(2))}</div>
+                      <div className="text-sm font-semibold text-gray-900">{fmt(s.closingStock?.toFixed(2))}</div>
                     </li>
                   ))}
                 </ul>
@@ -888,7 +882,7 @@ export default function AdminHomePage() {
 
         {/* Overstock & Outwards vs Stock */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <Card title="Overstock (Top 100 SKUs)" subtitle="Sorted by closing stock (DP)">
+          <Card title="Overstock (Top 100 SKUs)" subtitle="Sorted by closing stock">
             <div className="h-96 overflow-y-auto relative">
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -899,14 +893,14 @@ export default function AdminHomePage() {
                   <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th className="py-3 px-4 text-left font-medium text-gray-900">Product</th>
-                      <th className="py-3 px-4 text-right font-medium text-gray-900">On-hand (DP)</th>
+                      <th className="py-3 px-4 text-right font-medium text-gray-900">On-hand</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {overStockTop100.map((o) => (
                       <tr key={o.barcode} className="hover:bg-gray-50">
                         <td className="py-3 px-4 text-left">{o.productName}</td>
-                        <td className="py-3 px-4 text-right font-medium">{fmt(o.closingValueDP?.toFixed(2))}</td>
+                        <td className="py-3 px-4 text-right font-medium">{fmt(o.closingStock?.toFixed(2))}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -915,7 +909,7 @@ export default function AdminHomePage() {
             </div>
           </Card>
 
-          <Card title="Actual Secondary vs Stock" subtitle={`Actual Secondary vs stock over ${periodDays} days (DP)`}>
+          <Card title="Actual Secondary vs Stock" subtitle={`Actual Secondary vs stock over ${periodDays} days`}>
             <div className="h-96 overflow-y-auto relative">
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -926,8 +920,8 @@ export default function AdminHomePage() {
                   <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th className="py-3 px-4 text-left font-medium text-gray-900">Product</th>
-                      <th className="py-3 px-4 text-center font-medium text-gray-900">On-hand (DP)</th>
-                      <th className="py-3 px-4 text-center font-medium text-gray-900">Actual Secondary (period) (DP)</th>
+                      <th className="py-3 px-4 text-center font-medium text-gray-900">On-hand</th>
+                      <th className="py-3 px-4 text-center font-medium text-gray-900">Actual Secondary (period)</th>
                       <th className="py-3 px-4 text-center font-medium text-gray-900">Stock/Actual Secondary</th>
                       <th className="py-3 px-4 text-right font-medium text-gray-900">Cover (days)</th>
                     </tr>
@@ -984,7 +978,7 @@ export default function AdminHomePage() {
                           details: []
                         };
                       }
-                      acc[key].value += detail.valueDP || 0;
+                      acc[key].value += detail.quantity || 0;
                       acc[key].details.push(detail);
                       return acc;
                     }, {});
@@ -999,7 +993,7 @@ export default function AdminHomePage() {
                           <thead className="bg-gray-50">
                             <tr>
                               <th className="py-3 px-4 text-left font-medium text-gray-900">{getGroupKey(modalData.type)}</th>
-                              <th className="py-3 px-4 text-right font-medium text-gray-900">Value (DP)</th>
+                              <th className="py-3 px-4 text-right font-medium text-gray-900">Quantity</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
@@ -1032,7 +1026,7 @@ export default function AdminHomePage() {
                                   {selectedZone === "all" && (
                                     <th className="py-3 px-4 text-left font-medium text-gray-900">Zone</th>
                                   )}
-                                  <th className="py-3 px-4 text-right font-medium text-gray-900">Value (DP)</th>
+                                  <th className="py-3 px-4 text-right font-medium text-gray-900">Quantity</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-200">
@@ -1047,7 +1041,7 @@ export default function AdminHomePage() {
                                     {selectedZone === "all" && (
                                       <td className="py-3 px-4 text-left">{detail.outlet}</td>
                                     )}
-                                    <td className="py-3 px-4 text-right">{detail.valueDP?.toFixed(2)}</td>
+                                    <td className="py-3 px-4 text-right">{detail.quantity?.toFixed(2)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -1083,12 +1077,12 @@ function groupByKey(rows, key, periodDays) {
       transferOut: 0, 
       closing: 0 
     };
-    map[k].opening += r.openingValueDP;
-    map[k].inwards += r.primaryValueDP;
-    map[k].outwards += r.secondaryValueDP;
-    map[k].transferIn += r.marketReturnValueDP;
-    map[k].transferOut += r.officeReturnValueDP;
-    map[k].closing += r.openingValueDP + r.primaryValueDP + r.marketReturnValueDP - r.officeReturnValueDP - r.secondaryValueDP;
+    map[k].opening += r.openingStock;
+    map[k].inwards += r.primary;
+    map[k].outwards += r.secondary;
+    map[k].transferIn += r.marketReturn;
+    map[k].transferOut += r.officeReturn;
+    map[k].closing += r.openingStock + r.primary + r.marketReturn - r.officeReturn - r.secondary;
   }
   return Object.values(map).sort((a, b) => b.closing - a.closing);
 }
@@ -1109,8 +1103,8 @@ function sumRows(rows) {
 }
 
 function outwardsStockRow(r, days) {
-  const onhand = num(r.closingValueDP);
-  const outwards = num(r.secondaryValueDP) - num(r.marketReturnValueDP);
+  const onhand = num(r.closingStock);
+  const outwards = num(r.secondary) - num(r.marketReturn);
   const daily = outwards > 0 && days > 0 ? outwards / days : 0;
   const coverDays = daily > 0 ? Math.round(onhand / daily) : Infinity;
   return {
