@@ -236,12 +236,41 @@ export default function AdminHomePage() {
       }
 
       const rows = normalizeAreaRows(allRows);
-      setSkuRows(rows);
 
-      const uniqueCategories = [...new Set(rows.map(item => item.category || "Uncategorized"))].sort();
+      // Aggregate by barcode to merge same products
+      const skuMap = new Map();
+      for (const row of rows) {
+        const barcode = row.barcode;
+        if (!skuMap.has(barcode)) {
+          skuMap.set(barcode, {
+            ...row,
+            primaryStocks: [...row.primaryStocks],
+            secondarySales: [...row.secondarySales],
+            marketReturnTransfers: [...row.marketReturnTransfers],
+            officeReturnTransfers: [...row.officeReturnTransfers],
+          });
+        } else {
+          const agg = skuMap.get(barcode);
+          agg.openingStock += row.openingStock;
+          agg.primary += row.primary;
+          agg.secondary += row.secondary;
+          agg.marketReturn += row.marketReturn;
+          agg.officeReturn += row.officeReturn;
+          agg.closingStock += row.closingStock;
+          agg.primaryStocks.push(...row.primaryStocks);
+          agg.secondarySales.push(...row.secondarySales);
+          agg.marketReturnTransfers.push(...row.marketReturnTransfers);
+          agg.officeReturnTransfers.push(...row.officeReturnTransfers);
+        }
+      }
+      const aggregatedRows = Array.from(skuMap.values());
+
+      setSkuRows(aggregatedRows);
+
+      const uniqueCategories = [...new Set(aggregatedRows.map(item => item.category || "Uncategorized"))].sort();
       setCategories([{ value: "all", label: "All Categories" }, ...uniqueCategories.map(c => ({ value: c, label: c }))]);
 
-      const uniqueBrands = [...new Set(rows.map(item => item.brand || "Unbranded"))].sort();
+      const uniqueBrands = [...new Set(aggregatedRows.map(item => item.brand || "Unbranded"))].sort();
       setBrands([{ value: "all", label: "All Brands" }, ...uniqueBrands.map(b => ({ value: b, label: b }))]);
 
     } catch (e) {

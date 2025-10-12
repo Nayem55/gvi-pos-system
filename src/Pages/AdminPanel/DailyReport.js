@@ -498,7 +498,7 @@ const DailyReport = () => {
       <div className="flex-1 p-6 bg-gray-100">
         <div className="container mx-auto">
           <h2 className="text-3xl font-bold text-gray-800 mb-6">
-            Daily Sales Report
+            Daily Sales Report For {viewedUser?.name}
           </h2>
 
           {/* Filters */}
