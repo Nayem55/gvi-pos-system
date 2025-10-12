@@ -4,8 +4,9 @@ import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
 
-export default function MarketReturn({ user, stock, getStockValue }) {
+export default function MarketReturn({ user, stock, getStockValue, allProducts }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
   const [searchResults, setSearchResults] = useState([]);
@@ -17,6 +18,8 @@ export default function MarketReturn({ user, stock, getStockValue }) {
   );
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+
+  const isAdminPanel = !!allProducts;
 
   const isPromoValid = (product, priceLabel) => {
     if (priceLabel) {
@@ -77,7 +80,6 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     }
   };
 
-  // Handle product search
   const handleSearch = async (query) => {
     setSearch(query);
     if (query.length > 2) {
@@ -99,7 +101,6 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     }
   };
 
-  // Add product to cart with current stock
   const addToCart = async (product) => {
     const alreadyAdded = cart.find((item) => item.barcode === product.barcode);
     if (alreadyAdded) {
@@ -177,38 +178,49 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           // Skip empty rows or instruction rows
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
-          const productResponse = await axios.get(
-            "http://175.29.181.245:5000/search-product",
-            {
-              params: {
-                search: row["Barcode"] || row["Product Name"],
-                type: "barcode",
-              },
-            }
-          );
+          // Skip rows with quantity 0
+          const returnQty = parseInt(row["Return Quantity"] || 0);
+          if (returnQty <= 0) continue;
 
-          const product = productResponse.data[0];
+          let product;
+          if (isAdminPanel) {
+            // Find product in allProducts for admin panel
+            product = allProducts.find(
+              (p) =>
+                p.barcode === row["Barcode"] || p.name === row["Product Name"]
+            );
+          } else {
+            // API call for non-admin
+            const productResponse = await axios.get(
+              "http://175.29.181.245:5000/search-product",
+              {
+                params: {
+                  search: row["Barcode"] || row["Product Name"],
+                  type: "barcode",
+                },
+              }
+            );
+            product = productResponse.data[0];
+          }
+
           if (!product) {
             errorCount++;
             continue;
           }
 
           const encodedOutlet = encodeURIComponent(user.outlet);
-
           const stockRes = await axios.get(
-            "http://175.29.181.245:5000/outlet-stock",
-            { params: { barcode: product.barcode, outlet: encodedOutlet } }
+            `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
-          const currentStock = stockRes.data.stock.currentStock || 0;
-          const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
-          const currentStockTP = stockRes.data.stock.currentStockValueTP || 0;
+          const currentStock = stockRes.data?.stock?.currentStock ?? 0;
+          const currentStockDP = stockRes.data?.stock?.currentStockValueDP ?? 0;
+          const currentStockTP = stockRes.data?.stock?.currentStockValueTP ?? 0;
           const currentDP = row["DP"] || getCurrentDP(product);
           const currentTP = row["TP"] || getCurrentTP(product);
-          const returnQty = parseInt(row["Return Quantity"] || 0);
 
-          // Validate return quantity doesn't exceed stock
-          const validReturnQty = Math.min(returnQty, currentStock);
+          // No validation for market return quantity as it increases stock
+          const validReturnQty = returnQty;
 
           setCart((prev) => [
             ...prev.filter((item) => item.barcode !== product.barcode),
@@ -263,62 +275,89 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     }
   };
 
-  const downloadDemoFile = () => {
-    const demoData = [
-      {
-        Barcode: "123456789",
-        "Product Name": "Sample Product",
-        "Return Quantity": "5",
-        DP: "100.00",
-        TP: "120.00",
-      },
-      {
-        Barcode: "987654321",
-        "Product Name": "Another Product",
-        "Return Quantity": "3",
-        DP: "150.00",
-        TP: "180.00",
-      },
-    ];
+  const downloadDemoFile = async () => {
+    try {
+      let productsToExport = [];
 
-    const worksheet = XLSX.utils.json_to_sheet(demoData);
+      if (isAdminPanel) {
+        // Use allProducts in admin panel
+        productsToExport = allProducts.map((product) => ({
+          Barcode: product.barcode,
+          "Product Name": product.name,
+          "Return Quantity": "0",
+          DP: product.dp,
+          TP: product.tp,
+        }));
+      } else {
+        // Fallback to sample data in non-admin
+        productsToExport = [
+          {
+            Barcode: "123456789",
+            "Product Name": "Sample Product",
+            "Return Quantity": "0",
+            DP: "100.00",
+            TP: "120.00",
+          },
+          {
+            Barcode: "987654321",
+            "Product Name": "Another Product",
+            "Return Quantity": "0",
+            DP: "150.00",
+            TP: "180.00",
+          },
+        ];
+      }
 
-    // Add instructions as the first row
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
+      const worksheet = XLSX.utils.json_to_sheet(productsToExport);
+
+      // Add instructions
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
         [
-          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          [
+            "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          ],
+          ["1. Set 'Return Quantity' to desired value (0 will be ignored)"],
+          ["2. DP/TP are optional - will use current prices if omitted"],
         ],
-        ["Barcode and Product Name must match existing products"],
-        ["Return Quantity cannot exceed current stock"],
-        ["DP/TP are optional - will use current prices if omitted"],
-      ],
-      { origin: -1 }
-    );
+        { origin: -1 }
+      );
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Market Returns");
-    XLSX.writeFile(workbook, "Market_Returns_Template.xlsx");
+      // Auto-size columns
+      const wscols = [
+        { wch: 15 }, // Barcode
+        { wch: 40 }, // Product Name
+        { wch: 18 }, // Return Quantity
+        { wch: 10 }, // DP
+        { wch: 10 }, // TP
+      ];
+      worksheet["!cols"] = wscols;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Market Returns");
+      XLSX.writeFile(workbook, "Market_Returns_Template.xlsx");
+    } catch (error) {
+      console.error("Error generating template:", error);
+      toast.error("Failed to generate template");
+    }
   };
 
-  // Update market return value in cart
   const updateMarketReturnValue = (barcode, value) => {
     const returnValue = parseInt(value) || 0;
     setCart((prev) =>
-      prev.map((item) =>
-        item.barcode === barcode
-          ? {
-              ...item,
-              marketReturn: returnValue,
-              total: returnValue * item.editableDP,
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.barcode === barcode) {
+          return {
+            ...item,
+            marketReturn: returnValue,
+            total: returnValue * item.editableDP,
+          };
+        }
+        return item;
+      })
     );
   };
 
-  // Handle price change for DP/TP
   const handlePriceChange = (barcode, field, value) => {
     setCart((prev) =>
       prev.map((item) => {
@@ -338,35 +377,19 @@ export default function MarketReturn({ user, stock, getStockValue }) {
     );
   };
 
-  // Remove item from cart
   const removeFromCart = (barcode) => {
     setCart((prev) => prev.filter((item) => item.barcode !== barcode));
   };
 
-  // Submit all market returns at once
   const handleSubmit = async () => {
     if (cart.length === 0) return;
 
-    // Validate all market return quantities
-    // const hasInvalid = cart.some(
-    //   (item) => item.marketReturn <= 0 || item.marketReturn > item.openingStock
-    // );
-
-    // if (hasInvalid) {
-    //   toast.error(
-    //     "All items must have valid return quantity (greater than 0 and not exceeding current stock)"
-    //   );
-    //   return;
-    // }
-
     setIsSubmitting(true);
-
-    // Combine selected date with current time
     const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+    // const transaction_id = uuidv4();
 
     try {
       const requests = cart.map(async (item) => {
-        // Update stock for market returns
         await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
           barcode: item.barcode,
           outlet: user.outlet,
@@ -377,7 +400,6 @@ export default function MarketReturn({ user, stock, getStockValue }) {
             item.currentStockTP + item.marketReturn * item.editableTP,
         });
 
-        // Log transaction with selected date
         await axios.post("http://175.29.181.245:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
@@ -392,6 +414,7 @@ export default function MarketReturn({ user, stock, getStockValue }) {
           userID: user._id,
           dp: item.editableDP,
           tp: item.editableTP,
+          // transaction_id: transaction_id,
         });
       });
 
@@ -429,33 +452,51 @@ export default function MarketReturn({ user, stock, getStockValue }) {
       </div>
 
       {/* Import/Export Controls */}
-      <div className="flex gap-4 my-4">
-        <button
-          onClick={downloadDemoFile}
-          className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
-        >
-          <FaFileDownload /> Template
-        </button>
-        <input
-          id="import-file"
-          type="file"
-          accept=".xlsx, .xls, .csv"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <label
-          htmlFor="import-file"
-          className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
-        >
-          <FaFileImport /> Import
-        </label>
-        <button
-          onClick={handleBulkImport}
-          disabled={importLoading || !importFile}
-          className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
-        >
-          {importLoading ? "Processing..." : "Add To Cart"}
-        </button>
+      {isAdminPanel && (
+        <div className="flex gap-4 my-4">
+          <button
+            onClick={downloadDemoFile}
+            className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
+          >
+            <FaFileDownload /> Template
+          </button>
+          <input
+            id="import-file"
+            type="file"
+            accept=".xlsx, .xls, .csv"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <label
+            htmlFor="import-file"
+            className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
+          >
+            <FaFileImport /> Import
+          </label>
+          <button
+            onClick={handleBulkImport}
+            disabled={importLoading || !importFile}
+            className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
+          >
+            {importLoading ? "Processing..." : "Add To Cart"}
+          </button>
+        </div>
+      )}
+
+      {/* Total Quantity and Value */}
+      <div className="bg-white p-4 shadow rounded-lg mb-4">
+        <div className="flex flex-row-reverse justify-between">
+          <span className="text-lg font-bold">
+            Total (DP):{" "}
+            {cart
+              .reduce((sum, item) => sum + item.editableDP * item.marketReturn, 0)
+              .toFixed(2)}{" "}
+            BDT
+          </span>
+          <span className="text-lg font-bold">
+            Total Quantity: {cart.reduce((sum, item) => sum + item.marketReturn, 0)}
+          </span>
+        </div>
       </div>
 
       {/* Search Box */}
@@ -555,7 +596,6 @@ export default function MarketReturn({ user, stock, getStockValue }) {
                       }
                       className="w-full p-1 border rounded text-center"
                       min="0"
-                      max={item.openingStock}
                     />
                   </td>
                   <td className="p-2 text-center">
