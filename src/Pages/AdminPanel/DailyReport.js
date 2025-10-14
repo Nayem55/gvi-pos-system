@@ -480,7 +480,7 @@ const DailyReport = () => {
                 <table className="min-w-full border-collapse bg-white shadow-sm rounded-lg">
                   <thead className="bg-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Day</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">SR</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Product Name</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Quantity</th>
@@ -516,7 +516,7 @@ const DailyReport = () => {
                           {row.price}
                         </td>
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300">
+                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300 text-center">
                             {row.memo}
                           </td>
                         ) : null}
