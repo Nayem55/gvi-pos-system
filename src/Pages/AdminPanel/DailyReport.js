@@ -397,7 +397,7 @@ const DailyReport = () => {
                   disabled={startDate && endDate}
                 />
               </div>
-              <div className="flex flex-col">
+              {/* <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700 mb-1">Start Date</label>
                 <input
                   type="date"
@@ -420,7 +420,7 @@ const DailyReport = () => {
                   }}
                   className="border border-gray-400 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
-              </div>
+              </div> */}
               <button
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium"
                 onClick={() => {
@@ -516,7 +516,7 @@ const DailyReport = () => {
                           {row.price}
                         </td>
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
+                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300">
                             {row.memo}
                           </td>
                         ) : null}
