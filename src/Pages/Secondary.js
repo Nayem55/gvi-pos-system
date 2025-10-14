@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
 
 export default function Secondary({
   user,
@@ -14,6 +15,7 @@ export default function Secondary({
   target,
   totalTP,
   dataLoading,
+  allProducts,
 }) {
   const [search, setSearch] = useState("");
   const [searchType, setSearchType] = useState("name");
@@ -29,6 +31,7 @@ export default function Secondary({
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const navigate = useNavigate();
+  const isAdminPanel = !!allProducts;
 
   useEffect(() => {
     if (!user) {
@@ -75,7 +78,6 @@ export default function Secondary({
       return product.tp;
     }
   };
-
   const getCurrentDP = (product) => {
     const priceLabel = user.pricelabel;
     if (priceLabel) {
@@ -108,6 +110,7 @@ export default function Secondary({
         setSearchResults(response.data);
       } catch (error) {
         console.error("Error fetching search results:", error);
+        toast.error("Failed to search products");
       } finally {
         setIsLoading(false);
       }
@@ -118,14 +121,11 @@ export default function Secondary({
 
   const addToCart = async (product) => {
     try {
+      const encodedOutlet = encodeURIComponent(user.outlet);
       const stockResponse = await axios.get(
-        "http://175.29.181.245:5000/outlet-stock",
-        {
-          params: { barcode: product.barcode, outlet: user.outlet },
-        }
+        `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
-      console.log(stockResponse);
-      const outletStock = stockResponse.data.stock.currentStock;
+      const outletStock = stockResponse.data.stock.currentStock || 0;
 
       if (outletStock === 0) {
         toast.error(`${product.name} is out of stock!`);
@@ -178,128 +178,13 @@ export default function Secondary({
       }
     } catch (error) {
       console.error("Error fetching outlet stock:", error);
+      toast.error("Failed to fetch stock.");
     }
     setSearch("");
     setSearchResults([]);
   };
 
-  const updateQuantity = (id, value) => {
-    const newQuantity = parseInt(value) || 0;
-    setCart(
-      cart.map((item) =>
-        item._id === id
-          ? {
-              ...item,
-              pcs: Math.max(0, Math.min(newQuantity, item.stock)),
-              total:
-                Math.max(0, Math.min(newQuantity, item.stock)) *
-                item.editableTP,
-            }
-          : item
-      )
-    );
-  };
-
-  const removeFromCart = (id) => {
-    setCart(cart.filter((item) => item._id !== id));
-  };
-
-  const handlePriceChange = (id, field, value) => {
-    setCart(
-      cart.map((item) => {
-        if (item._id === id) {
-          const newValue = parseFloat(value) || 0;
-          return {
-            ...item,
-            [field]: newValue,
-            total: field === "editableTP" ? newValue * item.pcs : item.total,
-          };
-        }
-        return item;
-      })
-    );
-  };
-
-  const handleSubmit = async () => {
-    if (cart.length === 0) {
-      toast.error("No item selected");
-      return;
-    }
-    if (!menu || !route) {
-      toast.error("Pleas provide route and memo");
-      return;
-    }
-    try {
-      setIsSubmitting(true);
-
-      const saleEntry = {
-        user: user._id,
-        so: user.name,
-        asm: user.asm,
-        rsm: user.rsm,
-        som: user.som,
-        zone: user.zone,
-        outlet: user.outlet,
-        route: route,
-        memo: menu,
-        sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
-        total_tp: cart.reduce(
-          (sum, item) => sum + item.editableTP * item.pcs,
-          0
-        ),
-        total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
-        total_dp: cart.reduce(
-          (sum, item) => sum + item.editableDP * item.pcs,
-          0
-        ),
-        products: cart.map((item) => ({
-          product_name: item.name,
-          category: item.category,
-          brand: item.brand,
-          barcode: item.barcode,
-          quantity: item.pcs,
-          tp: item.editableTP * item.pcs,
-          mrp: item.mrp * item.pcs,
-          dp: item.editableDP * item.pcs,
-        })),
-      };
-
-      await axios.post("http://175.29.181.245:5000/add-sale-report", saleEntry);
-
-      const updatePromises = cart.map(async (item) => {
-        await axios.post("http://175.29.181.245:5000/stock-transactions", {
-          barcode: item.barcode,
-          outlet: user.outlet,
-          type: "secondary",
-          asm: user.asm,
-          rsm: user.rsm,
-          som: user.som,
-          zone: user.zone,
-          quantity: item.pcs,
-          date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
-          user: user.name,
-          userID: user._id,
-          dp: item.editableDP,
-          tp: item.editableTP,
-        });
-      });
-
-      await Promise.all(updatePromises);
-
-      const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
-      setStock((prevStock) => Math.max(0, prevStock - totalSold));
-
-      setCart([]);
-      toast.success("Sales report submitted");
-      getStockValue(user.outlet);
-    } catch (error) {
-      console.error("Error updating outlet stock:", error);
-      toast.error("Failed to submit sales report");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  // Excel Import Functions
   const handleFileUpload = (e) => {
     const uploadedFile = e.target.files[0];
     if (!uploadedFile) return;
@@ -333,34 +218,49 @@ export default function Secondary({
     try {
       for (const row of data) {
         try {
+          // Skip empty rows or instruction rows
           if (!row["Barcode"] && !row["Product Name"]) continue;
 
-          const productResponse = await axios.get(
-            "http://175.29.181.245:5000/search-product",
-            {
-              params: {
-                search: row["Barcode"] || row["Product Name"],
-                type: "barcode",
-              },
-            }
-          );
+          // Skip rows with quantity 0
+          const quantity = parseInt(row["Quantity"] || 0);
+          if (quantity <= 0) continue;
 
-          const product = productResponse.data[0];
+          let product;
+          if (isAdminPanel) {
+            // Find product in allProducts for admin panel
+            product = allProducts.find(
+              (p) =>
+                p.barcode === row["Barcode"] || p.name === row["Product Name"]
+            );
+          } else {
+            // API call for non-admin
+            const productResponse = await axios.get(
+              "http://175.29.181.245:5000/search-product",
+              {
+                params: {
+                  search: row["Barcode"] || row["Product Name"],
+                  type: "barcode",
+                },
+              }
+            );
+            product = productResponse.data[0];
+          }
+
           if (!product) {
             errorCount++;
             continue;
           }
 
+          const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            "http://175.29.181.245:5000/outlet-stock",
-            { params: { barcode: product.barcode, outlet: user.outlet } }
+            `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
-          const outletStock = stockRes.data.stock.currentStock || 0;
+          const outletStock = stockRes.data?.stock?.currentStock ?? 0;
           const currentTP = row["TP"] || getCurrentTP(product);
           const currentDP = row["DP"] || getCurrentDP(product);
-          const quantity = parseInt(row["Quantity"] || 0);
 
+          // Validate quantity doesn't exceed stock
           const validQuantity = Math.min(quantity, outletStock);
 
           if (validQuantity <= 0) {
@@ -443,42 +343,202 @@ export default function Secondary({
     }
   };
 
-  const downloadDemoFile = () => {
-    const demoData = [
-      {
-        Barcode: "123456789",
-        "Product Name": "Sample Product",
-        Quantity: "5",
-        DP: "100.00",
-        TP: "120.00",
-      },
-      {
-        Barcode: "987654321",
-        "Product Name": "Another Product",
-        Quantity: "3",
-        DP: "150.00",
-        TP: "180.00",
-      },
-    ];
+  const downloadDemoFile = async () => {
+    try {
+      let productsToExport = [];
 
-    const worksheet = XLSX.utils.json_to_sheet(demoData);
+      if (isAdminPanel) {
+        // Use allProducts in admin panel
+        productsToExport = allProducts.map((product) => ({
+          Barcode: product.barcode,
+          "Product Name": product.name,
+          Quantity: "0",
+          DP: product.dp,
+          TP: product.tp,
+        }));
+      } else {
+        // Fallback to sample data in non-admin
+        productsToExport = [
+          {
+            Barcode: "123456789",
+            "Product Name": "Sample Product",
+            Quantity: "0",
+            DP: "100.00",
+            TP: "120.00",
+          },
+          {
+            Barcode: "987654321",
+            "Product Name": "Another Product",
+            Quantity: "0",
+            DP: "150.00",
+            TP: "180.00",
+          },
+        ];
+      }
 
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
+      const worksheet = XLSX.utils.json_to_sheet(productsToExport);
+
+      // Add instructions
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
         [
-          "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          [
+            "IMPORTANT: Maintain this exact format. Only edit the values (not column names)",
+          ],
+          ["1. Set 'Quantity' to desired value (0 will be ignored)"],
+          ["2. Quantity cannot exceed current stock"],
+          ["3. DP/TP are optional - will use current prices if omitted"],
         ],
-        ["Barcode and Product Name must match existing products"],
-        ["Quantity cannot exceed current stock"],
-        ["DP/TP are optional - will use current prices if omitted"],
-      ],
-      { origin: -1 }
-    );
+        { origin: -1 }
+      );
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Secondary Sales");
-    XLSX.writeFile(workbook, "Secondary_Sales_Template.xlsx");
+      // Auto-size columns
+      const wscols = [
+        { wch: 15 }, // Barcode
+        { wch: 40 }, // Product Name
+        { wch: 18 }, // Quantity
+        { wch: 10 }, // DP
+        { wch: 10 }, // TP
+      ];
+      worksheet["!cols"] = wscols;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Secondary Sales");
+      XLSX.writeFile(workbook, "Secondary_Sales_Template.xlsx");
+    } catch (error) {
+      console.error("Error generating template:", error);
+      toast.error("Failed to generate template");
+    }
+  };
+
+  const updateQuantity = (id, value) => {
+    const newQuantity = parseInt(value) || 0;
+    setCart(
+      cart.map((item) =>
+        item._id === id
+          ? {
+              ...item,
+              pcs: Math.max(0, Math.min(newQuantity, item.stock)),
+              total:
+                Math.max(0, Math.min(newQuantity, item.stock)) *
+                item.editableTP,
+            }
+          : item
+      )
+    );
+  };
+
+  const removeFromCart = (id) => {
+    setCart(cart.filter((item) => item._id !== id));
+  };
+
+  const handlePriceChange = (id, field, value) => {
+    setCart(
+      cart.map((item) => {
+        if (item._id === id) {
+          const newValue = parseFloat(value) || 0;
+          return {
+            ...item,
+            [field]: newValue,
+            total: field === "editableTP" ? newValue * item.pcs : item.total,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (cart.length === 0) {
+      toast.error("No item selected");
+      return;
+    }
+    if (!menu || !route) {
+      toast.error("Please provide route and memo");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      const transaction_id = uuidv4(); // Generate a unique transaction ID
+
+      const saleEntry = {
+        user: user._id,
+        so: user.name,
+        asm: user.asm,
+        rsm: user.rsm,
+        som: user.som,
+        zone: user.zone,
+        outlet: user.outlet,
+        route: route,
+        memo: menu,
+        sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+        total_tp: cart.reduce(
+          (sum, item) => sum + item.editableTP * item.pcs,
+          0
+        ),
+        total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
+        total_dp: cart.reduce(
+          (sum, item) => sum + item.editableDP * item.pcs,
+          0
+        ),
+        products: cart.map((item) => ({
+          product_name: item.name,
+          category: item.category,
+          brand: item.brand,
+          barcode: item.barcode,
+          quantity: item.pcs,
+          tp: item.editableTP * item.pcs,
+          mrp: item.mrp * item.pcs,
+          dp: item.editableDP * item.pcs,
+        })),
+        transaction_id: transaction_id, // Add unique transaction ID
+      };
+
+      await axios.post("http://175.29.181.245:5000/add-sale-report", saleEntry);
+
+      const updatePromises = cart.map(async (item) => {
+        await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
+          barcode: item.barcode,
+          outlet: user.outlet,
+          newStock: item.stock - item.pcs,
+          currentStockValueDP: item.currentDP * (item.stock - item.pcs),
+          currentStockValueTP: item.currentTP * (item.stock - item.pcs),
+        });
+
+        await axios.post("http://175.29.181.245:5000/stock-transactions", {
+          barcode: item.barcode,
+          outlet: user.outlet,
+          type: "secondary",
+          asm: user.asm,
+          rsm: user.rsm,
+          som: user.som,
+          zone: user.zone,
+          quantity: item.pcs,
+          date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+          user: user.name,
+          userID: user._id,
+          dp: item.editableDP,
+          tp: item.editableTP,
+          transaction_id: transaction_id, // Add unique transaction ID
+        });
+      });
+
+      await Promise.all(updatePromises);
+
+      const totalSold = cart.reduce((sum, item) => sum + item.pcs, 0);
+      setStock((prevStock) => Math.max(0, prevStock - totalSold));
+
+      setCart([]);
+      setRoute("");
+      setMenu("");
+      toast.success("Sales report submitted");
+      getStockValue(user.outlet);
+    } catch (error) {
+      console.error("Error updating outlet stock:", error);
+      toast.error("Failed to submit sales report");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -637,36 +697,36 @@ export default function Secondary({
       </div>
 
       {/* Import/Export Controls */}
-      <div className="flex gap-4 my-4">
-        <button
-          onClick={downloadDemoFile}
-          className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
-        >
-          <FaFileDownload /> Template
-        </button>
-        <input
-          id="import-file"
-          type="file"
-          accept=".xlsx,
-
- .xls, .csv"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <label
-          htmlFor="import-file"
-          className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
-        >
-          <FaFileImport /> Import
-        </label>
-        <button
-          onClick={handleBulkImport}
-          disabled={importLoading || !importFile}
-          className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
-        >
-          {importLoading ? "Processing..." : "Add To Cart"}
-        </button>
-      </div>
+      {isAdminPanel && (
+        <div className="flex gap-4 my-4">
+          <button
+            onClick={downloadDemoFile}
+            className="bg-blue-600 hover:bg-blue-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm"
+          >
+            <FaFileDownload /> Template
+          </button>
+          <input
+            id="import-file"
+            type="file"
+            accept=".xlsx, .xls, .csv"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <label
+            htmlFor="import-file"
+            className="bg-green-600 hover:bg-green-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 cursor-pointer text-sm w-full"
+          >
+            <FaFileImport /> Import
+          </label>
+          <button
+            onClick={handleBulkImport}
+            disabled={importLoading || !importFile}
+            className="bg-purple-600 hover:bg-purple-700 w-[200px] font-bold text-white px-3 py-2 rounded flex items-center gap-1 text-sm disabled:bg-gray-400"
+          >
+            {importLoading ? "Processing..." : "Add To Cart"}
+          </button>
+        </div>
+      )}
 
       {/* Route & Menu Inputs */}
       <div className="flex justify-between w-[100%] gap-4">
@@ -748,7 +808,6 @@ export default function Secondary({
                   <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
                     {item.name} {item.stock ? `(${item.stock})` : ""}
                   </td>
-
                   <td className="p-2 text-center">
                     <input
                       type="number"
@@ -758,7 +817,6 @@ export default function Secondary({
                       className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[60px]"
                     />
                   </td>
-
                   <td className="p-1 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <input
@@ -787,11 +845,9 @@ export default function Secondary({
                       />
                     </div>
                   </td>
-
                   <td className="p-2 text-center text-xs">
                     {(item.editableTP * item.pcs).toFixed(2)}
                   </td>
-
                   <td className="text-center">
                     <button onClick={() => removeFromCart(item._id)}>
                       <svg
@@ -824,7 +880,7 @@ export default function Secondary({
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px]tonne h-[40px]"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center w-[140px] h-[40px]"
         >
           {isSubmitting ? (
             <svg

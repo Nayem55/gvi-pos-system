@@ -20,6 +20,8 @@ const AlterUsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedZone, setSelectedZone] = useState("");
   const [dropdownData, setDropdownData] = useState({
     roles: ["SO", "ASM", "RSM", "SOM", "SELF", "COMMISSION", "super admin"],
     pricelabel: [],
@@ -29,7 +31,7 @@ const AlterUsersPage = () => {
       "DHAKA-02-ZONE-01",
       "DHAKA-02-ZONE-03",
       "DHAKA-03-ZONE-03",
-      "KHULNA-ZONE-01",
+      "KHULNA-ZONE-01 ",
       "COMILLA-ZONE-03",
       "CHITTAGONG-ZONE-03",
       "RANGPUR-ZONE-01",
@@ -90,9 +92,6 @@ const AlterUsersPage = () => {
       const groups = await axios.get(
         "http://175.29.181.245:5000/get-user-field-values?field=group"
       );
-      // const zones = await axios.get(
-      //   "http://175.29.181.245:5000/get-user-field-values?field=zone"
-      // );
       const outlets = await axios.get("http://175.29.181.245:5000/get-outlets");
       const asms = await axios.get(
         "http://175.29.181.245:5000/get-user-field-values?field=asm"
@@ -124,7 +123,6 @@ const AlterUsersPage = () => {
       setDropdownData((prev) => ({
         ...prev,
         groups: groups.data,
-        // zones: zones.data,
         outlets: outlets.data,
         asms: asms.data,
         rsms: uniqueRsms,
@@ -193,6 +191,15 @@ const AlterUsersPage = () => {
     }
   };
 
+  // Filter users based on search term and selected zone
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = user.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesZone = selectedZone ? user.zone === selectedZone : true;
+    return matchesSearch && matchesZone;
+  });
+
   // Helper component for dropdown fields
   const DropdownField = ({ label, field, options, disabled = false }) => (
     <div className="mb-4">
@@ -201,8 +208,12 @@ const AlterUsersPage = () => {
       </label>
       <div className="relative">
         <select
-          value={editingUser[field] || ""}
-          onChange={(e) => handleInputChange(e, field)}
+          value={editingUser ? editingUser[field] || "" : selectedZone}
+          onChange={(e) =>
+            editingUser
+              ? handleInputChange(e, field)
+              : setSelectedZone(e.target.value)
+          }
           className={`w-full p-2 border rounded-md ${
             disabled ? "bg-gray-100" : "bg-white"
           } text-gray-700 appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
@@ -247,12 +258,31 @@ const AlterUsersPage = () => {
             <h2 className="text-2xl font-bold text-gray-800">Manage Users</h2>
           </div>
 
+          {/* Search and Filter Controls */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Search by Name
+              </label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Enter user name..."
+                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="w-full sm:w-60">
+              <DropdownField label="Zone Filter" field="zone" options={dropdownData.zones} />
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg shadow-md overflow-x-auto">
             {loading && !editingUser ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
               </div>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No users found</p>
             ) : (
               <table className="w-full border-collapse">
@@ -268,7 +298,7 @@ const AlterUsersPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user._id} className="hover:bg-gray-50">
                       <td className="p-3 border-b">{user.name}</td>
                       <td className="p-3 border-b">{user.number}</td>
