@@ -454,12 +454,11 @@ export default function Secondary({
       return;
     }
     if (!menu || !route) {
-      toast.error("Please provide route and memo");
+      toast.error("Pleas provide route and memo");
       return;
     }
     try {
       setIsSubmitting(true);
-      const transaction_id = uuidv4(); // Generate a unique transaction ID
 
       const saleEntry = {
         user: user._id,
@@ -491,21 +490,12 @@ export default function Secondary({
           mrp: item.mrp * item.pcs,
           dp: item.editableDP * item.pcs,
         })),
-        transaction_id: transaction_id, // Add unique transaction ID
       };
 
-      await axios.post("http://175.29.181.245:5000/add-sale-report", saleEntry);
+      await axios.post("http://175.29.181.245:9001/add-sale-report", saleEntry);
 
       const updatePromises = cart.map(async (item) => {
-        await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
-          barcode: item.barcode,
-          outlet: user.outlet,
-          newStock: item.stock - item.pcs,
-          currentStockValueDP: item.currentDP * (item.stock - item.pcs),
-          currentStockValueTP: item.currentTP * (item.stock - item.pcs),
-        });
-
-        await axios.post("http://175.29.181.245:5000/stock-transactions", {
+        await axios.post("http://175.29.181.245:9001/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "secondary",
@@ -519,7 +509,6 @@ export default function Secondary({
           userID: user._id,
           dp: item.editableDP,
           tp: item.editableTP,
-          transaction_id: transaction_id, // Add unique transaction ID
         });
       });
 
@@ -529,8 +518,6 @@ export default function Secondary({
       setStock((prevStock) => Math.max(0, prevStock - totalSold));
 
       setCart([]);
-      setRoute("");
-      setMenu("");
       toast.success("Sales report submitted");
       getStockValue(user.outlet);
     } catch (error) {
