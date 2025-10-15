@@ -467,7 +467,7 @@ export default function Secondary({
         `http://175.29.181.245:5000/check-sale-report`,
         {
           params: {
-            outlet: user.outlet,
+            user: user._id,
             sale_date: formattedDate,
           },
         }
