@@ -454,11 +454,29 @@ export default function Secondary({
       return;
     }
     if (!menu || !route) {
-      toast.error("Pleas provide route and memo");
+      toast.error("Please provide memo and route");
       return;
     }
+
     try {
       setIsSubmitting(true);
+
+      // Check if a report already exists for the same date and outlet
+      const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+      const checkResponse = await axios.get(
+        `http://175.29.181.245:5000/check-sale-report`,
+        {
+          params: {
+            outlet: user.outlet,
+            sale_date: formattedDate,
+          },
+        }
+      );
+
+      if (checkResponse.data.exists) {
+        toast.error("A sales report already exists for this date");
+        return;
+      }
 
       const saleEntry = {
         user: user._id,
@@ -470,7 +488,7 @@ export default function Secondary({
         outlet: user.outlet,
         route: route,
         memo: menu,
-        sale_date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+        sale_date: formattedDate,
         total_tp: cart.reduce(
           (sum, item) => sum + item.editableTP * item.pcs,
           0
@@ -492,10 +510,10 @@ export default function Secondary({
         })),
       };
 
-      await axios.post("http://175.29.181.245:9001/add-sale-report", saleEntry);
+      await axios.post("http://175.29.181.245:5000/add-sale-report", saleEntry);
 
       const updatePromises = cart.map(async (item) => {
-        await axios.post("http://175.29.181.245:9001/stock-transactions", {
+        await axios.post("http://175.29.181.245:5000/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "secondary",
@@ -504,7 +522,7 @@ export default function Secondary({
           som: user.som,
           zone: user.zone,
           quantity: item.pcs,
-          date: dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss"),
+          date: formattedDate,
           user: user.name,
           userID: user._id,
           dp: item.editableDP,
@@ -522,7 +540,9 @@ export default function Secondary({
       getStockValue(user.outlet);
     } catch (error) {
       console.error("Error updating outlet stock:", error);
-      toast.error("Failed to submit sales report");
+      toast.error(
+        error.response?.data?.message || "Failed to submit sales report"
+      );
     } finally {
       setIsSubmitting(false);
     }
