@@ -89,7 +89,9 @@ const StockMovementReport = () => {
       const params = {
         outlet: selectedOutlet,
         startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
-        endDate: dayjs(dateRange.end).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        endDate: dayjs(dateRange.end)
+          .endOf("day")
+          .format("YYYY-MM-DD HH:mm:ss"),
       };
 
       const response = await axios.get(
@@ -108,17 +110,19 @@ const StockMovementReport = () => {
           );
         });
 
-        const uniqueCategories = [...new Set(
-          filteredData.map((item) => item.category || "Uncategorized")
-        )].sort();
+        const uniqueCategories = [
+          ...new Set(
+            filteredData.map((item) => item.category || "Uncategorized")
+          ),
+        ].sort();
         setCategories([
           { value: "all", label: "All Categories" },
           ...uniqueCategories.map((c) => ({ value: c, label: c })),
         ]);
 
-        const uniqueBrands = [...new Set(
-          filteredData.map((item) => item.brand || "Unbranded")
-        )].sort();
+        const uniqueBrands = [
+          ...new Set(filteredData.map((item) => item.brand || "Unbranded")),
+        ].sort();
         setBrands([
           { value: "all", label: "All Brands" },
           ...uniqueBrands.map((b) => ({ value: b, label: b })),
@@ -154,11 +158,13 @@ const StockMovementReport = () => {
     if (selectedBrand === "all") {
       return categories;
     }
-    const relevantCats = [...new Set(
-      reportData
-        .filter((item) => item.brand === selectedBrand)
-        .map((item) => item.category || "Uncategorized")
-    )].sort();
+    const relevantCats = [
+      ...new Set(
+        reportData
+          .filter((item) => item.brand === selectedBrand)
+          .map((item) => item.category || "Uncategorized")
+      ),
+    ].sort();
     return [
       { value: "all", label: "All Categories" },
       ...relevantCats.map((c) => ({ value: c, label: c })),
@@ -169,11 +175,13 @@ const StockMovementReport = () => {
     if (selectedCategory === "all") {
       return brands;
     }
-    const relevantBrands = [...new Set(
-      reportData
-        .filter((item) => item.category === selectedCategory)
-        .map((item) => item.brand || "Unbranded")
-    )].sort();
+    const relevantBrands = [
+      ...new Set(
+        reportData
+          .filter((item) => item.category === selectedCategory)
+          .map((item) => item.brand || "Unbranded")
+      ),
+    ].sort();
     return [
       { value: "all", label: "All Brands" },
       ...relevantBrands.map((b) => ({ value: b, label: b })),
@@ -194,7 +202,11 @@ const StockMovementReport = () => {
     }
   }, [filteredBrands]);
 
-  const fetchDetails = async (type, productBarcode = null, context = "total") => {
+  const fetchDetails = async (
+    type,
+    productBarcode = null,
+    context = "total"
+  ) => {
     setLoadingDetails(true);
     setModalData(null);
     setModalType(type.charAt(0).toUpperCase() + type.slice(1)); // Capitalize for display
@@ -211,7 +223,9 @@ const StockMovementReport = () => {
         const params = {
           outlet: selectedOutlet,
           startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
-          endDate: dayjs(dateRange.end).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+          endDate: dayjs(dateRange.end)
+            .endOf("day")
+            .format("YYYY-MM-DD HH:mm:ss"),
           type: type,
         };
 
@@ -307,7 +321,9 @@ const StockMovementReport = () => {
       const params = {
         outlet,
         startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
-        endDate: dayjs(dateRange.end).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        endDate: dayjs(dateRange.end)
+          .endOf("day")
+          .format("YYYY-MM-DD HH:mm:ss"),
       };
 
       const response = await axios.get(
@@ -416,16 +432,14 @@ const StockMovementReport = () => {
         item.primary +
         item.marketReturn -
         item.secondary -
-        item.officeReturn ||
-        0,
+        item.officeReturn || 0,
       (
         item.openingValueDP +
         item.primaryValueDP +
         item.marketReturnValueDP -
         item.secondaryValueDP -
         item.officeReturnValueDP
-      )?.toFixed(2) ||
-        "0.00",
+      )?.toFixed(2) || "0.00",
     ]);
 
     const pdfTotals = calculateTotals(data);
@@ -505,23 +519,21 @@ const StockMovementReport = () => {
         acc.officeReturnValue += item.officeReturnValueDP || 0;
         acc.secondaryQty += item.secondary || 0;
         acc.secondaryValue += item.secondaryValueDP || 0;
-        acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
+        acc.actualSecondaryQty += item.secondary - item.marketReturn || 0;
         acc.actualSecondaryValue +=
-          (item.secondaryValueDP - item.marketReturnValueDP) || 0;
+          item.secondaryValueDP - item.marketReturnValueDP || 0;
         acc.closingQty +=
-          (item.openingStock +
+          item.openingStock +
             item.primary +
             item.marketReturn -
             item.secondary -
-            item.officeReturn) ||
-          0;
+            item.officeReturn || 0;
         acc.closingValue +=
-          (item.openingValueDP +
+          item.openingValueDP +
             item.primaryValueDP +
             item.marketReturnValueDP -
             item.secondaryValueDP -
-            item.officeReturnValueDP) ||
-          0;
+            item.officeReturnValueDP || 0;
         return acc;
       },
       {
@@ -760,16 +772,14 @@ const StockMovementReport = () => {
           item.primary +
           item.marketReturn -
           item.secondary -
-          item.officeReturn ||
-          0,
+          item.officeReturn || 0,
         (
           item.openingValueDP +
           item.primaryValueDP +
           item.marketReturnValueDP -
           item.secondaryValueDP -
           item.officeReturnValueDP
-        )?.toFixed(2) ||
-          "0.00",
+        )?.toFixed(2) || "0.00",
       ]);
 
       if (totals) {
@@ -836,9 +846,8 @@ const StockMovementReport = () => {
 
       const fileName = `Stock_Report_${selectedOutlet || "all"}_${
         dayjs(dateRange.start).format("YYYY-MM-DD") +
-        " to " +
-        dayjs(dateRange.end).format("YYYY-MM-DD") ||
-        dayjs().format("MMMM")
+          " to " +
+          dayjs(dateRange.end).format("YYYY-MM-DD") || dayjs().format("MMMM")
       }_${dayjs().format("YYYYMMDD")}.pdf`;
       doc.save(fileName);
     } catch (error) {
@@ -863,23 +872,21 @@ const StockMovementReport = () => {
         acc.officeReturnValue += item.officeReturnValueDP || 0;
         acc.secondaryQty += item.secondary || 0;
         acc.secondaryValue += item.secondaryValueDP || 0;
-        acc.actualSecondaryQty += (item.secondary - item.marketReturn) || 0;
+        acc.actualSecondaryQty += item.secondary - item.marketReturn || 0;
         acc.actualSecondaryValue +=
-          (item.secondaryValueDP - item.marketReturnValueDP) || 0;
+          item.secondaryValueDP - item.marketReturnValueDP || 0;
         acc.closingQty +=
-          (item.openingStock +
+          item.openingStock +
             item.primary +
             item.marketReturn -
             item.secondary -
-            item.officeReturn) ||
-          0;
+            item.officeReturn || 0;
         acc.closingValue +=
-          (item.openingValueDP +
+          item.openingValueDP +
             item.primaryValueDP +
             item.marketReturnValueDP -
             item.secondaryValueDP -
-            item.officeReturnValueDP) ||
-          0;
+            item.officeReturnValueDP || 0;
       }
       return acc;
     },
@@ -1068,13 +1075,15 @@ const StockMovementReport = () => {
                   >
                     Export to PDF
                   </button>
-                  <button
-                    onClick={downloadAllPDFs}
-                    disabled={downloadingAll || outlets.length === 0}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {downloadingAll ? "Downloading..." : "Download All PDFs"}
-                  </button>
+                  {user.role === "super admin" && (
+                    <button
+                      onClick={downloadAllPDFs}
+                      disabled={downloadingAll || outlets.length === 0}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {downloadingAll ? "Downloading..." : "Download All PDFs"}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1111,11 +1120,13 @@ const StockMovementReport = () => {
                   ))}
                 </div>
               )}
-              {showOutletDropdown && outletSearch && filteredOutlets.length === 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
-                  No outlets found
-                </div>
-              )}
+              {showOutletDropdown &&
+                outletSearch &&
+                filteredOutlets.length === 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                    No outlets found
+                  </div>
+                )}
             </div>
           )}
           <SearchableSelect
@@ -1183,7 +1194,10 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-green-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Primary Stock (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-green-700 cursor-pointer hover:underline" onClick={() => fetchDetails("primary", null, "summary")}>
+                <p
+                  className="text-2xl font-semibold text-green-700 cursor-pointer hover:underline"
+                  onClick={() => fetchDetails("primary", null, "summary")}
+                >
                   {totals.primaryValue?.toFixed(2)}
                 </p>
                 <button
@@ -1191,9 +1205,24 @@ const StockMovementReport = () => {
                   className="text-xs text-green-600 hover:text-green-800 ml-2"
                   title="View Details"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1201,7 +1230,10 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-blue-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Secondary Sales (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-blue-700 cursor-pointer hover:underline" onClick={() => fetchDetails("secondary", null, "summary")}>
+                <p
+                  className="text-2xl font-semibold text-blue-700 cursor-pointer hover:underline"
+                  onClick={() => fetchDetails("secondary", null, "summary")}
+                >
                   {totals.secondaryValue?.toFixed(2)}
                 </p>
                 <button
@@ -1209,9 +1241,24 @@ const StockMovementReport = () => {
                   className="text-xs text-blue-600 hover:text-blue-800 ml-2"
                   title="View Details"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1219,7 +1266,10 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-red-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Market Returns (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-red-700 cursor-pointer hover:underline" onClick={() => fetchDetails("market return", null, "summary")}>
+                <p
+                  className="text-2xl font-semibold text-red-700 cursor-pointer hover:underline"
+                  onClick={() => fetchDetails("market return", null, "summary")}
+                >
                   {totals.marketReturnValue?.toFixed(2)}
                 </p>
                 <button
@@ -1227,9 +1277,24 @@ const StockMovementReport = () => {
                   className="text-xs text-red-600 hover:text-red-800 ml-2"
                   title="View Details"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1237,7 +1302,10 @@ const StockMovementReport = () => {
             <div className="bg-white border-l-4 border-yellow-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Office Returns (DP)</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold text-yellow-700 cursor-pointer hover:underline" onClick={() => fetchDetails("office return", null, "summary")}>
+                <p
+                  className="text-2xl font-semibold text-yellow-700 cursor-pointer hover:underline"
+                  onClick={() => fetchDetails("office return", null, "summary")}
+                >
                   {totals.officeReturnValue?.toFixed(2)}
                 </p>
                 <button
@@ -1245,9 +1313,24 @@ const StockMovementReport = () => {
                   className="text-xs text-yellow-600 hover:text-yellow-800 ml-2"
                   title="View Details"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1293,7 +1376,8 @@ const StockMovementReport = () => {
                   <th colSpan="18" className="bg-gray-200 px-4 py-3 text-left">
                     Period: {dayjs(dateRange.start).format("DD-MM-YY")} to{" "}
                     {dayjs(dateRange.end).format("DD-MM-YY")}
-                    {selectedCategory !== "all" && ` | Category: ${selectedCategory}`}
+                    {selectedCategory !== "all" &&
+                      ` | Category: ${selectedCategory}`}
                     {selectedBrand !== "all" && ` | Brand: ${selectedBrand}`}
                   </th>
                 </tr>
@@ -1383,35 +1467,57 @@ const StockMovementReport = () => {
                     <td className="border p-2 text-right">
                       {item.openingValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails("primary", item.barcode, "product")}>
+                    <td
+                      className="border p-2 text-right cursor-pointer text-green-600 hover:underline"
+                      onClick={() =>
+                        fetchDetails("primary", item.barcode, "product")
+                      }
+                    >
                       {item.primary} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.primaryValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails("market return", item.barcode, "product")}>
+                    <td
+                      className="border p-2 text-right cursor-pointer text-red-600 hover:underline"
+                      onClick={() =>
+                        fetchDetails("market return", item.barcode, "product")
+                      }
+                    >
                       {item.marketReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.marketReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails("office return", item.barcode, "product")}>
+                    <td
+                      className="border p-2 text-right cursor-pointer text-yellow-600 hover:underline"
+                      onClick={() =>
+                        fetchDetails("office return", item.barcode, "product")
+                      }
+                    >
                       {item.officeReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.officeReturnValueDP?.toFixed(2)}
                     </td>
-                    <td className="border p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails("secondary", item.barcode, "product")}>
+                    <td
+                      className="border p-2 text-right cursor-pointer text-blue-600 hover:underline"
+                      onClick={() =>
+                        fetchDetails("secondary", item.barcode, "product")
+                      }
+                    >
                       {item.secondary} pcs
                     </td>
                     <td className="border p-2 text-right">
                       {item.secondaryValueDP?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
-                      {(item.secondary - item.marketReturn)} pcs
+                      {item.secondary - item.marketReturn} pcs
                     </td>
                     <td className="border p-2 text-right">
-                      {(item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2)}
+                      {(
+                        item.secondaryValueDP - item.marketReturnValueDP
+                      )?.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">
                       {item.openingStock +
@@ -1442,31 +1548,45 @@ const StockMovementReport = () => {
                   <td className="p-2 text-right">
                     {totals.openingValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-green-600 hover:underline" onClick={() => fetchDetails("primary", null, "total")}>
+                  <td
+                    className="p-2 text-right cursor-pointer text-green-600 hover:underline"
+                    onClick={() => fetchDetails("primary", null, "total")}
+                  >
                     {totals.primaryQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.primaryValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-red-600 hover:underline" onClick={() => fetchDetails("market return", null, "total")}>
+                  <td
+                    className="p-2 text-right cursor-pointer text-red-600 hover:underline"
+                    onClick={() => fetchDetails("market return", null, "total")}
+                  >
                     {totals.marketReturnQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.marketReturnValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-yellow-600 hover:underline" onClick={() => fetchDetails("office return", null, "total")}>
+                  <td
+                    className="p-2 text-right cursor-pointer text-yellow-600 hover:underline"
+                    onClick={() => fetchDetails("office return", null, "total")}
+                  >
                     {totals.officeReturnQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.officeReturnValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right cursor-pointer text-blue-600 hover:underline" onClick={() => fetchDetails("secondary", null, "total")}>
+                  <td
+                    className="p-2 text-right cursor-pointer text-blue-600 hover:underline"
+                    onClick={() => fetchDetails("secondary", null, "total")}
+                  >
                     {totals.secondaryQty}
                   </td>
                   <td className="p-2 text-right">
                     {totals.secondaryValue.toFixed(2)}
                   </td>
-                  <td className="p-2 text-right">{totals.actualSecondaryQty}</td>
+                  <td className="p-2 text-right">
+                    {totals.actualSecondaryQty}
+                  </td>
                   <td className="p-2 text-right">
                     {totals.actualSecondaryValue.toFixed(2)}
                   </td>
@@ -1503,7 +1623,9 @@ const StockMovementReport = () => {
                 <div>
                   <h3 className="text-2xl font-bold">{getModalTitle()}</h3>
                   <p className="text-blue-100 mt-1">
-                    {selectedOutlet} | {dayjs(dateRange.start).format("DD-MM-YYYY")} to {dayjs(dateRange.end).format("DD-MM-YYYY")}
+                    {selectedOutlet} |{" "}
+                    {dayjs(dateRange.start).format("DD-MM-YYYY")} to{" "}
+                    {dayjs(dateRange.end).format("DD-MM-YYYY")}
                   </p>
                 </div>
                 <button
@@ -1515,8 +1637,18 @@ const StockMovementReport = () => {
                   className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
                   title="Close"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1528,7 +1660,9 @@ const StockMovementReport = () => {
                 <div className="flex justify-center py-8">
                   <div className="flex flex-col items-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                    <p className="mt-4 text-gray-600">Loading transaction details...</p>
+                    <p className="mt-4 text-gray-600">
+                      Loading transaction details...
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -1541,11 +1675,16 @@ const StockMovementReport = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div className="bg-gray-50 p-3 rounded">
                           <p className="text-sm text-gray-600">Barcode</p>
-                          <p className="font-medium">{modalData.products[0]?.barcode}</p>
+                          <p className="font-medium">
+                            {modalData.products[0]?.barcode}
+                          </p>
                         </div>
                         <div className="bg-gray-50 p-3 rounded">
                           <p className="text-sm text-gray-600">DP Price</p>
-                          <p className="font-medium">{modalData.products[0]?.dpPrice?.toFixed(2) || "N/A"}</p>
+                          <p className="font-medium">
+                            {modalData.products[0]?.dpPrice?.toFixed(2) ||
+                              "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1671,8 +1810,8 @@ const StockMovementReport = () => {
                   )}
                   {modalContext === "product" && (
                     <>
-                      Showing {modalType.toLowerCase()} transactions for specific
-                      product only
+                      Showing {modalType.toLowerCase()} transactions for
+                      specific product only
                     </>
                   )}
                 </div>
@@ -1691,24 +1830,37 @@ const StockMovementReport = () => {
                     <button
                       onClick={() => {
                         // Export modal data to Excel
-                        const exportData = Object.keys(modalData).map((date) => {
-                          const transactions = modalData[date];
-                          return transactions.map((t) => [
-                            dayjs(date).format("DD-MM-YYYY"),
-                            dayjs(t.date).format("HH:mm:ss"),
-                            t.productName,
-                            t.quantity,
-                            t.valueDP?.toFixed(2),
-                            t.valueTP?.toFixed(2) || "N/A",
-                          ]);
-                        }).flat();
+                        const exportData = Object.keys(modalData)
+                          .map((date) => {
+                            const transactions = modalData[date];
+                            return transactions.map((t) => [
+                              dayjs(date).format("DD-MM-YYYY"),
+                              dayjs(t.date).format("HH:mm:ss"),
+                              t.productName,
+                              t.quantity,
+                              t.valueDP?.toFixed(2),
+                              t.valueTP?.toFixed(2) || "N/A",
+                            ]);
+                          })
+                          .flat();
 
                         const wb = XLSX.utils.book_new();
                         const ws = XLSX.utils.aoa_to_sheet([
-                          ["Date", "Time", "Product", "Quantity", "DP Value", "TP Value"],
+                          [
+                            "Date",
+                            "Time",
+                            "Product",
+                            "Quantity",
+                            "DP Value",
+                            "TP Value",
+                          ],
                           ...exportData,
                         ]);
-                        XLSX.utils.book_append_sheet(wb, ws, `${modalType} Details`);
+                        XLSX.utils.book_append_sheet(
+                          wb,
+                          ws,
+                          `${modalType} Details`
+                        );
                         XLSX.writeFile(
                           wb,
                           `${modalType}_${selectedOutlet}_${dateRange.start}.xlsx`
