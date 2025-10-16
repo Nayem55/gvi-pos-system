@@ -636,7 +636,7 @@ const DailyReport = () => {
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.dp / product.quantity).toFixed(2)
+                                    ? (product.dp / product.quantity)
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -657,7 +657,7 @@ const DailyReport = () => {
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.tp / product.quantity).toFixed(2)
+                                    ? (product.tp / product.quantity)
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -678,7 +678,7 @@ const DailyReport = () => {
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.mrp / product.quantity).toFixed(2)
+                                    ? (product.mrp / product.quantity)
                                     : 0
                                 }
                                 onChange={(e) =>
