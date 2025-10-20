@@ -253,7 +253,7 @@ export default function Secondary({
 
           const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+            `http://175.29.181.245:5000/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
           const outletStock = stockRes.data?.stock?.currentStock ?? 0;
