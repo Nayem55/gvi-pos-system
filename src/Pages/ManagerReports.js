@@ -76,6 +76,7 @@ const ManagerReports = () => {
 
   const filteredZone = [
     "DHAKA-01-ZONE-01",
+    "DHAKA-02-ZONE-01",
     "DHAKA-02-ZONE-03",
     "DHAKA-03-ZONE-03",
     "KHULNA-ZONE-01",
