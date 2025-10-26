@@ -8,6 +8,7 @@ const SlabDashboard = () => {
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [roleFilter, setRoleFilter] = useState("All");
   const [zoneFilter, setZoneFilter] = useState("All");
+  const [soFilter, setSoFilter] = useState("All"); // New state for SO filter
   const [loading, setLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -41,11 +42,15 @@ const SlabDashboard = () => {
     if (zoneFilter !== "All") {
       filtered = filtered.filter((c) => c.so_zone === zoneFilter);
     }
+    if (soFilter !== "All") {
+      filtered = filtered.filter((c) => c.so_name === soFilter); // Apply SO filter
+    }
     setFilteredCustomers(filtered);
-  }, [roleFilter, zoneFilter, customers]);
+  }, [roleFilter, zoneFilter, soFilter, customers]); // Added soFilter to dependencies
 
   const handleRoleChange = (e) => setRoleFilter(e.target.value);
   const handleZoneChange = (e) => setZoneFilter(e.target.value);
+  const handleSoChange = (e) => setSoFilter(e.target.value); // Handler for SO filter
 
   const uniqueRoles = [
     "All",
@@ -54,6 +59,10 @@ const SlabDashboard = () => {
   const uniqueZones = [
     "All",
     ...new Set(customers.map((c) => c.so_zone).filter(Boolean)),
+  ];
+  const uniqueSoNames = [
+    "All",
+    ...new Set(customers.map((c) => c.so_name).filter(Boolean)), // Unique SO names
   ];
 
   const exportToExcel = () => {
@@ -160,6 +169,21 @@ const SlabDashboard = () => {
               {uniqueZones.map((zone, idx) => (
                 <option key={idx} value={zone}>
                   {zone}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by SO Name</label>
+            <select
+              value={soFilter}
+              onChange={handleSoChange}
+              className="w-40 rounded border-gray-300 p-2 shadow-sm focus:ring focus:ring-blue-200"
+            >
+              {uniqueSoNames.map((soName, idx) => (
+                <option key={idx} value={soName}>
+                  {soName}
                 </option>
               ))}
             </select>

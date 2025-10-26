@@ -601,20 +601,19 @@ const DealerSalesReport = () => {
                         </td>
                         <td className="border p-2">
                           {!report.isManager && (
-                            <button
-                              className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700"
-                              onClick={() =>
-                                navigate(
-                                  `/sales-report/daily/${report.userId}?${
-                                    startDate && endDate
-                                      ? `startDate=${startDate}&endDate=${endDate}`
-                                      : `month=${selectedMonth}`
-                                  }`
-                                )
-                              }
+                            <a
+                              href={`/sales-report/daily/${report.userId}?${
+                                startDate && endDate
+                                  ? `startDate=${startDate}&endDate=${endDate}`
+                                  : `month=${selectedMonth}`
+                              }`}
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
-                              Details
-                            </button>
+                              <button className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">
+                                Details
+                              </button>
+                            </a>
                           )}
                         </td>
                       </tr>
