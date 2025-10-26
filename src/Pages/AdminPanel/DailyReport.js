@@ -8,6 +8,8 @@ import { toast } from "react-hot-toast";
 const DailyReport = () => {
   const { userId } = useParams();
   const { search } = useLocation();
+  const [searchTerm, setSearchTerm] = useState("");
+
 
   const queryParams = new URLSearchParams(search);
   const initialMonth = queryParams.get("month") || dayjs().format("YYYY-MM");
@@ -406,12 +408,16 @@ const DailyReport = () => {
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">
               {viewedUser?.name}
             </h2>
-            <p className="text-base text-gray-600 mb-6">Outlet: {viewedUser?.outlet}</p>
+            <p className="text-base text-gray-600 mb-6">
+              Outlet: {viewedUser?.outlet}
+            </p>
 
             {/* Filters */}
             <div className="mb-6 flex flex-wrap gap-4 items-end">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">Select Month</label>
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  Select Month
+                </label>
                 <input
                   type="month"
                   value={selectedMonth}
@@ -482,16 +488,28 @@ const DailyReport = () => {
             {/* Report Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-100 rounded-lg p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-blue-700 mb-1">Total Products Sold</h4>
-                <p className="text-xl font-bold text-gray-800">{totalProductsSold}</p>
+                <h4 className="text-sm font-semibold text-blue-700 mb-1">
+                  Total Products Sold
+                </h4>
+                <p className="text-xl font-bold text-gray-800">
+                  {totalProductsSold}
+                </p>
               </div>
               <div className="bg-green-100 rounded-lg p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-green-700 mb-1">Total TP</h4>
-                <p className="text-xl font-bold text-gray-800">{totalTP.toFixed(2)}</p>
+                <h4 className="text-sm font-semibold text-green-700 mb-1">
+                  Total TP
+                </h4>
+                <p className="text-xl font-bold text-gray-800">
+                  {totalTP.toFixed(2)}
+                </p>
               </div>
               <div className="bg-purple-100 rounded-lg p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-purple-700 mb-1">Total MRP</h4>
-                <p className="text-xl font-bold text-gray-800">{totalMRP.toFixed(2)}</p>
+                <h4 className="text-sm font-semibold text-purple-700 mb-1">
+                  Total MRP
+                </h4>
+                <p className="text-xl font-bold text-gray-800">
+                  {totalMRP.toFixed(2)}
+                </p>
               </div>
             </div>
 
@@ -502,7 +520,8 @@ const DailyReport = () => {
               </div>
             ) : filterStartDate && filterEndDate ? (
               <div className="text-center text-gray-600 py-6">
-                Serial-wise report is only available for month selection. Please select a month.
+                Serial-wise report is only available for month selection. Please
+                select a month.
               </div>
             ) : rowData.length === 0 ? (
               <div className="text-center text-gray-600 py-6">
@@ -513,16 +532,34 @@ const DailyReport = () => {
                 <table className="min-w-full border-collapse bg-white shadow-sm rounded-lg">
                   <thead className="bg-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Day</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Product Name</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Quantity</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Unit Price</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Memo</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Total TP</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Total MRP</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Day
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Product Name
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Quantity
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Unit Price
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Memo
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Total TP
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Total MRP
+                      </th>
                       {user?.role === "super admin" && (
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                          Actions
+                        </th>
                       )}
                     </tr>
                   </thead>
@@ -530,12 +567,18 @@ const DailyReport = () => {
                     {rowData.map((row, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 border-r border-gray-300"
+                          >
                             {row.day}
                           </td>
                         ) : null}
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300"
+                          >
                             {row.date}
                           </td>
                         ) : null}
@@ -549,22 +592,34 @@ const DailyReport = () => {
                           {row.price}
                         </td>
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300 text-center">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300 text-center"
+                          >
                             {row.memo}
                           </td>
                         ) : null}
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300"
+                          >
                             {row.totalTP}
                           </td>
                         ) : null}
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300"
+                          >
                             {row.totalMRP}
                           </td>
                         ) : null}
                         {user?.role === "super admin" && row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-gray-600"
+                          >
                             <div className="flex flex-col space-y-1">
                               {row.actions}
                             </div>
@@ -575,13 +630,30 @@ const DailyReport = () => {
                   </tbody>
                   <tfoot className="bg-gray-200">
                     <tr className="font-semibold text-gray-800">
-                      <td colSpan={3} className="px-4 py-3 text-left border-t border-gray-300">Grand Total</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">{totalProductsSold}</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">-</td>
-                      <td className="px-4 py-3 text-left border-t border-gray-300">-</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">{totalTP.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">{totalMRP.toFixed(2)}</td>
-                      {user?.role === "super admin" && <td className="px-4 py-3 border-t border-gray-300"></td>}
+                      <td
+                        colSpan={3}
+                        className="px-4 py-3 text-left border-t border-gray-300"
+                      >
+                        Grand Total
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        {totalProductsSold}
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        -
+                      </td>
+                      <td className="px-4 py-3 text-left border-t border-gray-300">
+                        -
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        {totalTP.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        {totalMRP.toFixed(2)}
+                      </td>
+                      {user?.role === "super admin" && (
+                        <td className="px-4 py-3 border-t border-gray-300"></td>
+                      )}
                     </tr>
                   </tfoot>
                 </table>
@@ -614,8 +686,12 @@ const DailyReport = () => {
                       </label>
                       <input
                         type="date"
-                        value={dayjs(editingReport.sale_date).format("YYYY-MM-DD")}
-                        onChange={(e) => handleFieldChange("sale_date", e.target.value)}
+                        value={dayjs(editingReport.sale_date).format(
+                          "YYYY-MM-DD"
+                        )}
+                        onChange={(e) =>
+                          handleFieldChange("sale_date", e.target.value)
+                        }
                         className="p-2 border border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
                         step="1"
                       />
@@ -627,7 +703,9 @@ const DailyReport = () => {
                       <input
                         type="text"
                         value={editingReport.memo || ""}
-                        onChange={(e) => handleFieldChange("memo", e.target.value)}
+                        onChange={(e) =>
+                          handleFieldChange("memo", e.target.value)
+                        }
                         className="p-2 border border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 text-sm text-center"
                         placeholder="Enter memo"
                       />
@@ -640,14 +718,19 @@ const DailyReport = () => {
                     </label>
                     <div className="space-y-3">
                       {editingReport.products.map((product, index) => (
-                        <div key={index} className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                        <div
+                          key={index}
+                          className="border border-gray-300 rounded-lg p-4 bg-gray-50"
+                        >
                           <div className="font-medium text-gray-800 mb-2">
                             {product.product_name}
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Quantity</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Quantity
+                              </label>
                               <input
                                 type="number"
                                 value={product.quantity}
@@ -664,12 +747,14 @@ const DailyReport = () => {
                             </div>
 
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Unit DP</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Unit DP
+                              </label>
                               <input
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.dp / product.quantity)
+                                    ? product.dp / product.quantity
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -685,12 +770,14 @@ const DailyReport = () => {
                             </div>
 
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Unit TP</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Unit TP
+                              </label>
                               <input
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.tp / product.quantity)
+                                    ? product.tp / product.quantity
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -706,12 +793,14 @@ const DailyReport = () => {
                             </div>
 
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Unit MRP</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Unit MRP
+                              </label>
                               <input
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.mrp / product.quantity)
+                                    ? product.mrp / product.quantity
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -730,15 +819,21 @@ const DailyReport = () => {
                           <div className="grid grid-cols-3 gap-3 mt-3">
                             <div className="bg-white p-2 rounded text-center border border-gray-300 text-sm">
                               <div className="text-gray-600">Total DP</div>
-                              <div className="font-medium text-gray-800">{product.dp?.toFixed(2)}</div>
+                              <div className="font-medium text-gray-800">
+                                {product.dp?.toFixed(2)}
+                              </div>
                             </div>
                             <div className="bg-white p-2 rounded text-center border border-gray-300 text-sm">
                               <div className="text-gray-600">Total TP</div>
-                              <div className="font-medium text-gray-800">{product.tp?.toFixed(2)}</div>
+                              <div className="font-medium text-gray-800">
+                                {product.tp?.toFixed(2)}
+                              </div>
                             </div>
                             <div className="bg-white p-2 rounded text-center border border-gray-300 text-sm">
                               <div className="text-gray-600">Total MRP</div>
-                              <div className="font-medium text-gray-800">{product.mrp?.toFixed(2)}</div>
+                              <div className="font-medium text-gray-800">
+                                {product.mrp?.toFixed(2)}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -782,11 +877,11 @@ const DailyReport = () => {
             </div>
           </div>
         )}
-
         {showSummary && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
               <div className="p-6">
+                {/* Header */}
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">
                     Product Wise Sales Summary
@@ -798,23 +893,55 @@ const DailyReport = () => {
                     ✕
                   </button>
                 </div>
+
+                {/* Search Box */}
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search product..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                {/* Table */}
                 <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse bg-white shadow-sm rounded-lg">
                     <thead className="bg-gray-200">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Product Name</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Total Quantity</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Total Value (TP)</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                          Product Name
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                          Total Quantity
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                          Total Value (TP)
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-300">
-                      {summaryData.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">{item.name}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600">{item.quantity}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600">{item.value.toFixed(2)}</td>
-                        </tr>
-                      ))}
+                      {summaryData
+                        .filter((item) =>
+                          item.name
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase())
+                        )
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                              {item.name}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                              {item.quantity}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                              {item.value.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
