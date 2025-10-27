@@ -129,7 +129,7 @@ const Header = () => {
               <p className="font-bold">Stock Movement</p>
             </Link>
           )}
-          {(user.role === "ASM") && (
+          {(user.role === "ASM" || user.role === "SOM") && (
             <Link
               to={"/stock-movement/group"}
               className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"

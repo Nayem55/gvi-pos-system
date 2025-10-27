@@ -9,7 +9,7 @@ import autoTable from "jspdf-autotable";
 
 const GroupStockMovementReport = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
-  const [selectedType, setSelectedType] = useState("ASM"); // Default to ASM, restricted for ASM role
+  const [selectedType, setSelectedType] = useState(user.role === "ASM" ? "ASM" : user.role === "SOM" ? "SOM" : "ASM");
   const [selectedArea, setSelectedArea] = useState("");
   const [areaOptions, setAreaOptions] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -32,7 +32,7 @@ const GroupStockMovementReport = () => {
   const [currentBarcode, setCurrentBarcode] = useState(null);
   const [selectedOutlet, setSelectedOutlet] = useState("");
 
-  // Fetch area options based on selected type, restricted for ASM role
+  // Fetch area options based on selected type, restricted for ASM and SOM roles
   useEffect(() => {
     const fetchAreaOptions = async () => {
       try {
@@ -43,8 +43,8 @@ const GroupStockMovementReport = () => {
         if (response.data?.success) {
           setAreaOptions(response.data.data);
           if (response.data.data.length > 0) {
-            if (user.role === "ASM") {
-              setSelectedArea(user.name); // Lock to user's name for ASM
+            if (user.role === "ASM" || user.role === "SOM") {
+              setSelectedArea(user.name); // Lock to user's name for ASM or SOM
             } else {
               setSelectedArea(response.data.data[0]);
             }
@@ -698,7 +698,7 @@ const GroupStockMovementReport = () => {
 
   return (
     <div className="flex">
-      {user.role !== "ASM" && <AdminSidebar />}
+      {(user.role !== "ASM" && user.role !== "SOM") && <AdminSidebar />}
 
       <div className="mx-auto px-6 py-8 w-full md:w-[80%]">
         <div className="flex justify-between items-center mb-6">
@@ -759,16 +759,18 @@ const GroupStockMovementReport = () => {
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
             className="px-4 py-2 border rounded-md shadow-sm w-full md:w-48"
-            disabled={user.role === "ASM"} // Disable for ASM role
+            disabled={user.role === "ASM" || user.role === "SOM"} // Disable for ASM and SOM roles
           >
-            {user.role !== "ASM" ? (
+            {user.role === "ASM" ? (
+              <option value="ASM">ASM Wise</option>
+            ) : user.role === "SOM" ? (
+              <option value="SOM">SOM Wise</option>
+            ) : (
               <>
                 <option value="ASM">ASM Wise</option>
                 <option value="SOM">SOM Wise</option>
                 <option value="Zone">Zone Wise</option>
               </>
-            ) : (
-              <option value="ASM">ASM Wise</option>
             )}
           </select>
 
@@ -776,7 +778,7 @@ const GroupStockMovementReport = () => {
             value={selectedArea}
             onChange={(e) => setSelectedArea(e.target.value)}
             className="px-4 py-2 border rounded-md shadow-sm w-full md:w-48"
-            disabled={user.role === "ASM"} // Disable for ASM role
+            disabled={user.role === "ASM" || user.role === "SOM"} // Disable for ASM and SOM roles
           >
             {areaOptions.map((area, index) => (
               <option key={index} value={area}>
