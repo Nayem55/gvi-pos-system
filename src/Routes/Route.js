@@ -268,6 +268,10 @@ const router = createBrowserRouter([
         path: "/admin/slab-report",
         element: <SlabDashboard />,
       },
+      {
+        path: "/slab-report",
+        element: <SlabDashboard />,
+      },
     ],
   },
 ]);

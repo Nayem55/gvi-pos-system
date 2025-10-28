@@ -2,306 +2,336 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import AdminSidebar from "../Component/AdminSidebar";
+import { Menu, X, Download, Eye } from "lucide-react";
 
 const SlabDashboard = () => {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
-  const [roleFilter, setRoleFilter] = useState("All");
   const [zoneFilter, setZoneFilter] = useState("All");
-  const [soFilter, setSoFilter] = useState("All"); // New state for SO filter
-  const [loading, setLoading] = useState(false);
+  const [soFilter, setSoFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const navigate = useNavigate();
+  const [showFilters, setShowFilters] = useState(false);
+  const user = JSON.parse(localStorage.getItem("pos-user") || "{}");
 
+  // Fetch Data
   useEffect(() => {
     const fetchCustomers = async () => {
       setLoading(true);
       try {
         const response = await fetch("http://175.29.181.245:5000/customer-sale-summary");
         const data = await response.json();
-        console.log("Fetched data:", data); // Debug log
         setCustomers(data);
-        setFilteredCustomers(data);
       } catch (error) {
         console.error("Fetch failed", error);
-      } finally {
-        setLoading(false);
       }
     };
-
     fetchCustomers();
   }, []);
 
+  // Filter Logic
   useEffect(() => {
     let filtered = [...customers];
-    if (roleFilter !== "All") {
-      filtered = filtered.filter((c) => c.so_role === roleFilter);
+
+    if (zoneFilter !== "All") filtered = filtered.filter(c => c.so_zone === zoneFilter);
+    if (soFilter !== "All") filtered = filtered.filter(c => c.so_name === soFilter);
+
+    if (user.role === "SO") {
+      filtered = filtered.filter(c =>
+        c.so_name?.trim().toLowerCase() === user.name?.trim().toLowerCase()
+      );
+    } else if (["ASM", "RSM", "SOM"].includes(user.role)) {
+      filtered = filtered.filter(c =>
+        c.so_zone?.toLowerCase().includes(user.zone?.toLowerCase())
+      );
     }
-    if (zoneFilter !== "All") {
-      filtered = filtered.filter((c) => c.so_zone === zoneFilter);
-    }
-    if (soFilter !== "All") {
-      filtered = filtered.filter((c) => c.so_name === soFilter); // Apply SO filter
-    }
+
     setFilteredCustomers(filtered);
-  }, [roleFilter, zoneFilter, soFilter, customers]); // Added soFilter to dependencies
+    if (customers.length > 0) setLoading(false);
+  }, [zoneFilter, soFilter, customers]);
 
-  const handleRoleChange = (e) => setRoleFilter(e.target.value);
-  const handleZoneChange = (e) => setZoneFilter(e.target.value);
-  const handleSoChange = (e) => setSoFilter(e.target.value); // Handler for SO filter
+  const uniqueZones = ["All", ...new Set(customers.map(c => c.so_zone).filter(Boolean))];
+  const uniqueSoNames = ["All", ...new Set(customers.map(c => c.so_name).filter(Boolean))];
 
-  const uniqueRoles = [
-    "All",
-    ...new Set(customers.map((c) => c.so_role).filter(Boolean)),
-  ];
-  const uniqueZones = [
-    "All",
-    ...new Set(customers.map((c) => c.so_zone).filter(Boolean)),
-  ];
-  const uniqueSoNames = [
-    "All",
-    ...new Set(customers.map((c) => c.so_name).filter(Boolean)), // Unique SO names
-  ];
-
+  // Export
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      filteredCustomers.map((customer) => {
-        return {
-          "Customer Name": customer.owner_name || "-",
-          "Customer Phone": customer.owner_number || "-",
-          "Shop Name": customer.shop_name || "-",
-          "Shop Address": customer.shop_address || "-",
-          "Dealer Name": customer.dealer_name || "-",
-          "SO Name": customer.so_name || "-",
-          Role: customer.so_role || "-",
-          Zone: customer.so_zone || "-",
-          "SO Number": customer.so_number || "-",
-          ASM: customer.asm || "-",
-          RSM: customer.rsm || "-",
-          SOM: customer.som || "-",
-          "Lifetime Quantity": customer.lifetime_quantity || 0,
-        };
-      })
+    const ws = XLSX.utils.json_to_sheet(
+      filteredCustomers.map(c => ({
+        "Customer Name": c.owner_name || "-",
+        "Phone": c.owner_number || "-",
+        "Shop": c.shop_name || "-",
+        "Address": c.shop_address || "-",
+        "Dealer": c.dealer_name || "-",
+        "SO": c.so_name || "-",
+        "Role": c.so_role || "-",
+        "Zone": c.so_zone || "-",
+        "SO #": c.so_number || "-",
+        "ASM": c.asm || "-",
+        "RSM": c.rsm || "-",
+        "SOM": c.som || "-",
+        "Lifetime Qty": c.lifetime_quantity || 0,
+      }))
     );
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Summary");
-    XLSX.writeFile(workbook, "Customer_Summary_Lifetime.xlsx");
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Customers");
+    XLSX.writeFile(wb, "Lifetime_Customers.xlsx");
   };
 
+  // Modal
   const openModal = async (customer) => {
     setSelectedCustomer(customer);
     setIsModalOpen(true);
     try {
-      const response = await fetch(
-        `http://175.29.181.245:5000/customer-transactions?owner_number=${customer.owner_number}`
-      );
-      const data = await response.json();
-      // Merge transactions by sale_date
-      const mergedTransactions = data.reduce((acc, tx) => {
-        const saleDate = tx.sale_date.split(' ')[0]; // Extract date part (YYYY-MM-DD)
-        const existing = acc.find((t) => t.sale_date === saleDate);
+      const res = await fetch(`http://175.29.181.245:5000/customer-transactions?owner_number=${customer.owner_number}`);
+      const data = await res.json();
+      const merged = data.reduce((acc, tx) => {
+        const date = tx.sale_date.split(" ")[0];
+        const existing = acc.find(t => t.sale_date === date);
         if (existing) {
           existing.purchase_quantity += tx.purchase_quantity;
-          tx.products.forEach((prod) => {
-            const existingProd = existing.products.find(
-              (p) => p.product_name === prod.product_name
-            );
-            if (existingProd) {
-              existingProd.quantity += prod.quantity;
-            } else {
-              existing.products.push(prod);
-            }
+          tx.products.forEach(p => {
+            const ep = existing.products.find(x => x.product_name === p.product_name);
+            ep ? (ep.quantity += p.quantity) : existing.products.push(p);
           });
         } else {
-          acc.push({
-            sale_date: saleDate,
-            purchase_quantity: tx.purchase_quantity,
-            products: [...tx.products],
-          });
+          acc.push({ sale_date: date, purchase_quantity: tx.purchase_quantity, products: [...tx.products] });
         }
         return acc;
       }, []);
-      setTransactions(mergedTransactions);
-    } catch (error) {
-      console.error("Fetch transactions failed", error);
+      setTransactions(merged);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const closeModal = () => {
+    setIsModalOpen(false);
     setSelectedCustomer(null);
     setTransactions([]);
-    setIsModalOpen(false);
   };
 
+  // Summary
+  const totalCustomers = filteredCustomers.length;
+  const totalQuantity = filteredCustomers.reduce((a, c) => a + (c.lifetime_quantity || 0), 0);
+  const zoneSummary = filteredCustomers.reduce((acc, c) => {
+    const z = c.so_zone || "Unknown";
+    acc[z] = acc[z] || { count: 0, quantity: 0 };
+    acc[z].count += 1;
+    acc[z].quantity += c.lifetime_quantity || 0;
+    return acc;
+  }, {});
+
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <AdminSidebar />
+    <>
+      <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        {/* Sidebar - Always on top */}
+        {user.role === "super admin" && <AdminSidebar />}
 
-      <div className="flex-1 p-6">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Lifetime Customer Summary</h1>
-
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Role</label>
-            <select
-              value={roleFilter}
-              onChange={handleRoleChange}
-              className="w-40 rounded border-gray-300 p-2 shadow-sm focus:ring focus:ring-blue-200"
+        {/* Main Content */}
+        <div className="flex-1 p-4 md:p-6 lg:p-8 relative">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+              Lifetime Customer Summary
+            </h1>
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow-md transition"
             >
-              {uniqueRoles.map((role, idx) => (
-                <option key={idx} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
+              <Download className="w-4 h-4" /> Export
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Belt</label>
-            <select
-              value={zoneFilter}
-              onChange={handleZoneChange}
-              className="w-40 rounded border-gray-300 p-2 shadow-sm focus:ring focus:ring-blue-200"
-            >
-              {uniqueZones.map((zone, idx) => (
-                <option key={idx} value={zone}>
-                  {zone}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by SO Name</label>
-            <select
-              value={soFilter}
-              onChange={handleSoChange}
-              className="w-40 rounded border-gray-300 p-2 shadow-sm focus:ring focus:ring-blue-200"
-            >
-              {uniqueSoNames.map((soName, idx) => (
-                <option key={idx} value={soName}>
-                  {soName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mb-4 flex justify-end gap-4">
-          <button
-            onClick={exportToExcel}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded shadow-md transition"
-          >
-            Export to Excel
-          </button>
-        </div>
-
-        <div className="overflow-auto bg-white rounded-lg shadow p-4">
-          {loading ? (
-            <div className="text-center text-gray-500 p-10">Loading...</div>
-          ) : (
-            <table className="min-w-full text-sm">
-              <thead className="bg-blue-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-3 text-left">Customer Shop Name</th>
-                  <th className="p-3 text-left">Customer Address</th>
-                  <th className="p-3 text-left">Customer Name</th>
-                  <th className="p-3 text-left">Customer Phone</th>
-                  <th className="p-3 text-left">Dealer Name</th>
-                  <th className="p-3 text-left">SO Name</th>
-                  <th className="p-3 text-left">Role</th>
-                  <th className="p-3 text-left">SO Zone</th>
-                  <th className="p-3 text-left">SO Number</th>
-                  <th className="p-3 text-left">ASM</th>
-                  <th className="p-3 text-left">RSM</th>
-                  <th className="p-3 text-left">SOM</th>
-                  <th className="p-3 text-left">Lifetime Quantity</th>
-                  <th className="p-3 text-left">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((customer, idx) => (
-                    <tr key={idx} className="border-t hover:bg-gray-50">
-                      <td className="p-3">{customer.shop_name || "-"}</td>
-                      <td className="p-3">{customer.shop_address || "-"}</td>
-                      <td className="p-3">{customer.owner_name || "-"}</td>
-                      <td className="p-3">{customer.owner_number || "-"}</td>
-                      <td className="p-3">{customer.dealer_name || "-"}</td>
-                      <td className="p-3">{customer.so_name || "-"}</td>
-                      <td className="p-3">{customer.so_role || "-"}</td>
-                      <td className="p-3">{customer.so_zone || "-"}</td>
-                      <td className="p-3">{customer.so_number || "-"}</td>
-                      <td className="p-3">{customer.asm || "-"}</td>
-                      <td className="p-3">{customer.rsm || "-"}</td>
-                      <td className="p-3">{customer.som || "-"}</td>
-                      <td className="p-3">{customer.lifetime_quantity}</td>
-                      <td className="p-3">
-                        <button
-                          onClick={() => openModal(customer)}
-                          className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded transition"
-                        >
-                          Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="14" className="p-6 text-center text-gray-500">
-                      No customers found for selected filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {isModalOpen && selectedCustomer && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-[600px]">
-              <h2 className="text-xl font-bold mb-4 text-gray-800">
-                Transaction Details for {selectedCustomer.owner_name}
-              </h2>
-              <div className="max-h-96 overflow-y-auto">
-                {transactions.length > 0 ? (
-                  transactions.map((tx, idx) => (
-                    <div key={idx} className="mb-4 border-b pb-2 text-sm text-gray-700">
-                      <p>
-                        <span className="font-medium">Invoice Date:</span> {tx.sale_date}
-                      </p>
-                      <p>
-                        <span className="font-medium">Total Quantity:</span> {tx.purchase_quantity}
-                      </p>
-                      <p className="font-medium">Products:</p>
-                      <ul className="list-disc pl-5">
-                        {tx.products.map((prod, pidx) => (
-                          <li key={pidx}>
-                            {prod.product_name}: {prod.quantity}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-600">No transactions found.</p>
-                )}
-              </div>
+          {/* Filters */}
+          {user.role !== "SO" && (
+            <div className="mb-6">
               <button
-                onClick={closeModal}
-                className="mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded transition"
+                onClick={() => setShowFilters(!showFilters)}
+                className="sm:hidden w-full text-left bg-white p-3 rounded-lg shadow flex justify-between items-center font-semibold"
               >
-                Close
+                Filters {showFilters ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
+
+              <div className={`${showFilters ? "block" : "hidden"} sm:block mt-3 sm:mt-0`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Zone</label>
+                    <select
+                      value={zoneFilter}
+                      onChange={(e) => setZoneFilter(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      {uniqueZones.map(z => <option key={z} value={z}>{z}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">SO Name</label>
+                    <select
+                      value={soFilter}
+                      onChange={(e) => setSoFilter(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      {uniqueSoNames.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 rounded-xl shadow-lg">
+              <h3 className="text-lg font-semibold">Total Customers</h3>
+              <p className="text-3xl font-bold mt-1">{totalCustomers.toLocaleString()}</p>
+            </div>
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-5 rounded-xl shadow-lg">
+              <h3 className="text-lg font-semibold">Lifetime Quantity</h3>
+              <p className="text-3xl font-bold mt-1">{totalQuantity.toLocaleString()}</p>
             </div>
           </div>
-        )}
+
+          {/* Zone Summary */}
+          <div className="bg-white rounded-xl shadow-lg p-5 mb-6 overflow-hidden">
+            <h3 className="text-lg font-bold text-gray-800 mb-3">Zone Wise Summary</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="text-left p-3 font-semibold">Zone</th>
+                    <th className="text-center p-3 font-semibold">Customers</th>
+                    <th className="text-right p-3 font-semibold">Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(zoneSummary).map(([zone, { count, quantity }]) => (
+                    <tr key={zone} className="border-t">
+                      <td className="p-3 font-medium">{zone}</td>
+                      <td className="text-center p-3">{count}</td>
+                      <td className="text-right p-3 font-semibold">{quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Customer List */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            {loading ? (
+              <div className="p-12 text-center">
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+                <p className="mt-3 text-gray-600">Loading customers...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <table className="hidden md:table w-full text-sm">
+                  <thead className="bg-indigo-50 text-indigo-800">
+                    <tr>
+                      <th className="p-3 text-left">Shop</th>
+                      <th className="p-3 text-left">Owner</th>
+                      <th className="p-3 text-left">Phone</th>
+                      <th className="p-3 text-left">SO</th>
+                      <th className="p-3 text-left">Zone</th>
+                      <th className="p-3 text-right">Qty</th>
+                      <th className="p-3 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map((c, i) => (
+                      <tr key={i} className="border-t hover:bg-gray-50 transition">
+                        <td className="p-3 font-medium">{c.shop_name || "-"}</td>
+                        <td className="p-3">{c.owner_name || "-"}</td>
+                        <td className="p-3">{c.owner_number || "-"}</td>
+                        <td className="p-3">{c.so_name || "-"}</td>
+                        <td className="p-3">{c.so_zone || "-"}</td>
+                        <td className="p-3 text-right font-semibold">{c.lifetime_quantity}</td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => openModal(c)}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1 mx-auto"
+                          >
+                            <Eye className="w-3 h-3" /> View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden p-4 space-y-3">
+                  {filteredCustomers.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No customers found.</p>
+                  ) : (
+                    filteredCustomers.map((c, i) => (
+                      <div key={i} className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-gray-800">{c.shop_name || "Unknown Shop"}</h4>
+                          <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                            {c.lifetime_quantity} qty
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600"><strong>Owner:</strong> {c.owner_name}</p>
+                        <p className="text-sm text-gray-600"><strong>Phone:</strong> {c.owner_number}</p>
+                        <p className="text-sm text-gray-600"><strong>SO:</strong> {c.so_name} ({c.so_zone})</p>
+                        <button
+                          onClick={() => openModal(c)}
+                          className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" /> View Transactions
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Modal - Outside main layout, with proper z-index */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
+            <div className="p-5 border-b sticky top-0 bg-white z-10">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800">
+                  Transactions: {selectedCustomer?.owner_name}
+                </h2>
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              {transactions.length > 0 ? (
+                transactions.map((tx, i) => (
+                  <div key={i} className="border rounded-lg p-3 bg-gray-50">
+                    <p className="font-semibold text-gray-800">{tx.sale_date}</p>
+                    <p className="text-sm"><strong>Total Qty:</strong> {tx.purchase_quantity}</p>
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-blue-600 text-sm font-medium">View Products</summary>
+                      <ul className="mt-1 text-sm text-gray-600 list-disc list-inside">
+                        {tx.products.map((p, pi) => (
+                          <li key={pi}>{p.product_name}: {p.quantity}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-8">No transactions found.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
