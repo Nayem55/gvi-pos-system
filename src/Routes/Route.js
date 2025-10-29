@@ -128,6 +128,10 @@ const router = createBrowserRouter([
         element: <TDDAdminPanel />,
       },
       {
+        path: "/tada-report",
+        element: <FullTDDReport />,
+      },
+      {
         path: "admin/tada-full-report",
         element: <FullTDDReport />,
       },

@@ -4,7 +4,7 @@ import logo from "../Images/Logo.png";
 import application from "../Images/Application2.png";
 import admin from "../Images/admin-panel.png";
 import dashboard from "../Images/dashboard.png";
-import { Box, FileStack, ListOrdered, Paperclip } from "lucide-react";
+import { Box, File, FileStack, ListOrdered, Paperclip } from "lucide-react";
 
 const Header = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -171,6 +171,14 @@ const Header = () => {
               <p className="font-bold">Dealer Sale Reports</p>
             </Link>
           )}
+          <Link
+            to={"/tada-report"}
+            className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"
+            onClick={toggleSidebar}
+          >
+            <File className="w-8" />
+            <p className="font-bold">TA/DA Report</p>
+          </Link>
           <Link
             to={"/slab-report"}
             className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md flex gap-4 items-center"

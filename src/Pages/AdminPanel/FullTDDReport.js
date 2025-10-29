@@ -17,24 +17,85 @@ const FullTDDReport = () => {
   const [uniqueZones, setUniqueZones] = useState([]);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const user = JSON.parse(localStorage.getItem("pos-user") || "{}");
+
+  // Get user role and determine access level
+  const userRole = user?.role || "";
+  const isSuperAdmin = userRole === "super admin";
+  const isASM = userRole === "ASM";
+  const isSOM = userRole === "SOM";
+  const isSO = userRole === "SO";
+  
+  // Get user's zone for ASM/SOM filtering
+  const userZone = user?.zone || "";
 
   // Generate summary report
   const generateReport = async () => {
     try {
       setIsGenerating(true);
-      const response = await axios.get(
-        "http://175.29.181.245:5000/tdda/full-report",
-        {
-          params: { month: selectedMonth },
+      
+      // For SO users, only fetch their own data
+      if (isSO) {
+        const response = await axios.get(
+          "http://175.29.181.245:5000/tdda/admin-report",
+          {
+            params: {
+              userId: user._id,
+              month: selectedMonth,
+            },
+          }
+        );
+        
+        // Transform single user report to full report format
+        const userData = response.data;
+        const transformedData = {
+          month: selectedMonth,
+          days: userData.dailyExpenses.map(expense => expense.date),
+          users: [{
+            userId: user.userId,
+            name: userData.userInfo.name,
+            zone: userData.userInfo.area || user.zone || "",
+            outlet: userData.userInfo.designation || "",
+            dailyTotals: userData.dailyExpenses.map(expense => 
+              parseFloat(expense.totalExpense) || 0
+            ),
+            total: parseFloat(userData.summary.totalExpense) || 0
+          }]
+        };
+        
+        setReportData(transformedData);
+        setUniqueZones([userData.userInfo.area || user.zone || ""]);
+        setSelectedZone(userData.userInfo.area || user.zone || "");
+      } else {
+        // For other roles, fetch full report
+        const response = await axios.get(
+          "http://175.29.181.245:5000/tdda/full-report",
+          {
+            params: { month: selectedMonth },
+          }
+        );
+        
+        let filteredData = response.data;
+        
+        // Filter data based on role
+        if (isASM || isSOM) {
+          filteredData = {
+            ...response.data,
+            users: response.data.users.filter(u => 
+              u.zone && userZone && u.zone.includes(userZone)
+            )
+          };
         }
-      );
-      setReportData(response.data);
-      const zones = [...new Set(response.data.users.map((u) => u.zone))].sort();
-      setUniqueZones(zones);
-      setSelectedZone("");
-      toast.success("Full report generated successfully");
+        
+        setReportData(filteredData);
+        const zones = [...new Set(filteredData.users.map((u) => u.zone))].sort();
+        setUniqueZones(zones);
+        setSelectedZone("");
+      }
+      
+      toast.success("Report generated successfully");
     } catch (error) {
-      console.error("Error generating full report:", error);
+      console.error("Error generating report:", error);
       toast.error(error.response?.data?.error || "Failed to generate report");
     } finally {
       setIsGenerating(false);
@@ -207,6 +268,34 @@ const FullTDDReport = () => {
       return;
     }
 
+    // SO users can only download their own PDF
+    if (isSO) {
+      try {
+        setDownloadingAll(true);
+        const detailedReport = await fetchReportDataForUser(user.userId);
+        if (detailedReport && detailedReport.dailyExpenses.length > 0) {
+          const pdfBlob = await generatePDFBlob(detailedReport);
+          if (pdfBlob) {
+            const fileName = `TADA_Report_${detailedReport.userInfo.name.replace(
+              /\s+/g,
+              "_"
+            )}_${detailedReport.userInfo.month}.pdf`;
+            saveAs(pdfBlob, fileName);
+            toast.success("PDF report downloaded successfully");
+          }
+        } else {
+          toast.error("No report data available");
+        }
+      } catch (error) {
+        console.error("Error downloading PDF:", error);
+        toast.error("Failed to download PDF report");
+      } finally {
+        setDownloadingAll(false);
+      }
+      return;
+    }
+
+    // For other roles, download multiple PDFs
     setDownloadingAll(true);
     const zip = new JSZip();
     const timestamp = dayjs().format("YYYYMMDD_HHmmss");
@@ -414,11 +503,18 @@ const FullTDDReport = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <AdminSidebar />
-      <div className="flex-1 overflow-auto p-4 md:p-8">
+      {isSuperAdmin && <AdminSidebar />}
+      <div className={`${isSuperAdmin ? "flex-1" : "w-full"} overflow-auto p-4 md:p-8`}>
         <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
-            <h1 className="text-2xl font-bold text-white">Full TD/DA Report</h1>
+            <h1 className="text-2xl font-bold text-white">
+              {isSO ? "My TD/DA Report" : "Full TD/DA Report"}
+            </h1>
+            {!isSuperAdmin && (
+              <p className="text-indigo-200 text-sm mt-1">
+                Role: {userRole} {userZone && `| Zone: ${userZone}`}
+              </p>
+            )}
           </div>
           <div className="p-6 border-b border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -433,36 +529,29 @@ const FullTDDReport = () => {
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Zone
-                </label>
-                <select
-                  value={selectedZone}
-                  onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                  disabled={!reportData}
-                >
-                  {/* <option value="">All Zones</option>
-                  {uniqueZones.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))} */}
-                  <option value="">All Zones</option>
-                  <option value="DHAKA-01-ZONE-01">DHAKA-01-ZONE-01</option>
-                  <option value="DHAKA-02-ZONE-01">DHAKA-02-ZONE-01</option>
-                  <option value="DHAKA-02-ZONE-03">DHAKA-02-ZONE-03</option>
-                  <option value="DHAKA-03-ZONE-03">DHAKA-03-ZONE-03</option>
-                  <option value="KHULNA-ZONE-01 ">KHULNA-ZONE-01</option>
-                  <option value="COMILLA-ZONE-03">COMILLA-ZONE-03</option>
-                  <option value="CHITTAGONG-ZONE-03">CHITTAGONG-ZONE-03</option>
-                  <option value="RANGPUR-ZONE-01">RANGPUR-ZONE-01</option>
-                  <option value="BARISAL-ZONE-03">BARISAL-ZONE-03</option>
-                  <option value="BOGURA-ZONE-01">BOGURA-ZONE-01</option>
-                  <option value="MYMENSINGH-ZONE-01">MYMENSINGH-ZONE-01</option>
-                </select>
-              </div>
+              
+              {/* Zone filter - only show for Super Admin, ASM, and SOM */}
+              {(isSuperAdmin || isASM || isSOM) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filter by Zone
+                  </label>
+                  <select
+                    value={selectedZone}
+                    onChange={(e) => setSelectedZone(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    disabled={!reportData}
+                  >
+                    <option value="">All Zones</option>
+                    {uniqueZones.map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
               <div className="flex items-end space-x-4">
                 <button
                   onClick={generateReport}
@@ -499,78 +588,89 @@ const FullTDDReport = () => {
                     "Generate Report"
                   )}
                 </button>
-                <div className="relative flex-1">
-                  <button
-                    onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
+                
+                {/* Export button - show for all roles but with different options */}
+                {(isSuperAdmin || isASM || isSOM || isSO) && (
+                  <div className="relative flex-1">
+                    <button
+                      onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md shadow-sm flex items-center justify-center"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Export
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                  {exportDropdownOpen && (
-                    <div className="absolute top-12 left-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                      <div
-                        className="py-1"
-                        role="menu"
-                        aria-orientation="vertical"
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
                       >
-                        <button
-                          onClick={() => {
-                            exportToExcel();
-                            setExportDropdownOpen(false);
-                          }}
-                          disabled={!reportData}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          role="menuitem"
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Export
+                      <svg
+                        className="w-4 h-4 ml-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                    {exportDropdownOpen && (
+                      <div className="absolute top-12 left-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                        <div
+                          className="py-1"
+                          role="menu"
+                          aria-orientation="vertical"
                         >
-                          Export to Excel
-                        </button>
-                        <button
-                          onClick={() => {
-                            downloadAllPDFs();
-                            setExportDropdownOpen(false);
-                          }}
-                          disabled={
-                            downloadingAll || !reportData || !selectedMonth
-                          }
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          role="menuitem"
-                        >
-                          {downloadingAll
-                            ? "Downloading..."
-                            : "Download All PDF"}
-                        </button>
+                          {/* Excel export - only for Super Admin, ASM, SOM */}
+                          {(isSuperAdmin || isASM || isSOM) && (
+                            <button
+                              onClick={() => {
+                                exportToExcel();
+                                setExportDropdownOpen(false);
+                              }}
+                              disabled={!reportData}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                              role="menuitem"
+                            >
+                              Export to Excel
+                            </button>
+                          )}
+                          
+                          {/* PDF download - for all roles */}
+                          <button
+                            onClick={() => {
+                              downloadAllPDFs();
+                              setExportDropdownOpen(false);
+                            }}
+                            disabled={
+                              downloadingAll || !reportData || !selectedMonth
+                            }
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            role="menuitem"
+                          >
+                            {downloadingAll
+                              ? "Downloading..."
+                              : isSO 
+                                ? "Download My PDF" 
+                                : "Download All PDF"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -579,6 +679,8 @@ const FullTDDReport = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-800">
                   Report for {dayjs(reportData.month).format("MMMM YYYY")}
+                  {isSO && " - Personal Report"}
+                  {(isASM || isSOM) && ` - ${userZone} Zone`}
                 </h2>
               </div>
               <div className="overflow-x-auto shadow-md rounded-lg max-h-[60vh]">
@@ -588,12 +690,16 @@ const FullTDDReport = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                         User Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                        Zone
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                        Outlet
-                      </th>
+                      {(isSuperAdmin || isASM || isSOM) && (
+                        <>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                            Zone
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                            Outlet
+                          </th>
+                        </>
+                      )}
                       {reportData.days.map((day) => (
                         <th
                           key={day}
@@ -617,12 +723,16 @@ const FullTDDReport = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {user.name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {user.zone}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {user.outlet}
-                        </td>
+                        {(isSuperAdmin || isASM || isSOM) && (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {user.zone}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {user.outlet}
+                            </td>
+                          </>
+                        )}
                         {user.dailyTotals.map((total, dayIndex) => (
                           <td
                             key={dayIndex}
@@ -637,27 +747,30 @@ const FullTDDReport = () => {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-indigo-50 sticky bottom-0 z-10">
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="px-6 py-4 text-sm font-bold text-gray-900"
-                      >
-                        Total
-                      </td>
-                      {summary.dailySums.map((sum, index) => (
+                  {/* Show summary only for Super Admin, ASM, SOM (not for SO) */}
+                  {(isSuperAdmin || isASM || isSOM) && summary && (
+                    <tfoot className="bg-indigo-50 sticky bottom-0 z-10">
+                      <tr>
                         <td
-                          key={index}
-                          className="px-3 py-4 text-sm font-bold text-right text-gray-900"
+                          colSpan={isSuperAdmin ? 3 : 1}
+                          className="px-6 py-4 text-sm font-bold text-gray-900"
                         >
-                          {sum.toFixed(2)}
+                          Total
                         </td>
-                      ))}
-                      <td className="px-6 py-4 text-sm font-bold text-right text-gray-900">
-                        {summary.grandTotal.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tfoot>
+                        {summary.dailySums.map((sum, index) => (
+                          <td
+                            key={index}
+                            className="px-3 py-4 text-sm font-bold text-right text-gray-900"
+                          >
+                            {sum.toFixed(2)}
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 text-sm font-bold text-right text-gray-900">
+                          {summary.grandTotal.toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             </div>
