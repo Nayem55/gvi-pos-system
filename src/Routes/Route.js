@@ -34,7 +34,6 @@ import AlterOutletsPage from "../Pages/AlterOutletsPage";
 import CategoryTargetPage from "../Pages/CategoryTargetPage";
 import BrandWiseSalesReport from "../Pages/BrandsSaleReport";
 import BrandTargetPage from "../Pages/BrandTargetPage";
-import TDDA from "../Pages/TDDA";
 import TDDAdminPanel from "../Pages/TDDA";
 import SalarySheet from "../Pages/AdminPanel/SalarySheet";
 import OrderRequests from "../Pages/AdminPanel/OrderRequests";
@@ -52,229 +51,333 @@ import ProductStockMovementReport from "../Pages/ProductStockMovementReport";
 import CategoryStockMovementReport from "../Pages/CategoryStockMovementReport";
 import BrandStockMovementReport from "../Pages/BrandStockMovementReport";
 import SlabDashboard from "../Pages/SlabDashboard";
+import ProtectedRoute from "../Component/ProtectedRoute";
+
+// Import the ProtectedRoute you already created
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Main></Main>,
+    element: <Main />,
     children: [
-      {
-        path: "/",
-        element: <Home />,
-      },
-      {
-        path: "/home",
-        element: <TodaysSale />,
-      },
+      /* ====================== PUBLIC / USER ROUTES ====================== */
+      { path: "/", element: <Home /> },
+      { path: "/home", element: <TodaysSale /> },
+      { path: "/login", element: <LoginForm /> },
+      { path: "/signup", element: <SignUpForm /> },
+      { path: "/profile", element: <Profile /> },
+      { path: "/primary-request", element: <PrimaryRequest /> },
+      { path: "/dashboard", element: <UserDashboard /> },
+      { path: "/accounts", element: <Accounts /> },
+      { path: "/manage-stock", element: <ManageUserStock /> },
+      { path: "/manager-report", element: <ManagerReports /> },
 
-      {
-        path: "/login",
-        element: <LoginForm />,
-      },
-      {
-        path: "/signup",
-        element: <SignUpForm />,
-      },
-      {
-        path: "/profile",
-        element: <Profile />,
-      },
-      {
-        path: "/primary-request",
-        element: <PrimaryRequest />,
-      },
-      {
-        path: "/dashboard",
-        element: <UserDashboard />,
-      },
-      {
-        path: "/accounts",
-        element: <Accounts />,
-      },
-      {
-        path: "/stock-movement/dealer",
-        element: <StockMovementReport />,
-      },
-      {
-        path: "/stock-movement/product",
-        element: <ProductStockMovementReport />,
-      },
-      {
-        path: "/stock-movement/category",
-        element: <CategoryStockMovementReport />,
-      },
-      {
-        path: "/stock-movement/brand",
-        element: <BrandStockMovementReport />,
-      },
-      {
-        path: "/stock-movement/group",
-        element: <GroupStockMovementReport />,
-      },
-      {
-        path: "/admin/money-transaction",
-        element: <FinancialMovementReport />,
-      },
-      {
-        path: "/manage-stock",
-        element: <ManageUserStock />,
-      },
-      {
-        path: "/manager-report",
-        element: <ManagerReports />,
-      },
-      {
-        path: "admin/tada",
-        element: <TDDAdminPanel />,
-      },
-      {
-        path: "/tada-report",
-        element: <FullTDDReport />,
-      },
-      {
-        path: "admin/tada-full-report",
-        element: <FullTDDReport />,
-      },
+      // Stock movement (user level)
+      { path: "/stock-movement/dealer", element: <StockMovementReport /> },
+      { path: "/stock-movement/product", element: <ProductStockMovementReport /> },
+      { path: "/stock-movement/category", element: <CategoryStockMovementReport /> },
+      { path: "/stock-movement/brand", element: <BrandStockMovementReport /> },
+      { path: "/stock-movement/group", element: <GroupStockMovementReport /> },
+
+      // TADA (user level)
+      { path: "admin/tada", element: <TDDAdminPanel /> },
+      { path: "/tada-report", element: <FullTDDReport /> },
+
+      // Daily report per user
+      { path: "/sales-report/daily/:userId", element: <DailyReport /> },
+
+      /* ====================== ADMIN PANEL – SUPER ADMIN ONLY ====================== */
       {
         path: "/admin",
-        element: <AdminHomePage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AdminHomePage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/salary",
-        element: <SalarySheet />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <SalarySheet />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/products",
-        element: <AdminProducts />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AdminProducts />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/create-product",
-        element: <CreateProductPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CreateProductPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/create-brand",
-        element: <CreateBrandPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CreateBrandPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/alter-products",
-        element: <AlterProductsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AlterProductsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/alter-brands",
-        element: <AlterBrandsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AlterBrandsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/create-user",
-        element: <CreateUserPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CreateUserPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/alter-users",
-        element: <AlterUsersPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AlterUsersPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/create-category",
-        element: <CreateCategoryPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CreateCategoryPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/alter-categories",
-        element: <AlterCategoriesPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AlterCategoriesPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/create-outlet",
-        element: <CreateOutletPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CreateOutletPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/alter-outlets",
-        element: <AlterOutletsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AlterOutletsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/promotion",
-        element: <PromotionalPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <PromotionalPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/stock-movement",
-        element: <StockMovementReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <StockMovementReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/sales-movement/dealer-wise",
-        element: <DealerSalesReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <DealerSalesReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/full-sales-report",
-        element: <FullSalesReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <FullSalesReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/full-stock-report",
-        element: <StockTransactionsReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <StockTransactionsReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/sales-movement/category-wise",
-        element: <CategoryWiseSalesReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CategoryWiseSalesReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/sales-movement/brand-wise",
-        element: <BrandWiseSalesReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <BrandWiseSalesReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/sales-movement/category-wise/detail/:category",
-        element: <CategoryReportDetails />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CategoryReportDetails />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/sales-movement/product-wise",
-        element: <ProductWiseSalesReport />,
-      },
-      {
-        path: "/sales-report/daily/:userId",
-        element: <DailyReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <ProductWiseSalesReport />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/manage-stock",
-        element: <ManageStock />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <ManageStock />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/order-requests",
-        element: <OrderRequests />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <OrderRequests />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/users",
-        element: <UserManagementPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <UserManagementPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/monthly-target",
-        element: <MonthlyTargetPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <MonthlyTargetPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/category-target",
-        element: <CategoryTargetPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CategoryTargetPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/brand-target",
-        element: <BrandTargetPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <BrandTargetPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/daily/dealer-sales-report",
-        element: <DailyDealerSalesReport />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <DailyDealerSalesReport />
+          </ProtectedRoute>
+        ),
       },
-      // Add these routes to your admin routes
       {
         path: "/admin/create-pricelevel",
-        element: <CreatePriceLevelPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <CreatePriceLevelPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/alter-pricelevels",
-        element: <AlterPriceLevelsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <AlterPriceLevelsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/payment-request",
-        element: <PaymentRequests />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <PaymentRequests />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/admin/slab-report",
-        element: <SlabDashboard />,
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <SlabDashboard />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/slab-report",
-        element: <SlabDashboard />,
+        element: (
+            <SlabDashboard />
+        ),
+      },
+      {
+        path: "admin/tada-full-report",
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <FullTDDReport />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/money-transaction",
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <FinancialMovementReport />
+          </ProtectedRoute>
+        ),
+      },
+
+      /* ====================== OPTIONAL: 404 ====================== */
+      {
+        path: "*",
+        element: <div className="p-8 text-center">404 - Page Not Found</div>,
       },
     ],
   },

@@ -378,7 +378,7 @@ const FullTDDReport = () => {
       ];
 
       const data = [
-        ["Full TD/DA Report"],
+        ["Full TA/DA Report"],
         [`Month: ${dayjs(reportData.month).format("MMMM YYYY")}`],
         [""],
         headers,

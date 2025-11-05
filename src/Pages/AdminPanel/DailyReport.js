@@ -4,13 +4,13 @@ import { useParams, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import { toast } from "react-hot-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const DailyReport = () => {
   const { userId } = useParams();
   const { search } = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-
-
   const queryParams = new URLSearchParams(search);
   const initialMonth = queryParams.get("month") || dayjs().format("YYYY-MM");
   const initialStartDate = queryParams.get("startDate") || "";
@@ -399,6 +399,65 @@ const DailyReport = () => {
 
   const rowData = getRowData();
 
+  // PDF Download Function
+  const downloadPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    // Title
+    doc.setFontSize(16);
+    doc.text("Product-Wise Sales Summary", 14, 15);
+
+    // Outlet & Period
+    doc.setFontSize(10);
+    doc.text(`Outlet: ${viewedUser?.outlet || "N/A"}`, 14, 23);
+    doc.text(`Period: ${filterMonth || "Custom Range"}`, 14, 29);
+
+    // Grand Total
+    const grandTotalTP = summaryData.reduce((sum, i) => sum + i.value, 0);
+    doc.setFontSize(11);
+    doc.text(`Grand Total TP: ${grandTotalTP.toFixed(2)}`, 200, 23, {
+      align: "left",
+    });
+
+    // Table Data (filtered & sorted)
+    const tableData = summaryData
+      .filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((item) => [
+        item.name,
+        item.quantity.toString(),
+        item.value.toFixed(2),
+      ]);
+
+    // AutoTable
+    autoTable(doc, {
+      head: [["Product Name", "Total Quantity", "Total Value (TP)"]],
+      body: tableData,
+      startY: 35,
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [33, 150, 243] },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { halign: "right" },
+        2: { halign: "right" },
+      },
+    });
+
+    // Footer Total
+    const finalY = (doc).lastAutoTable.finalY + 10;
+    doc.setFontSize(11);
+    doc.text(`Grand Total TP: ${grandTotalTP.toFixed(2)}`, 200, finalY, {
+      align: "left",
+    });
+
+    // Save
+    const fileName = `sales-summary-${filterMonth || "custom"}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       <AdminSidebar />
@@ -430,30 +489,6 @@ const DailyReport = () => {
                   disabled={startDate && endDate}
                 />
               </div>
-              {/* <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setSelectedMonth("");
-                  }}
-                  className="border border-gray-400 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setSelectedMonth("");
-                  }}
-                  className="border border-gray-400 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-              </div> */}
               <button
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium"
                 onClick={() => {
@@ -662,6 +697,7 @@ const DailyReport = () => {
           </div>
         </div>
 
+        {/* Edit Modal */}
         {isEditing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -674,7 +710,7 @@ const DailyReport = () => {
                     onClick={() => setIsEditing(false)}
                     className="text-gray-500 hover:text-gray-700 text-lg"
                   >
-                    ✕
+                    X
                   </button>
                 </div>
 
@@ -877,24 +913,41 @@ const DailyReport = () => {
             </div>
           </div>
         )}
+
+        {/* Summary Modal with PDF & Grand Total */}
         {showSummary && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="p-6">
-                {/* Header */}
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Product Wise Sales Summary
+                    Product-Wise Sales Summary
                   </h3>
-                  <button
-                    onClick={() => setShowSummary(false)}
-                    className="text-gray-500 hover:text-gray-700 text-lg"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={downloadPDF}
+                      className="px-4 py-1.5 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 flex items-center gap-2"
+                    >
+                      Download PDF
+                    </button>
+                    <button
+                      onClick={() => setShowSummary(false)}
+                      className="text-gray-500 hover:text-gray-700 text-lg"
+                    >
+                      X
+                    </button>
+                  </div>
                 </div>
 
-                {/* Search Box */}
+                {/* Grand Total TP */}
+                <div className="mb-4 p-3 bg-green-50 rounded-lg flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Grand Total TP</span>
+                  <span className="text-xl font-bold text-green-700">
+                    {summaryData.reduce((sum, i) => sum + i.value, 0).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Search */}
                 <div className="mb-4">
                   <input
                     type="text"

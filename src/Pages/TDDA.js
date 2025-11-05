@@ -544,7 +544,7 @@ const TDDAdminPanel = () => {
       const wb = XLSX.utils.book_new();
 
       const data = [
-        ["Employee TD/DA Report", "", "", "", "", "", "", "", "", ""],
+        ["Employee TA/DA Report", "", "", "", "", "", "", "", "", ""],
         [
           "Name:",
           reportData.userInfo.name,
@@ -750,7 +750,7 @@ const TDDAdminPanel = () => {
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(68, 114, 196);
-      doc.text("Employee TD/DA Report", doc.internal.pageSize.getWidth() / 2, 15, {
+      doc.text("Employee TA/DA Report", doc.internal.pageSize.getWidth() / 2, 15, {
         align: "center",
       });
 
@@ -978,7 +978,7 @@ const TDDAdminPanel = () => {
             </div>
           </div>
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">TD/DA Submission Count by Date</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">TA/DA Submission Count by Date</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
