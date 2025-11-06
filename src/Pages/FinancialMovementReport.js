@@ -398,6 +398,7 @@ const FinancialMovementReport = () => {
       amount: txn.amount,
       type: txn.type,
       remarks: txn.remarks || "",
+      date: txn.date, // e.g., "2025-09-09 00:00:00"
     });
     setEditingTxn(txn);
   };
@@ -411,13 +412,15 @@ const FinancialMovementReport = () => {
     try {
       await axios.put(
         `http://175.29.181.245:5000/money-transaction/${editingTxn._id}`,
-        editForm
+        editForm // now includes { amount, type, remarks, date }
       );
       toast.success("Transaction updated successfully!");
       setEditingTxn(null);
       fetchReportData();
     } catch (error) {
-      toast.error("Failed to update transaction");
+      toast.error(
+        error.response?.data?.message || "Failed to update transaction"
+      );
       console.error("Error:", error);
     }
   };
@@ -702,7 +705,8 @@ const FinancialMovementReport = () => {
                       <td className="border p-2">{txn.createdBy}</td>
                       <td className="border p-2">{txn.remarks || "-"}</td>
                       {user.role === "super admin" &&
-                        (txn.type === "payment"|| txn.type === "adjustment") && (
+                        (txn.type === "payment" ||
+                          txn.type === "adjustment") && (
                           <td className="border p-2">
                             <button
                               onClick={() => handleEdit(txn)}
@@ -737,6 +741,24 @@ const FinancialMovementReport = () => {
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h3 className="text-lg font-bold mb-4">Edit Transaction</h3>
               <div>
+                {/* Date Field */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={dayjs(editForm.date).format("YYYY-MM-DD")}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value;
+                      const formatted = `${selectedDate} 00:00:00`;
+                      setEditForm((prev) => ({ ...prev, date: formatted }));
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    required
+                  />
+                </div>
+
+                {/* Amount */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-1">
                     Amount
@@ -748,8 +770,11 @@ const FinancialMovementReport = () => {
                     onChange={handleEditChange}
                     className="w-full p-2 border border-gray-300 rounded"
                     required
+                    step="0.01"
                   />
                 </div>
+
+                {/* Type */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-1">Type</label>
                   <select
@@ -763,6 +788,8 @@ const FinancialMovementReport = () => {
                     <option value="office return">Office Return</option>
                   </select>
                 </div>
+
+                {/* Remarks */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-1">
                     Remarks
@@ -775,6 +802,7 @@ const FinancialMovementReport = () => {
                     rows="3"
                   />
                 </div>
+
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
