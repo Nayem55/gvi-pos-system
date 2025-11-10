@@ -5,6 +5,8 @@ import dayjs from "dayjs";
 import AdminSidebar from "../../Component/AdminSidebar";
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const DailyReport = () => {
   const { userId } = useParams();
@@ -313,44 +315,50 @@ const DailyReport = () => {
     try {
       // Prepare data for Excel export
       const excelData = [];
-      
+
       // Add header row
       excelData.push([
-        'Day', 'Date', 'Product Name', 'Quantity', 'Unit Price', 
-        'Memo', 'Total TP', 'Total MRP'
+        "Day",
+        "Date",
+        "Product Name",
+        "Quantity",
+        "Unit Price",
+        "Memo",
+        "Total TP",
+        "Total MRP",
       ]);
 
       // Add data rows
       serialWiseReport.forEach((dayReport, dayIndex) => {
         let dayAdded = false;
-        
+
         dayReport.reports.forEach((report) => {
           report.products.forEach((product, productIndex) => {
             const row = [];
-            
+
             // Day (only for first product of the day)
             if (!dayAdded && productIndex === 0) {
               row.push(dayIndex + 1);
               dayAdded = true;
             } else {
-              row.push('');
+              row.push("");
             }
-            
+
             // Date (only for first product of the day)
             if (productIndex === 0) {
               row.push(dayReport.date);
             } else {
-              row.push('');
+              row.push("");
             }
-            
+
             // Product details
             row.push(
               product.product_name,
               product.quantity,
               (product.tp / product.quantity).toFixed(2),
-              report.memo || 'N/A'
+              report.memo || "N/A"
             );
-            
+
             // Total TP and MRP (only for first product of the report)
             if (productIndex === 0) {
               row.push(
@@ -358,9 +366,9 @@ const DailyReport = () => {
                 dayReport.totalMRP.toFixed(2)
               );
             } else {
-              row.push('', '');
+              row.push("", "");
             }
-            
+
             excelData.push(row);
           });
         });
@@ -368,33 +376,44 @@ const DailyReport = () => {
 
       // Add summary row
       excelData.push([]); // Empty row
-      excelData.push(['GRAND TOTAL', '', '', totalProductsSold, '', '', totalTP.toFixed(2), totalMRP.toFixed(2)]);
+      excelData.push([
+        "GRAND TOTAL",
+        "",
+        "",
+        totalProductsSold,
+        "",
+        "",
+        totalTP.toFixed(2),
+        totalMRP.toFixed(2),
+      ]);
 
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(excelData);
 
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+      XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
 
       // Generate Excel file and download
-      const fileName = `sales-report-${viewedUser?.name || 'user'}-${filterMonth || 'custom'}.xlsx`;
+      const fileName = `sales-report-${viewedUser?.name || "user"}-${
+        filterMonth || "custom"
+      }.xlsx`;
       XLSX.writeFile(wb, fileName);
-      
-      toast.success('Report exported successfully!');
+
+      toast.success("Report exported successfully!");
     } catch (error) {
-      console.error('Error exporting to Excel:', error);
-      toast.error('Failed to export report');
+      console.error("Error exporting to Excel:", error);
+      toast.error("Failed to export report");
     }
   };
 
   const exportSummaryToExcel = () => {
     try {
       const excelData = [];
-      
+
       // Add header row
-      excelData.push(['Product Name', 'Total Quantity', 'Total Value (TP)']);
-      
+      excelData.push(["Product Name", "Total Quantity", "Total Value (TP)"]);
+
       // Add data rows
       summaryData
         .filter((item) =>
@@ -402,11 +421,7 @@ const DailyReport = () => {
         )
         .sort((a, b) => a.name.localeCompare(b.name))
         .forEach((item) => {
-          excelData.push([
-            item.name,
-            item.quantity,
-            item.value.toFixed(2)
-          ]);
+          excelData.push([item.name, item.quantity, item.value.toFixed(2)]);
         });
 
       // Create workbook and worksheet
@@ -414,16 +429,136 @@ const DailyReport = () => {
       const ws = XLSX.utils.aoa_to_sheet(excelData);
 
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Sales Summary');
+      XLSX.utils.book_append_sheet(wb, ws, "Sales Summary");
 
       // Generate Excel file and download
-      const fileName = `sales-summary-${viewedUser?.name || 'user'}-${filterMonth || 'custom'}.xlsx`;
+      const fileName = `sales-summary-${viewedUser?.name || "user"}-${
+        filterMonth || "custom"
+      }.xlsx`;
       XLSX.writeFile(wb, fileName);
-      
-      toast.success('Summary exported successfully!');
+
+      toast.success("Summary exported successfully!");
     } catch (error) {
-      console.error('Error exporting summary to Excel:', error);
-      toast.error('Failed to export summary');
+      console.error("Error exporting summary to Excel:", error);
+      toast.error("Failed to export summary");
+    }
+  };
+
+  /* --------------------------------------------------------------
+   PDF – Serial-wise daily report
+   -------------------------------------------------------------- */
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      // ---- Header ------------------------------------------------
+      doc.setFontSize(14);
+      doc.text(`${viewedUser?.name || "User"} – Daily Sales Report`, 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Outlet: ${viewedUser?.outlet || "N/A"}`, 14, 22);
+      const period = filterMonth
+        ? dayjs(filterMonth).format("MMMM YYYY")
+        : `${dayjs(filterStartDate).format("DD-MM-YY")} to ${dayjs(
+            filterEndDate
+          ).format("DD-MM-YY")}`;
+      doc.text(`Period: ${period}`, 14, 29);
+      doc.text(`Generated: ${dayjs().format("DD MMM YYYY, hh:mm A")}`, 200, 29);
+
+      // ---- Table data --------------------------------------------
+      const head = [
+        [
+          "Day",
+          "Date",
+          "Product",
+          "Qty",
+          "Unit TP",
+          "Memo",
+          "Total TP",
+          "Total MRP",
+        ],
+      ];
+
+      const body = [];
+      let dayCounter = 0;
+
+      serialWiseReport.forEach((dayReport) => {
+        dayCounter++;
+        let firstRowOfDay = true;
+
+        dayReport.reports.forEach((report) => {
+          report.products.forEach((prod, prodIdx) => {
+            const row = [];
+
+            if (firstRowOfDay && prodIdx === 0) {
+              row.push(dayCounter.toString(), dayReport.date);
+              firstRowOfDay = false;
+            } else {
+              row.push("", "");
+            }
+
+            row.push(prod.product_name);
+            row.push(prod.quantity.toString());
+            row.push((prod.tp / prod.quantity).toFixed(2));
+            row.push(report.memo || "N/A");
+
+            if (prodIdx === 0) {
+              row.push(dayReport.totalTP.toFixed(2));
+              row.push(dayReport.totalMRP.toFixed(2));
+            } else {
+              row.push("", "");
+            }
+
+            body.push(row);
+          });
+        });
+      });
+
+      // ---- Grand total row ----------------------------------------
+      body.push([
+        { content: "GRAND TOTAL", colSpan: 3, styles: { fontStyle: "bold" } },
+        totalProductsSold,
+        "",
+        "",
+        totalTP.toFixed(2),
+        totalMRP.toFixed(2),
+      ]);
+
+      // ---- AutoTable ---------------------------------------------
+      autoTable(doc, {
+        head,
+        body,
+        startY: 35,
+        theme: "grid",
+        styles: { fontSize: 9, cellPadding: 2 },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: { cellWidth: 12, halign: "center" },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 55 },
+          3: { cellWidth: 15, halign: "right" },
+          4: { cellWidth: 22, halign: "right" },
+          5: { cellWidth: 30 },
+          6: { cellWidth: 22, halign: "right" },
+          7: { cellWidth: 22, halign: "right" },
+        },
+      });
+
+      const fileName = `daily-report-${viewedUser?.name || "user"}-${
+        filterMonth || "custom"
+      }.pdf`;
+      doc.save(fileName);
+      toast.success("PDF exported successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export PDF");
     }
   };
 
@@ -526,12 +661,16 @@ const DailyReport = () => {
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">
               {viewedUser?.name}
             </h2>
-            <p className="text-base text-gray-600 mb-6">Outlet: {viewedUser?.outlet}</p>
+            <p className="text-base text-gray-600 mb-6">
+              Outlet: {viewedUser?.outlet}
+            </p>
 
             {/* Filters */}
             <div className="mb-6 flex flex-wrap gap-4 items-end">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">Select Month</label>
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  Select Month
+                </label>
                 <input
                   type="month"
                   value={selectedMonth}
@@ -597,28 +736,49 @@ const DailyReport = () => {
               >
                 Summary
               </button>
-              <button
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-medium"
-                onClick={exportToExcel}
-                disabled={loading || rowData.length === 0}
-              >
-                Export to Excel
-              </button>
+              <div className="flex gap-3">
+                <button
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-medium flex items-center gap-2"
+                  onClick={exportToExcel}
+                  disabled={loading || rowData.length === 0}
+                >
+                  <span>Export Excel</span>
+                </button>
+                <button
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm font-medium flex items-center gap-2"
+                  onClick={exportToPDF}
+                  disabled={loading || rowData.length === 0}
+                >
+                  <span>Export PDF</span>
+                </button>
+              </div>
             </div>
 
             {/* Report Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-100 rounded-lg p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-blue-700 mb-1">Total Products Sold</h4>
-                <p className="text-xl font-bold text-gray-800">{totalProductsSold}</p>
+                <h4 className="text-sm font-semibold text-blue-700 mb-1">
+                  Total Products Sold
+                </h4>
+                <p className="text-xl font-bold text-gray-800">
+                  {totalProductsSold}
+                </p>
               </div>
               <div className="bg-green-100 rounded-lg p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-green-700 mb-1">Total TP</h4>
-                <p className="text-xl font-bold text-gray-800">{totalTP.toFixed(2)}</p>
+                <h4 className="text-sm font-semibold text-green-700 mb-1">
+                  Total TP
+                </h4>
+                <p className="text-xl font-bold text-gray-800">
+                  {totalTP.toFixed(2)}
+                </p>
               </div>
               <div className="bg-purple-100 rounded-lg p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-purple-700 mb-1">Total MRP</h4>
-                <p className="text-xl font-bold text-gray-800">{totalMRP.toFixed(2)}</p>
+                <h4 className="text-sm font-semibold text-purple-700 mb-1">
+                  Total MRP
+                </h4>
+                <p className="text-xl font-bold text-gray-800">
+                  {totalMRP.toFixed(2)}
+                </p>
               </div>
             </div>
 
@@ -629,7 +789,8 @@ const DailyReport = () => {
               </div>
             ) : filterStartDate && filterEndDate ? (
               <div className="text-center text-gray-600 py-6">
-                Serial-wise report is only available for month selection. Please select a month.
+                Serial-wise report is only available for month selection. Please
+                select a month.
               </div>
             ) : rowData.length === 0 ? (
               <div className="text-center text-gray-600 py-6">
@@ -640,16 +801,34 @@ const DailyReport = () => {
                 <table className="min-w-full border-collapse bg-white shadow-sm rounded-lg">
                   <thead className="bg-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Day</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Product Name</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Quantity</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Unit Price</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Memo</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Total TP</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Total MRP</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Day
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Product Name
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Quantity
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Unit Price
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Memo
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Total TP
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                        Total MRP
+                      </th>
                       {user?.role === "super admin" && (
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                          Actions
+                        </th>
                       )}
                     </tr>
                   </thead>
@@ -657,12 +836,18 @@ const DailyReport = () => {
                     {rowData.map((row, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 border-r border-gray-300"
+                          >
                             {row.day}
                           </td>
                         ) : null}
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300"
+                          >
                             {row.date}
                           </td>
                         ) : null}
@@ -676,22 +861,34 @@ const DailyReport = () => {
                           {row.price}
                         </td>
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300 text-center">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border border-gray-300 text-center"
+                          >
                             {row.memo}
                           </td>
                         ) : null}
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300"
+                          >
                             {row.totalTP}
                           </td>
                         ) : null}
                         {row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium text-gray-800 border-r border-gray-300"
+                          >
                             {row.totalMRP}
                           </td>
                         ) : null}
                         {user?.role === "super admin" && row.isGroupHeader ? (
-                          <td rowSpan={row.rowSpan} className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td
+                            rowSpan={row.rowSpan}
+                            className="px-4 py-3 whitespace-nowrap text-sm text-gray-600"
+                          >
                             <div className="flex flex-col space-y-1">
                               {row.actions}
                             </div>
@@ -702,13 +899,30 @@ const DailyReport = () => {
                   </tbody>
                   <tfoot className="bg-gray-200">
                     <tr className="font-semibold text-gray-800">
-                      <td colSpan={3} className="px-4 py-3 text-left border-t border-gray-300">Grand Total</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">{totalProductsSold}</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">-</td>
-                      <td className="px-4 py-3 text-left border-t border-gray-300">-</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">{totalTP.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right border-t border-gray-300">{totalMRP.toFixed(2)}</td>
-                      {user?.role === "super admin" && <td className="px-4 py-3 border-t border-gray-300"></td>}
+                      <td
+                        colSpan={3}
+                        className="px-4 py-3 text-left border-t border-gray-300"
+                      >
+                        Grand Total
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        {totalProductsSold}
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        -
+                      </td>
+                      <td className="px-4 py-3 text-left border-t border-gray-300">
+                        -
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        {totalTP.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right border-t border-gray-300">
+                        {totalMRP.toFixed(2)}
+                      </td>
+                      {user?.role === "super admin" && (
+                        <td className="px-4 py-3 border-t border-gray-300"></td>
+                      )}
                     </tr>
                   </tfoot>
                 </table>
@@ -741,8 +955,12 @@ const DailyReport = () => {
                       </label>
                       <input
                         type="date"
-                        value={dayjs(editingReport.sale_date).format("YYYY-MM-DD")}
-                        onChange={(e) => handleFieldChange("sale_date", e.target.value)}
+                        value={dayjs(editingReport.sale_date).format(
+                          "YYYY-MM-DD"
+                        )}
+                        onChange={(e) =>
+                          handleFieldChange("sale_date", e.target.value)
+                        }
                         className="p-2 border border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
                         step="1"
                       />
@@ -754,7 +972,9 @@ const DailyReport = () => {
                       <input
                         type="text"
                         value={editingReport.memo || ""}
-                        onChange={(e) => handleFieldChange("memo", e.target.value)}
+                        onChange={(e) =>
+                          handleFieldChange("memo", e.target.value)
+                        }
                         className="p-2 border border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 text-sm text-center"
                         placeholder="Enter memo"
                       />
@@ -767,14 +987,19 @@ const DailyReport = () => {
                     </label>
                     <div className="space-y-3">
                       {editingReport.products.map((product, index) => (
-                        <div key={index} className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                        <div
+                          key={index}
+                          className="border border-gray-300 rounded-lg p-4 bg-gray-50"
+                        >
                           <div className="font-medium text-gray-800 mb-2">
                             {product.product_name}
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Quantity</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Quantity
+                              </label>
                               <input
                                 type="number"
                                 value={product.quantity}
@@ -791,12 +1016,14 @@ const DailyReport = () => {
                             </div>
 
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Unit DP</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Unit DP
+                              </label>
                               <input
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.dp / product.quantity)
+                                    ? product.dp / product.quantity
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -812,12 +1039,14 @@ const DailyReport = () => {
                             </div>
 
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Unit TP</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Unit TP
+                              </label>
                               <input
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.tp / product.quantity)
+                                    ? product.tp / product.quantity
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -833,12 +1062,14 @@ const DailyReport = () => {
                             </div>
 
                             <div className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">Unit MRP</label>
+                              <label className="text-xs font-medium text-gray-600 mb-1">
+                                Unit MRP
+                              </label>
                               <input
                                 type="number"
                                 value={
                                   product.quantity
-                                    ? (product.mrp / product.quantity)
+                                    ? product.mrp / product.quantity
                                     : 0
                                 }
                                 onChange={(e) =>
@@ -857,15 +1088,21 @@ const DailyReport = () => {
                           <div className="grid grid-cols-3 gap-3 mt-3">
                             <div className="bg-white p-2 rounded text-center border border-gray-300 text-sm">
                               <div className="text-gray-600">Total DP</div>
-                              <div className="font-medium text-gray-800">{product.dp?.toFixed(2)}</div>
+                              <div className="font-medium text-gray-800">
+                                {product.dp?.toFixed(2)}
+                              </div>
                             </div>
                             <div className="bg-white p-2 rounded text-center border border-gray-300 text-sm">
                               <div className="text-gray-600">Total TP</div>
-                              <div className="font-medium text-gray-800">{product.tp?.toFixed(2)}</div>
+                              <div className="font-medium text-gray-800">
+                                {product.tp?.toFixed(2)}
+                              </div>
                             </div>
                             <div className="bg-white p-2 rounded text-center border border-gray-300 text-sm">
                               <div className="text-gray-600">Total MRP</div>
-                              <div className="font-medium text-gray-800">{product.mrp?.toFixed(2)}</div>
+                              <div className="font-medium text-gray-800">
+                                {product.mrp?.toFixed(2)}
+                              </div>
                             </div>
                           </div>
                         </div>
