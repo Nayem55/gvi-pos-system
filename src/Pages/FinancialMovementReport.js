@@ -89,6 +89,7 @@ const FinancialMovementReport = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
   const fetchReportData = async () => {
     setLoading(true);
     setError(null);
