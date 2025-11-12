@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
@@ -34,6 +34,7 @@ const FinancialMovementReport = () => {
   });
   const [showOpeningModal, setShowOpeningModal] = useState(false);
   const [openingBreakdown, setOpeningBreakdown] = useState([]);
+  const [selectedOutletTransactions, setSelectedOutletTransactions] = useState(null);
 
   useEffect(() => {
     fetchOutlets();
@@ -136,6 +137,53 @@ const FinancialMovementReport = () => {
       setLoading(false);
     }
   };
+
+  const groupedData = useMemo(() => {
+    if (selectedType === "outlet" || !reportData?.transactions) return null;
+
+    const groups = {};
+    openingBreakdown.forEach((bd) => {
+      const out = bd.outlet;
+      groups[out] = {
+        transactions: [],
+        primary: 0,
+        adjustment: 0,
+        payment: 0,
+        officeReturn: 0,
+        openingDue: bd.openingDue,
+        closingDue: 0,
+      };
+    });
+
+    reportData.transactions.forEach((txn) => {
+      const out = txn.outlet;
+      if (groups[out]) {
+        groups[out].transactions.push(txn);
+        const amt = txn.amount;
+        const typeLower = txn.type.toLowerCase();
+        if (typeLower === "primary") {
+          groups[out].primary += amt;
+        } else if (typeLower === "adjustment") {
+          groups[out].adjustment += amt;
+        } else if (typeLower === "payment") {
+          groups[out].payment += amt;
+        } else if (
+          ["office return", "return", "sales return", "discount paid"].includes(
+            typeLower
+          )
+        ) {
+          groups[out].officeReturn += amt;
+        }
+      }
+    });
+
+    Object.values(groups).forEach((g) => {
+      g.closingDue =
+        g.openingDue + g.primary + g.adjustment - g.payment - g.officeReturn;
+    });
+
+    return groups;
+  }, [reportData, selectedType, openingBreakdown]);
 
   const exportToExcel = () => {
     if (!reportData) return;
@@ -618,17 +666,7 @@ const FinancialMovementReport = () => {
 
         {!loading && reportData && (
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-            <div
-              className="bg-white border-l-4 border-purple-600 p-4 rounded shadow"
-              onClick={
-                selectedType !== "outlet"
-                  ? () => setShowOpeningModal(true)
-                  : undefined
-              }
-              style={{
-                cursor: selectedType !== "outlet" ? "pointer" : "default",
-              }}
-            >
+            <div className="bg-white border-l-4 border-purple-600 p-4 rounded shadow">
               <p className="text-sm text-gray-600">Opening Balance</p>
               <p className="text-2xl font-semibold text-purple-700">
                 {reportData.openingDue?.toFixed(2)}
@@ -673,7 +711,64 @@ const FinancialMovementReport = () => {
           </div>
         )}
 
-        {!loading && reportData?.transactions && (
+        {!loading && reportData?.transactions && groupedData && (
+          <div className="bg-white p-4 rounded shadow-md mb-6">
+            <h3 className="text-lg font-bold mb-4">Outlet Summary</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border p-2">Outlet</th>
+                    <th className="border p-2">Opening Due</th>
+                    <th className="border p-2">Primary Added</th>
+                    <th className="border p-2">Adjustments</th>
+                    <th className="border p-2">Payments</th>
+                    <th className="border p-2">Office Returns</th>
+                    <th className="border p-2">Closing Due</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(groupedData).map(([outlet, data]) => (
+                    <tr
+                      key={outlet}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() =>
+                        setSelectedOutletTransactions({
+                          outlet,
+                          transactions: data.transactions,
+                        })
+                      }
+                    >
+                      <td className="border p-2 capitalize">
+                        {outlet.replace("_", " ")}
+                      </td>
+                      <td className="border p-2">
+                        {data.openingDue.toFixed(2)}
+                      </td>
+                      <td className="border p-2">
+                        {data.primary.toFixed(2)}
+                      </td>
+                      <td className="border p-2">
+                        {data.adjustment.toFixed(2)}
+                      </td>
+                      <td className="border p-2">
+                        {data.payment.toFixed(2)}
+                      </td>
+                      <td className="border p-2">
+                        {data.officeReturn.toFixed(2)}
+                      </td>
+                      <td className="border p-2">
+                        {data.closingDue.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {!loading && reportData?.transactions && !groupedData && (
           <div className="bg-white p-4 rounded shadow-md mb-6">
             <h3 className="text-lg font-bold mb-4">Transaction Details</h3>
             <div className="overflow-x-auto">
@@ -855,6 +950,76 @@ const FinancialMovementReport = () => {
               <div className="flex justify-end mt-4">
                 <button
                   onClick={() => setShowOpeningModal(false)}
+                  className="bg-gray-600 text-white px-4 py-2 rounded"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedOutletTransactions && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
+              <h3 className="text-lg font-bold mb-4">
+                Transaction Details for{" "}
+                {selectedOutletTransactions.outlet.replace("_", " ")}
+              </h3>
+              <div className="overflow-x-auto mb-4">
+                <table className="min-w-full border">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border p-2">Date</th>
+                      <th className="border p-2">Type</th>
+                      <th className="border p-2">Amount</th>
+                      <th className="border p-2">Created By</th>
+                      <th className="border p-2">Remarks</th>
+                      <th className="border p-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOutletTransactions.transactions.map(
+                      (txn, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border p-2">
+                            {dayjs(txn.date).format("DD-MM-YY")}
+                          </td>
+                          <td className="border p-2 capitalize">
+                            {txn.type.replace("_", " ")}
+                          </td>
+                          <td className="border p-2">
+                            {txn.amount?.toFixed(2)}
+                          </td>
+                          <td className="border p-2">{txn.createdBy}</td>
+                          <td className="border p-2">{txn.remarks || "-"}</td>
+                          {user.role === "super admin" &&
+                            (txn.type === "payment" ||
+                              txn.type === "adjustment") && (
+                              <td className="border p-2">
+                                <button
+                                  onClick={() => handleEdit(txn)}
+                                  className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(txn._id)}
+                                  className="bg-red-600 text-white px-2 py-1 rounded"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            )}
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setSelectedOutletTransactions(null)}
                   className="bg-gray-600 text-white px-4 py-2 rounded"
                 >
                   Close
