@@ -375,23 +375,23 @@ const MonthlyTargetPage = () => {
           </h2>
 
           {/* Summary */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-inner border border-purple-200">
-            <h3 className="text-lg font-medium mb-2 text-purple-800">
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg shadow-inner border border-blue-200">
+            <h3 className="text-lg font-medium mb-2 text-blue-800">
               Summary for{" "}
               {dayjs().month(month - 1).format("MMMM")} {year}{" "}
               {selectedZone !== "all" && `(${selectedZone})`}
             </h3>
             <div className="flex flex-wrap gap-6 text-gray-700">
               <p>
-                <span className="font-bold text-purple-700">Total DP:</span>{" "}
+                <span className="font-bold text-blue-700">Total DP:</span>{" "}
                 {calculateTotalTargets().totalDP}
               </p>
               <p>
-                <span className="font-bold text-purple-700">Total TP:</span>{" "}
+                <span className="font-bold text-blue-700">Total TP:</span>{" "}
                 {calculateTotalTargets().totalTP}
               </p>
               <p>
-                <span className="font-bold text-purple-700">Users with Target:</span>{" "}
+                <span className="font-bold text-blue-700">Users with Target:</span>{" "}
                 {calculateTotalTargets().userCountWithTarget}
               </p>
             </div>
@@ -403,7 +403,7 @@ const MonthlyTargetPage = () => {
                 type="number"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                className="border border-gray-300 rounded p-2 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="border border-gray-300 rounded p-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Year"
                 min="2000"
                 max="2100"
@@ -411,7 +411,7 @@ const MonthlyTargetPage = () => {
               <select
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className="border border-gray-300 rounded p-2 w-40 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="border border-gray-300 rounded p-2 w-40 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {[...Array(12)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -424,7 +424,7 @@ const MonthlyTargetPage = () => {
               <select
                 value={selectedZone}
                 onChange={(e) => setSelectedZone(e.target.value)}
-                className="border border-gray-300 rounded p-2 w-48 focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+                className="border border-gray-300 rounded p-2 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
               >
                 <option value="all">All Zones</option>
                 {zones.map((zone) => (
@@ -438,14 +438,14 @@ const MonthlyTargetPage = () => {
             <button
               onClick={handleBulkSave}
               disabled={loading || Object.keys(tempTargets).length === 0}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium"
             >
               {loading ? "Saving All..." : "Save All Changes"}
             </button>
           </div>
 
-          <div className="mb-6 p-5 border border-purple-200 rounded-lg bg-purple-50 shadow-inner">
-            <h3 className="text-lg font-medium mb-4 text-purple-800">
+          <div className="mb-6 p-5 border border-blue-200 rounded-lg bg-blue-50 shadow-inner">
+            <h3 className="text-lg font-medium mb-4 text-blue-800">
               Bulk Import/Export Targets
             </h3>
             <div className="flex flex-col gap-4">
@@ -480,7 +480,7 @@ const MonthlyTargetPage = () => {
                 </button>
               </div>
               <div className="text-sm text-gray-700 bg-white p-3 rounded border">
-                <p className="font-semibold text-purple-700 mb-1">Instructions:</p>
+                <p className="font-semibold text-blue-700 mb-1">Instructions:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Download template → Fill only "DP Target" column</li>
                   <li>TP is auto-calculated (DP × 1.07)</li>
@@ -492,14 +492,14 @@ const MonthlyTargetPage = () => {
           </div>
 
           {loading && (
-            <div className="mb-4 text-center text-purple-600 font-medium animate-pulse">
+            <div className="mb-4 text-center text-blue-600 font-medium animate-pulse">
               Loading data... Please wait.
             </div>
           )}
 
           <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-lg bg-white">
             <table className="w-full table-auto">
-              <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+              <thead className="bg-gradient-to-r from-blue-600 to-blue-600 text-white">
                 <tr>
                   <th className="p-4 text-left font-semibold">User Name</th>
                   <th className="p-4 text-left font-semibold">Outlet</th>
@@ -513,13 +513,13 @@ const MonthlyTargetPage = () => {
                 {users.map((user) => (
                   <tr
                     key={user._id}
-                    className="hover:bg-purple-50 transition-all border-b"
+                    className="hover:bg-blue-50 transition-all border-b"
                   >
                     <td className="p-4 font-medium">{user.name}</td>
                     <td className="p-4 text-gray-600">{user.outlet || "-"}</td>
                     <td className="p-4 text-gray-600">{user.number}</td>
                     <td className="p-4">
-                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                         {user.zone || "No Zone"}
                       </span>
                     </td>
@@ -534,7 +534,7 @@ const MonthlyTargetPage = () => {
                     <td className="p-4 text-center">
                       <input
                         type="number"
-                        className="border border-purple-300 p-2 rounded w-32 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+                        className="border border-blue-300 p-2 rounded w-32 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                         value={tempTargets[user._id]?.dp || ""}
                         onChange={(e) =>
                           handleTargetChange(user._id, e.target.value, "dp")
