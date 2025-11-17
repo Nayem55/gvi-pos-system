@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 
 const BrandTargetPage = () => {
   const [users, setUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]); // Store all users
   const [brands, setBrands] = useState([]);
   const [targets, setTargets] = useState({});
   const [tempTargets, setTempTargets] = useState({});
@@ -18,7 +19,9 @@ const BrandTargetPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [isSummaryOpen, setIsSummaryOpen] = useState(false); // New state for dropdown
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [selectedZone, setSelectedZone] = useState("all"); // Zone filter
+
   const tableContainerRef = useRef(null);
   const summaryButtonRef = useRef(null);
 
@@ -59,6 +62,7 @@ const BrandTargetPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch users and brands
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -66,7 +70,9 @@ const BrandTargetPage = () => {
           axios.get("http://175.29.181.245:5000/getAllUser"),
           axios.get("http://175.29.181.245:5000/brands"),
         ]);
-        setUsers(usersRes.data);
+        const fetchedUsers = usersRes.data;
+        setAllUsers(fetchedUsers);
+        setUsers(fetchedUsers); // Initially show all
         setBrands(brandsRes.data);
       } catch (error) {
         console.error("Failed to fetch data", error);
@@ -76,6 +82,16 @@ const BrandTargetPage = () => {
     fetchData();
   }, []);
 
+  // Filter users by zone
+  useEffect(() => {
+    if (selectedZone === "all") {
+      setUsers(allUsers);
+    } else {
+      setUsers(allUsers.filter((user) => user.zone === selectedZone));
+    }
+  }, [selectedZone, allUsers]);
+
+  // Fetch targets
   useEffect(() => {
     const fetchTargets = async () => {
       if (!year || !month) return;
@@ -318,11 +334,15 @@ const BrandTargetPage = () => {
     });
   };
 
+  // Updated: Use filtered users for download
   const downloadDemoFile = () => {
-    const demoData = users.map((user) => {
+    const downloadUsers = selectedZone === "all" ? allUsers : users;
+
+    const demoData = downloadUsers.map((user) => {
       const row = {
         "User ID": user._id,
         "User Name": user.name,
+        "Zone": user.zone || "",
       };
       brands.forEach((brand) => {
         row[brand] = "";
@@ -333,9 +353,10 @@ const BrandTargetPage = () => {
     const worksheet = XLSX.utils.json_to_sheet(demoData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Brand Targets");
-    XLSX.writeFile(workbook, `Brand_Targets_Template_${year}_${month}.xlsx`);
+    XLSX.writeFile(workbook, `Brand_Targets_Template_${year}_${month}_${selectedZone === "all" ? "AllZones" : selectedZone}.xlsx`);
   };
 
+  // Updated: Calculate summary based on filtered users
   const calculateBrandTotals = () => {
     const brandTotals = {};
     let userCountWithTargets = 0;
@@ -344,7 +365,8 @@ const BrandTargetPage = () => {
       brandTotals[brand] = 0;
     });
 
-    Object.entries(tempTargets).forEach(([userID, userTargets]) => {
+    users.forEach((user) => {
+      const userTargets = tempTargets[user._id] || {};
       let hasNonZeroTarget = false;
       brands.forEach((brand) => {
         const targetValue = parseFloat(userTargets[brand]) || 0;
@@ -364,6 +386,9 @@ const BrandTargetPage = () => {
 
     return { brandTotals, userCountWithTargets };
   };
+
+  // Get unique zones
+  const zones = Array.from(new Set(allUsers.map((u) => u.zone).filter(Boolean)));
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -404,7 +429,7 @@ const BrandTargetPage = () => {
                     {dayjs()
                       .month(month - 1)
                       .format("MMMM")}{" "}
-                    {year}
+                    {year} ({selectedZone === "all" ? "All Zones" : selectedZone})
                   </span>
                   <svg
                     className={`w-4 h-4 transform transition-transform ${
@@ -426,8 +451,7 @@ const BrandTargetPage = () => {
                 {isSummaryOpen && (
                   <div
                     id="summary-dropdown"
-                    className="absolute z-10 mt-2 w-full md:w-96 bg-gray-50 rounded-lg shadow-lg p-4 border border-gray-200 transform transition-all duration-300 ease-in-out origin-top scale-y-0 data-[open=true]:scale-y-100"
-                    data-open={isSummaryOpen}
+                    className="absolute z-10 mt-2 w-full md:w-96 bg-gray-50 rounded-lg shadow-lg p-4 border border-gray-200"
                   >
                     <h3 className="text-lg font-medium text-gray-800 mb-3">
                       Summary Details
@@ -461,7 +485,7 @@ const BrandTargetPage = () => {
               {/* Control Panel */}
               <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                  <div className="flex items-center space-x-4">
+                  <div className="flex flex-wrap items-center gap-4">
                     <input
                       type="number"
                       value={year}
@@ -477,6 +501,20 @@ const BrandTargetPage = () => {
                       {[...Array(12)].map((_, i) => (
                         <option key={i + 1} value={i + 1}>
                           {dayjs().month(i).format("MMMM")}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Zone Filter */}
+                    <select
+                      value={selectedZone}
+                      onChange={(e) => setSelectedZone(e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="all">All Zones</option>
+                      {zones.map((zone) => (
+                        <option key={zone} value={zone}>
+                          {zone}
                         </option>
                       ))}
                     </select>
@@ -642,7 +680,7 @@ const BrandTargetPage = () => {
                     <ol className="list-decimal pl-5 space-y-1">
                       <li>Download the template to ensure correct format.</li>
                       <li>Enter target values for each brand column.</li>
-                      <li>Do not alter "User ID" or "User Name" columns.</li>
+                      <li>Do not alter "User ID", "User Name", or "Zone" columns.</li>
                       <li>Upload the file to load data into the table.</li>
                       <li>Review changes and use "Save All" to persist.</li>
                     </ol>
@@ -686,6 +724,12 @@ const BrandTargetPage = () => {
                         >
                           Outlet
                         </th>
+                        <th
+                          scope="col"
+                          className="sticky left-32 z-10 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50"
+                        >
+                          Zone
+                        </th>
                         {brands.map((brand) => (
                           <th
                             key={brand}
@@ -711,6 +755,9 @@ const BrandTargetPage = () => {
                           </td>
                           <td className="sticky left-12 px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-white">
                             {user.outlet}
+                          </td>
+                          <td className="sticky left-32 px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-white">
+                            {user.zone || "-"}
                           </td>
                           {brands.map((brand) => (
                             <td
