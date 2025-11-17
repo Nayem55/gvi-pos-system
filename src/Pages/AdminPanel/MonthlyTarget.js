@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 
 const MonthlyTargetPage = () => {
   const [users, setUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]); // Keep full list
   const [targets, setTargets] = useState({});
   const [tempTargets, setTempTargets] = useState({});
   const [year, setYear] = useState(dayjs().year());
@@ -14,12 +15,15 @@ const MonthlyTargetPage = () => {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [selectedZone, setSelectedZone] = useState("all"); // Zone filter
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const res = await axios.get("http://175.29.181.245:5000/getAllUser");
-        setUsers(res.data);
+        const fetchedUsers = res.data;
+        setAllUsers(fetchedUsers);
+        setUsers(fetchedUsers); // Initially show all
       } catch (error) {
         console.error("Failed to fetch users", error);
         toast.error("Failed to fetch users");
@@ -27,6 +31,15 @@ const MonthlyTargetPage = () => {
     };
     fetchUsers();
   }, []);
+
+  // Apply zone filter
+  useEffect(() => {
+    if (selectedZone === "all") {
+      setUsers(allUsers);
+    } else {
+      setUsers(allUsers.filter((user) => user.zone === selectedZone));
+    }
+  }, [selectedZone, allUsers]);
 
   useEffect(() => {
     const fetchTargets = async () => {
@@ -139,10 +152,7 @@ const MonthlyTargetPage = () => {
       setTargets(updatedTargetsMap);
       setTempTargets(updatedTargetsMap);
     } catch (error) {
-      console.error(
-        "Failed to save or update target",
-        error.response?.data || error
-      );
+      console.error("Failed to save or update target", error.response?.data || error);
       toast.error(error.response?.data?.message || "Error saving target");
     } finally {
       setLoading(false);
@@ -170,11 +180,7 @@ const MonthlyTargetPage = () => {
           dp: tempTargets[user._id].dp,
         }));
 
-      await axios.post(
-        "http://175.29.181.245:5000/targets/bulk",
-        targetsToSave
-      );
-
+      await axios.post("http://175.29.181.245:5000/targets/bulk", targetsToSave);
       toast.success(`Successfully saved ${targetsToSave.length} targets`);
 
       const res = await axios.get("http://175.29.181.245:5000/targets", {
@@ -259,9 +265,7 @@ const MonthlyTargetPage = () => {
       const processedCount = processExcelData(data);
 
       if (processedCount > 0) {
-        toast.success(
-          `Imported and processed ${processedCount} targets. Review and save.`
-        );
+        toast.success(`Imported and processed ${processedCount} targets. Review and save.`);
       } else {
         toast.error("No valid targets found in the file");
       }
@@ -280,7 +284,6 @@ const MonthlyTargetPage = () => {
   const readExcelFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
@@ -292,18 +295,20 @@ const MonthlyTargetPage = () => {
           reject(error);
         }
       };
-
       reader.onerror = (error) => reject(error);
       reader.readAsArrayBuffer(file);
     });
   };
 
+  // Updated: Filter users in template
   const downloadDemoFile = () => {
-    const demoData = users.map((user) => ({
+    const exportUsers = selectedZone === "all" ? allUsers : users;
+
+    const demoData = exportUsers.map((user) => ({
       "User ID": user._id,
       "User Name": user.name,
       "User Number": user.number,
-      "User Zone": user.zone,
+      "User Zone": user.zone || "",
       "DP Target": "",
       "TP Target (Auto Calculated)": "",
     }));
@@ -311,15 +316,18 @@ const MonthlyTargetPage = () => {
     const worksheet = XLSX.utils.json_to_sheet(demoData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Targets");
-    XLSX.writeFile(workbook, `Monthly_Targets_Template_${year}_${month}.xlsx`);
+    XLSX.writeFile(workbook, `Monthly_Targets_Template_${year}_${month}_${selectedZone === "all" ? "AllZones" : selectedZone}.xlsx`);
   };
 
+  // Updated: Export only filtered users
   const handleExportTargets = () => {
-    const exportData = users.map((user) => ({
+    const exportUsers = selectedZone === "all" ? allUsers : users;
+
+    const exportData = exportUsers.map((user) => ({
       "User ID": user._id,
       "User Name": user.name,
       "User Number": user.number,
-      "User Zone": user.zone,
+      "User Zone": user.zone || "",
       "DP Target": tempTargets[user._id]?.dp || "",
       "TP Target (Auto Calculated)": tempTargets[user._id]?.tp || "",
     }));
@@ -327,21 +335,23 @@ const MonthlyTargetPage = () => {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Targets");
-    XLSX.writeFile(workbook, `Monthly_Targets_${year}_${month}.xlsx`);
+    XLSX.writeFile(workbook, `Monthly_Targets_${year}_${month}_${selectedZone === "all" ? "AllZones" : selectedZone}.xlsx`);
   };
 
+  // Updated: Summary based on filtered users
   const calculateTotalTargets = () => {
     let totalDP = 0;
     let totalTP = 0;
     let userCountWithTarget = 0;
 
-    Object.values(tempTargets).forEach((target) => {
-      const dp = parseFloat(target.dp) || 0;
-      const tp = parseFloat(target.tp) || 0;
-      totalDP += dp;
-      totalTP += tp;
-      if (dp > 0) {
-        userCountWithTarget += 1;
+    users.forEach((user) => {
+      const target = tempTargets[user._id];
+      if (target) {
+        const dp = parseFloat(target.dp) || 0;
+        const tp = parseFloat(target.tp) || 0;
+        totalDP += dp;
+        totalTP += tp;
+        if (dp > 0) userCountWithTarget += 1;
       }
     });
 
@@ -352,42 +362,43 @@ const MonthlyTargetPage = () => {
     };
   };
 
+  // Extract unique zones
+  const zones = Array.from(new Set(allUsers.map((u) => u.zone).filter(Boolean)));
+
   return (
     <div className="flex">
       <AdminSidebar />
       <div className="p-6 bg-gray-100 min-h-screen flex-1">
-        <div className="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-7xl mx-auto">
           <h2 className="text-2xl font-semibold mb-6">
             Monthly Target Management
           </h2>
 
-          {/* Total Targets Display */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
-            <h3 className="text-lg font-medium mb-2">
+          {/* Summary */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-inner border border-purple-200">
+            <h3 className="text-lg font-medium mb-2 text-purple-800">
               Summary for{" "}
-              {dayjs()
-                .month(month - 1)
-                .format("MMMM")}{" "}
-              {year}
+              {dayjs().month(month - 1).format("MMMM")} {year}{" "}
+              {selectedZone !== "all" && `(${selectedZone})`}
             </h3>
-            <div className="flex gap-8">
+            <div className="flex flex-wrap gap-6 text-gray-700">
               <p>
-                <span className="font-semibold">Total DP Target:</span>{" "}
+                <span className="font-bold text-purple-700">Total DP:</span>{" "}
                 {calculateTotalTargets().totalDP}
               </p>
               <p>
-                <span className="font-semibold">Total TP Target:</span>{" "}
+                <span className="font-bold text-purple-700">Total TP:</span>{" "}
                 {calculateTotalTargets().totalTP}
               </p>
               <p>
-                <span className="font-semibold">Users with Targets:</span>{" "}
+                <span className="font-bold text-purple-700">Users with Target:</span>{" "}
                 {calculateTotalTargets().userCountWithTarget}
               </p>
             </div>
           </div>
 
           <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-wrap gap-4 items-center">
               <input
                 type="number"
                 value={year}
@@ -408,120 +419,122 @@ const MonthlyTargetPage = () => {
                   </option>
                 ))}
               </select>
+
+              {/* Zone Filter */}
+              <select
+                value={selectedZone}
+                onChange={(e) => setSelectedZone(e.target.value)}
+                className="border border-gray-300 rounded p-2 w-48 focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+              >
+                <option value="all">All Zones</option>
+                {zones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="flex gap-4">
-              <button
-                onClick={handleBulkSave}
-                disabled={loading || Object.keys(tempTargets).length === 0}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? "Saving All..." : "Save All Changes"}
-              </button>
-            </div>
+            <button
+              onClick={handleBulkSave}
+              disabled={loading || Object.keys(tempTargets).length === 0}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium"
+            >
+              {loading ? "Saving All..." : "Save All Changes"}
+            </button>
           </div>
 
-          <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-inner">
-            <h3 className="text-lg font-medium mb-3">
+          <div className="mb-6 p-5 border border-purple-200 rounded-lg bg-purple-50 shadow-inner">
+            <h3 className="text-lg font-medium mb-4 text-purple-800">
               Bulk Import/Export Targets
             </h3>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex flex-col md:flex-row gap-4 items-stretch">
                 <button
                   onClick={downloadDemoFile}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
                   Download Template
                 </button>
                 <button
                   onClick={handleExportTargets}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                  className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                 >
-                  Export Targets
+                  Export Current Targets
                 </button>
-                <div className="flex-1 w-full">
+                <div className="flex-1">
                   <input
                     id="file-upload"
                     type="file"
                     accept=".xlsx, .xls, .csv"
                     onChange={handleFileUpload}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                 </div>
                 <button
                   onClick={handleBulkImport}
                   disabled={!file || importLoading || loading}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {importLoading ? "Importing..." : "Import File"}
                 </button>
               </div>
-              <div className="text-sm text-gray-600">
-                <p className="font-medium mb-1">Import/Export Instructions:</p>
-                <ol className="list-decimal pl-5 space-y-1">
-                  <li>Download the template to ensure correct format.</li>
-                  <li>
-                    Enter values only in the "DP Target" column (TP is
-                    auto-calculated).
-                  </li>
-                  <li>
-                    Do not alter "User ID", "User Name", "User Number", or "User
-                    Zone" columns.
-                  </li>
-                  <li>Upload the file to load data into the table.</li>
-                  <li>Review changes and use "Save All Changes" to persist.</li>
-                  <li>Use "Export Targets" to download current targets for the selected month.</li>
-                </ol>
+              <div className="text-sm text-gray-700 bg-white p-3 rounded border">
+                <p className="font-semibold text-purple-700 mb-1">Instructions:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Download template → Fill only "DP Target" column</li>
+                  <li>TP is auto-calculated (DP × 1.07)</li>
+                  <li>Do not modify User ID, Name, Number, or Zone</li>
+                  <li>Export downloads current targets for selected zone</li>
+                </ul>
               </div>
             </div>
           </div>
 
           {loading && (
-            <div className="mb-4 text-center text-purple-600 font-medium">
+            <div className="mb-4 text-center text-purple-600 font-medium animate-pulse">
               Loading data... Please wait.
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow">
-            <table className="w-full table-auto border-collapse">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border-b p-3 text-left font-medium">
-                    User Name
-                  </th>
-                  <th className="border-b p-3 text-left font-medium">Outlet</th>
-                  <th className="border-b p-3 text-left font-medium">Number</th>
-                  <th className="border-b p-3 text-left font-medium">Zone</th>
-                  <th className="border-b p-3 text-center font-medium">
-                    TP Target
-                  </th>
-                  <th className="border-b p-3 text-center font-medium">
-                    DP Target
-                  </th>
+          <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-lg bg-white">
+            <table className="w-full table-auto">
+              <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                <tr>
+                  <th className="p-4 text-left font-semibold">User Name</th>
+                  <th className="p-4 text-left font-semibold">Outlet</th>
+                  <th className="p-4 text-left font-semibold">Number</th>
+                  <th className="p-4 text-left font-semibold">Zone</th>
+                  <th className="p-4 text-center font-semibold">TP Target</th>
+                  <th className="p-4 text-center font-semibold">DP Target</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr
                     key={user._id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-purple-50 transition-all border-b"
                   >
-                    <td className="border-b p-3">{user.name}</td>
-                    <td className="border-b p-3">{user.outlet}</td>
-                    <td className="border-b p-3">{user.number}</td>
-                    <td className="border-b p-3">{user.zone}</td>
-                    <td className="border-b p-3 text-center">
+                    <td className="p-4 font-medium">{user.name}</td>
+                    <td className="p-4 text-gray-600">{user.outlet || "-"}</td>
+                    <td className="p-4 text-gray-600">{user.number}</td>
+                    <td className="p-4">
+                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                        {user.zone || "No Zone"}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
                       <input
                         type="text"
-                        className="border border-gray-300 p-2 rounded w-32 text-center bg-gray-100"
+                        className="border border-gray-300 p-2 rounded w-32 text-center bg-gray-100 font-medium"
                         value={tempTargets[user._id]?.tp || ""}
                         disabled
                       />
                     </td>
-                    <td className="border-b p-3 text-center">
+                    <td className="p-4 text-center">
                       <input
                         type="number"
-                        className="border border-gray-300 p-2 rounded w-32 text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="border border-purple-300 p-2 rounded w-32 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
                         value={tempTargets[user._id]?.dp || ""}
                         onChange={(e) =>
                           handleTargetChange(user._id, e.target.value, "dp")
