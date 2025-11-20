@@ -100,15 +100,19 @@ const BrandWiseSalesReport = () => {
       const response = await axios.get("http://175.29.181.245:5000/sales/brand-wise", {
         params,
       });
-      setSalesData(response.data);
 
-      const totalBrands = response.data.length;
-      const totalQuantity = response.data.reduce(
-        (acc, brand) => acc + brand.total_quantity,
-        0
-      );
-      const totalTP = response.data.reduce((acc, brand) => acc + brand.total_tp, 0);
-      const totalMRP = response.data.reduce((acc, brand) => acc + brand.total_mrp, 0);
+      // Deduct market returns from quantity
+      const adjustedData = response.data.map((brand) => ({
+        ...brand,
+        net_quantity: brand.total_quantity - (brand.return_quantity || 0),
+      }));
+
+      setSalesData(adjustedData);
+
+      const totalBrands = adjustedData.length;
+      const totalQuantity = adjustedData.reduce((acc, brand) => acc + brand.net_quantity, 0);
+      const totalTP = adjustedData.reduce((acc, brand) => acc + brand.total_tp, 0);
+      const totalMRP = adjustedData.reduce((acc, brand) => acc + brand.total_mrp, 0);
 
       setSummary({ totalBrands, totalQuantity, totalTP, totalMRP });
     } catch (err) {
@@ -138,8 +142,6 @@ const BrandWiseSalesReport = () => {
         params.zone = selectedZone;
       }
 
-      console.debug("Fetching outlet details with params:", params); // Debug log
-
       const outletSalesRes = await axios.get(
         "http://175.29.181.245:5000/sales/brand-wise/outlet-details",
         { params }
@@ -154,30 +156,26 @@ const BrandWiseSalesReport = () => {
       const enhancedOutletData = outletSales.map((outlet) => {
         const userTargets = targetsData[outlet._id.userID] || {};
         const target = userTargets[brand] || 0;
-        const achievement = target > 0 ? (outlet.total_quantity / target) * 100 : 0;
 
-        return { ...outlet, target, achievement };
+        // Net quantity after deducting market returns
+        const net_quantity = outlet.total_quantity - (outlet.return_quantity || 0);
+        const achievement = target > 0 ? (net_quantity / target) * 100 : 0;
+
+        return {
+          ...outlet,
+          net_quantity,
+          target,
+          achievement,
+        };
       });
 
       setModalData(enhancedOutletData);
 
-      const totalQuantity = enhancedOutletData.reduce(
-        (sum, outlet) => sum + outlet.total_quantity,
-        0
-      );
-      const totalTP = enhancedOutletData.reduce(
-        (sum, outlet) => sum + outlet.total_tp,
-        0
-      );
-      const totalMRP = enhancedOutletData.reduce(
-        (sum, outlet) => sum + outlet.total_mrp,
-        0
-      );
+      const totalQuantity = enhancedOutletData.reduce((sum, o) => sum + o.net_quantity, 0);
+      const totalTP = enhancedOutletData.reduce((sum, o) => sum + o.total_tp, 0);
+      const totalMRP = enhancedOutletData.reduce((sum, o) => sum + o.total_mrp, 0);
       const totalOutlets = enhancedOutletData.length;
-      const totalTarget = enhancedOutletData.reduce(
-        (sum, outlet) => sum + outlet.target,
-        0
-      );
+      const totalTarget = enhancedOutletData.reduce((sum, o) => sum + o.target, 0);
       const totalAchievement = totalTarget > 0 ? (totalQuantity / totalTarget) * 100 : 0;
 
       setModalSummary({
@@ -228,14 +226,14 @@ const BrandWiseSalesReport = () => {
     try {
       const exportData = salesData.map((brand) => ({
         Brand: brand._id,
-        "Total Pcs": brand.total_quantity,
+        "Total Pcs (Net)": brand.net_quantity,
         "Total TP": brand.total_tp.toFixed(2),
         "Total MRP": brand.total_mrp.toFixed(2),
       }));
 
       exportData.push({
         Brand: "TOTAL",
-        "Total Pcs": summary.totalQuantity,
+        "Total Pcs (Net)": summary.totalQuantity,
         "Total TP": summary.totalTP.toFixed(2),
         "Total MRP": summary.totalMRP.toFixed(2),
       });
@@ -245,16 +243,16 @@ const BrandWiseSalesReport = () => {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Brand Wise Sales");
 
       worksheet["!cols"] = [
-        { wch: 30 }, // Brand
-        { wch: 10 }, // Pcs
-        { wch: 15 }, // TP
-        { wch: 15 }, // MRP
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
       ];
 
       const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const fileName = `BrandWiseSales-${dayjs().format("YYYY-MM-DD_HH-mm")}.xlsx`;
+      const fileName = `BrandWiseSales-Net-${dayjs().format("YYYY-MM-DD_HH-mm")}.xlsx`;
       saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
-      toast.success("Sales report exported successfully");
+      toast.success("Sales report (Net Pcs) exported successfully");
     } catch (error) {
       console.error("Error exporting sales data:", error);
       toast.error("Failed to export sales data");
@@ -267,7 +265,7 @@ const BrandWiseSalesReport = () => {
         Brand: selectedBrand,
         SO: outlet._id.so,
         Outlet: outlet._id.outlet,
-        "Pcs Sold": outlet.total_quantity,
+        "Pcs Sold (Net)": outlet.net_quantity,
         "Total TP": outlet.total_tp.toFixed(2),
         "Total MRP": outlet.total_mrp.toFixed(2),
         Target: outlet.target,
@@ -278,7 +276,7 @@ const BrandWiseSalesReport = () => {
         Brand: `${selectedBrand} - TOTAL`,
         SO: "",
         Outlet: "",
-        "Pcs Sold": modalSummary.totalQuantity,
+        "Pcs Sold (Net)": modalSummary.totalQuantity,
         "Total TP": modalSummary.totalTP.toFixed(2),
         "Total MRP": modalSummary.totalMRP.toFixed(2),
         Target: modalSummary.totalTarget.toFixed(2),
@@ -302,9 +300,9 @@ const BrandWiseSalesReport = () => {
       ];
 
       const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const fileName = `OutletSalesWithTargets-${selectedBrand}-${dayjs().format("YYYY-MM-DD")}.xlsx`;
+      const fileName = `OutletSales-Net-${selectedBrand}-${dayjs().format("YYYY-MM-DD")}.xlsx`;
       saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
-      toast.success("Outlet details exported successfully");
+      toast.success("Outlet details (Net Pcs) exported successfully");
     } catch (error) {
       console.error("Error exporting outlet details:", error);
       toast.error("Failed to export outlet details");
@@ -337,7 +335,7 @@ const BrandWiseSalesReport = () => {
             <div className="bg-green-100 p-4 rounded-lg flex items-center gap-3">
               <ShoppingCart size={28} className="text-green-500" />
               <div>
-                <p className="text-gray-600 text-sm">Total Pcs Sold</p>
+                <p className="text-gray-600 text-sm">Net Pcs Sold (After Returns)</p>
                 <h3 className="text-lg font-bold">{summary.totalQuantity}</h3>
               </div>
             </div>
@@ -435,7 +433,7 @@ const BrandWiseSalesReport = () => {
                 <thead>
                   <tr className="bg-gray-200">
                     <th className="border p-2 text-left">Brand</th>
-                    <th className="border p-2 text-center">Pcs</th>
+                    <th className="border p-2 text-center">Net Pcs (After Returns)</th>
                     <th className="border p-2 text-center">Total TP</th>
                     <th className="border p-2 text-center">Total MRP</th>
                     <th className="border p-2 text-center">View Details</th>
@@ -449,7 +447,7 @@ const BrandWiseSalesReport = () => {
                         className="border p-2 text-center cursor-pointer text-blue-600 hover:underline"
                         onClick={() => fetchOutletDetails(brand._id)}
                       >
-                        {brand.total_quantity}
+                        {brand.net_quantity}
                       </td>
                       <td className="border p-2 text-center">{brand.total_tp.toFixed(2)}</td>
                       <td className="border p-2 text-center">{brand.total_mrp.toFixed(2)}</td>
@@ -513,7 +511,7 @@ const BrandWiseSalesReport = () => {
                   <div className="bg-green-100 p-3 rounded-lg flex items-center gap-3">
                     <ShoppingCart size={20} className="text-green-500" />
                     <div>
-                      <p className="text-gray-600 text-xs">Total Pcs Sold</p>
+                      <p className="text-gray-600 text-xs">Net Pcs Sold (After Returns)</p>
                       <h3 className="text-md font-bold">{modalSummary.totalQuantity}</h3>
                     </div>
                   </div>
@@ -540,7 +538,6 @@ const BrandWiseSalesReport = () => {
                   </div>
                 </div>
 
-                {/* Date Range and Zone Info */}
                 <div className="p-4 text-sm text-gray-600">
                   <p>
                     Date Range:{" "}
@@ -566,7 +563,7 @@ const BrandWiseSalesReport = () => {
                           <tr className="bg-gray-200">
                             <th className="border p-2 text-left">SO</th>
                             <th className="border p-2 text-left">Outlet</th>
-                            <th className="border p-2 text-center">Pcs Sold</th>
+                            <th className="border p-2 text-center">Net Pcs (After Returns)</th>
                             <th className="border p-2 text-center">Total TP</th>
                             <th className="border p-2 text-center">Target</th>
                             <th className="border p-2 text-center">Achievement</th>
@@ -580,7 +577,7 @@ const BrandWiseSalesReport = () => {
                             >
                               <td className="border p-2">{outlet._id.so}</td>
                               <td className="border p-2">{outlet._id.outlet}</td>
-                              <td className="border p-2 text-center">{outlet.total_quantity}</td>
+                              <td className="border p-2 text-center">{outlet.net_quantity}</td>
                               <td className="border p-2 text-center">{outlet.total_tp.toFixed(2)}</td>
                               <td className="border p-2 text-center">{outlet.target}</td>
                               <td className="border p-2 text-center">
