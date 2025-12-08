@@ -308,7 +308,7 @@ const ManagerReports = () => {
         };
       }
       acc[userId].sales.push(sale);
-      acc[userId].totalTP += sale.total_tp || 0;
+      acc[userId].totalTP += sale.total_tp-sale.return || 0;
       return acc;
     }, {});
 
@@ -570,7 +570,7 @@ const ManagerReports = () => {
                         <th className="p-2">Zone</th>
                         <th className="p-2">Role</th>
                         <th className="p-2">Target (TP)</th>
-                        <th className="p-2">Sales (TP)</th>
+                        <th className="p-2">ACT. Sales (TP)</th>
                         <th className="p-2">Achievement</th>
                         {/* <th className="p-2">Sales Count</th>
                         <th className="p-2">Action</th> */}
