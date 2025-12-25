@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import AdminSidebar from "../Component/AdminSidebar";
-import { Menu, X, Download, Eye } from "lucide-react";
+import { Menu, X, Download, Eye, Trash2, Edit2 } from "lucide-react";
 
 const SlabDashboard = () => {
   const [customers, setCustomers] = useState([]);
@@ -13,31 +13,35 @@ const SlabDashboard = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editQuantity, setEditQuantity] = useState("");
+  const [customerToEdit, setCustomerToEdit] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const user = JSON.parse(localStorage.getItem("pos-user") || "{}");
 
   // Fetch Data
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("http://175.29.181.245:5000/customer-sale-summary");
+      const data = await response.json();
+      setCustomers(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Fetch failed", error);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchCustomers = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch("http://175.29.181.245:5000/customer-sale-summary");
-        const data = await response.json();
-        setCustomers(data);
-      } catch (error) {
-        console.error("Fetch failed", error);
-      }
-    };
     fetchCustomers();
   }, []);
 
   // Filter Logic
   useEffect(() => {
     let filtered = [...customers];
-
     if (zoneFilter !== "All") filtered = filtered.filter(c => c.so_zone === zoneFilter);
     if (soFilter !== "All") filtered = filtered.filter(c => c.so_name === soFilter);
-
     if (user.role === "SO") {
       filtered = filtered.filter(c =>
         c.so_name?.trim().toLowerCase() === user.name?.trim().toLowerCase()
@@ -47,9 +51,7 @@ const SlabDashboard = () => {
         c.so_zone?.toLowerCase().includes(user.zone?.toLowerCase())
       );
     }
-
     setFilteredCustomers(filtered);
-    if (customers.length > 0) setLoading(false);
   }, [zoneFilter, soFilter, customers]);
 
   const uniqueZones = ["All", ...new Set(customers.map(c => c.so_zone).filter(Boolean))];
@@ -79,7 +81,59 @@ const SlabDashboard = () => {
     XLSX.writeFile(wb, "Lifetime_Customers.xlsx");
   };
 
-  // Modal
+  // Delete Customer
+  const deleteCustomer = async (owner_number) => {
+    if (!window.confirm("Are you sure you want to delete this customer and their transactions?")) {
+      return;
+    }
+    try {
+      const res = await fetch(`http://175.29.181.245:5000/customer/${owner_number}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchCustomers();
+      } else {
+        alert("Failed to delete customer");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting customer");
+    }
+  };
+
+  // Edit Quantity
+  const openEditModal = (customer) => {
+    setCustomerToEdit(customer);
+    setEditQuantity(customer.lifetime_quantity || 0);
+    setIsEditModalOpen(true);
+  };
+
+  const saveQuantity = async () => {
+    if (!customerToEdit) return;
+
+    try {
+      const res = await fetch(`http://175.29.181.245:5000/customer/${customerToEdit.owner_number}/quantity`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifetime_quantity: parseInt(editQuantity) || 0 }),
+      });
+
+      if (res.ok) {
+        fetchCustomers(); // Refresh data
+        setIsEditModalOpen(false);
+        setCustomerToEdit(null);
+        setEditQuantity("");
+      } else {
+        const error = await res.json();
+        alert("Failed to update quantity: " + error.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating quantity");
+    }
+  };
+
+  // Transaction Modal
   const openModal = async (customer) => {
     setSelectedCustomer(customer);
     setIsModalOpen(true);
@@ -126,12 +180,8 @@ const SlabDashboard = () => {
   return (
     <>
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        {/* Sidebar - Always on top */}
         {user.role === "super admin" && <AdminSidebar />}
-
-        {/* Main Content */}
         <div className="flex-1 p-4 md:p-6 lg:p-8 relative">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
               Lifetime Customer Summary
@@ -144,7 +194,6 @@ const SlabDashboard = () => {
             </button>
           </div>
 
-          {/* Filters */}
           {user.role !== "SO" && (
             <div className="mb-6">
               <button
@@ -153,7 +202,6 @@ const SlabDashboard = () => {
               >
                 Filters {showFilters ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-
               <div className={`${showFilters ? "block" : "hidden"} sm:block mt-3 sm:mt-0`}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow">
                   <div>
@@ -181,7 +229,6 @@ const SlabDashboard = () => {
             </div>
           )}
 
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 rounded-xl shadow-lg">
               <h3 className="text-lg font-semibold">Total Customers</h3>
@@ -193,7 +240,6 @@ const SlabDashboard = () => {
             </div>
           </div>
 
-          {/* Zone Summary */}
           <div className="bg-white rounded-xl shadow-lg p-5 mb-6 overflow-hidden">
             <h3 className="text-lg font-bold text-gray-800 mb-3">Zone Wise Summary</h3>
             <div className="overflow-x-auto">
@@ -218,7 +264,6 @@ const SlabDashboard = () => {
             </div>
           </div>
 
-          {/* Customer List */}
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {loading ? (
               <div className="p-12 text-center">
@@ -237,7 +282,7 @@ const SlabDashboard = () => {
                       <th className="p-3 text-left">SO</th>
                       <th className="p-3 text-left">Zone</th>
                       <th className="p-3 text-right">Qty</th>
-                      <th className="p-3 text-center">Action</th>
+                      <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -249,13 +294,29 @@ const SlabDashboard = () => {
                         <td className="p-3">{c.so_name || "-"}</td>
                         <td className="p-3">{c.so_zone || "-"}</td>
                         <td className="p-3 text-right font-semibold">{c.lifetime_quantity}</td>
-                        <td className="p-3 text-center">
+                        <td className="p-3 text-center flex justify-center gap-2">
                           <button
                             onClick={() => openModal(c)}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1 mx-auto"
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1"
                           >
                             <Eye className="w-3 h-3" /> View
                           </button>
+                          {user.role === "super admin" && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(c)}
+                                className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit Qty
+                              </button>
+                              <button
+                                onClick={() => deleteCustomer(c.owner_number)}
+                                className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -278,12 +339,30 @@ const SlabDashboard = () => {
                         <p className="text-sm text-gray-600"><strong>Owner:</strong> {c.owner_name}</p>
                         <p className="text-sm text-gray-600"><strong>Phone:</strong> {c.owner_number}</p>
                         <p className="text-sm text-gray-600"><strong>SO:</strong> {c.so_name} ({c.so_zone})</p>
-                        <button
-                          onClick={() => openModal(c)}
-                          className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
-                        >
-                          <Eye className="w-4 h-4" /> View Transactions
-                        </button>
+                        <div className="mt-3 flex flex-col gap-2">
+                          <button
+                            onClick={() => openModal(c)}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Eye className="w-4 h-4" /> View Transactions
+                          </button>
+                          {user.role === "super admin" && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(c)}
+                                className="w-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
+                              >
+                                <Edit2 className="w-4 h-4" /> Edit Quantity
+                              </button>
+                              <button
+                                onClick={() => deleteCustomer(c.owner_number)}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" /> Delete Customer
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}
@@ -294,7 +373,7 @@ const SlabDashboard = () => {
         </div>
       </div>
 
-      {/* Modal - Outside main layout, with proper z-index */}
+      {/* Transaction Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
@@ -327,6 +406,44 @@ const SlabDashboard = () => {
               ) : (
                 <p className="text-center text-gray-500 py-8">No transactions found.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Quantity Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Lifetime Quantity</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Customer: <strong>{customerToEdit?.owner_name}</strong> ({customerToEdit?.owner_number})
+            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">New Quantity</label>
+            <input
+              type="number"
+              value={editQuantity}
+              onChange={(e) => setEditQuantity(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              min="0"
+            />
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={saveQuantity}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setCustomerToEdit(null);
+                  setEditQuantity("");
+                }}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 rounded-lg"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
