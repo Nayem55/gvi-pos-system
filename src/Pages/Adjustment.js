@@ -66,7 +66,7 @@ export default function AdjustmentVoucher({
 
       // Update the due amount directly
       const dueResponse = await axios.put(
-        "http://175.29.181.245:5000/update-due",
+        "http://175.29.181.245:2001/update-due",
         {
           outlet: user.outlet,
           currentDue: currentDue + adjustmentAmount,
@@ -78,7 +78,7 @@ export default function AdjustmentVoucher({
       }
 
       // Record money transaction for the adjustment
-      await axios.post("http://175.29.181.245:5000/money-transfer", {
+      await axios.post("http://175.29.181.245:2001/money-transfer", {
         outlet: user.outlet,
         amount: adjustmentAmount,
         asm: user.asm,

@@ -42,11 +42,11 @@ const AlterProductsPage = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
-  const API_URL = "http://175.29.181.245:5000/products";
+  const API_URL = "http://175.29.181.245:2001/products";
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://175.29.181.245:5000/categories");
+      const response = await axios.get("http://175.29.181.245:2001/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -56,7 +56,7 @@ const AlterProductsPage = () => {
 
   const fetchBrands = async () => {
     try {
-      const response = await axios.get("http://175.29.181.245:5000/brands");
+      const response = await axios.get("http://175.29.181.245:2001/brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -67,7 +67,7 @@ const AlterProductsPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://175.29.181.245:5000/all-products`);
+      const res = await axios.get(`http://175.29.181.245:2001/all-products`);
       setProducts(res.data);
       setFilteredProducts(res.data);
 
@@ -183,7 +183,7 @@ const AlterProductsPage = () => {
     setUpdating(true);
     try {
       const response = await axios.put(
-        `http://175.29.181.245:5000/category-bulk-update`,
+        `http://175.29.181.245:2001/category-bulk-update`,
         {
           category: selectedCategory,
           updateFields,
@@ -363,7 +363,7 @@ const AlterProductsPage = () => {
             });
 
             const response = await axios.post(
-              "http://175.29.181.245:5000/bulk-import-products",
+              "http://175.29.181.245:2001/bulk-import-products",
               { updatedProducts: importData }
             );
 

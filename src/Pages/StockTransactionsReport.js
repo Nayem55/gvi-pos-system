@@ -67,7 +67,7 @@ const StockTransactionsReport = () => {
 
   const fetchOutlets = async () => {
     try {
-      const response = await axios.get("http://175.29.181.245:5000/get-outlets");
+      const response = await axios.get("http://175.29.181.245:2001/get-outlets");
       setOutlets(response.data);
     } catch (error) {
       console.error("Error fetching outlets:", error);
@@ -88,7 +88,7 @@ const StockTransactionsReport = () => {
       if (selectedType) params.type = selectedType;
 
       const response = await axios.get(
-        "http://175.29.181.245:5000/detailed-stock-transactions",
+        "http://175.29.181.245:2001/detailed-stock-transactions",
         { params }
       );
 
@@ -197,7 +197,7 @@ const StockTransactionsReport = () => {
   const handleSaveEdit = async () => {
     try {
       await axios.put(
-        `http://175.29.181.245:5000/stock-transaction/${editingTxn._id}`,
+        `http://175.29.181.245:2001/stock-transaction/${editingTxn._id}`,
         editForm
       );
       toast.success("Transaction updated successfully!");
@@ -214,7 +214,7 @@ const StockTransactionsReport = () => {
       return;
     }
     try {
-      await axios.delete(`http://175.29.181.245:5000/stock-transaction/${id}`);
+      await axios.delete(`http://175.29.181.245:2001/stock-transaction/${id}`);
       toast.success("Transaction deleted successfully!");
       fetchReportData();
     } catch (error) {

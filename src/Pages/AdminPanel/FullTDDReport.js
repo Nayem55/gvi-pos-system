@@ -37,7 +37,7 @@ const FullTDDReport = () => {
       // For SO users, only fetch their own data
       if (isSO) {
         const response = await axios.get(
-          "http://175.29.181.245:5000/tdda/admin-report",
+          "http://175.29.181.245:2001/tdda/admin-report",
           {
             params: {
               userId: user._id,
@@ -69,7 +69,7 @@ const FullTDDReport = () => {
       } else {
         // For other roles, fetch full report
         const response = await axios.get(
-          "http://175.29.181.245:5000/tdda/full-report",
+          "http://175.29.181.245:2001/tdda/full-report",
           {
             params: { month: selectedMonth },
           }
@@ -106,7 +106,7 @@ const FullTDDReport = () => {
   const fetchReportDataForUser = async (userId) => {
     try {
       const response = await axios.get(
-        "http://175.29.181.245:5000/tdda/admin-report",
+        "http://175.29.181.245:2001/tdda/admin-report",
         {
           params: {
             userId: userId,

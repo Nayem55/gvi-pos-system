@@ -67,8 +67,8 @@ const CategoryTargetPage = () => {
     const fetchData = async () => {
       try {
         const [usersRes, categoriesRes] = await Promise.all([
-          axios.get("http://175.29.181.245:5000/getAllUser"),
-          axios.get("http://175.29.181.245:5000/categories"),
+          axios.get("http://175.29.181.245:2001/getAllUser"),
+          axios.get("http://175.29.181.245:2001/categories"),
         ]);
         const fetchedUsers = usersRes.data;
         setAllUsers(fetchedUsers);
@@ -99,7 +99,7 @@ const CategoryTargetPage = () => {
       try {
         setLoading(true);
         const res = await axios.get(
-          "http://175.29.181.245:5000/categoryTargets",
+          "http://175.29.181.245:2001/categoryTargets",
           {
             params: { year, month },
           }
@@ -157,7 +157,7 @@ const CategoryTargetPage = () => {
           target: parseFloat(target),
         }));
 
-      await axios.post("http://175.29.181.245:5000/categoryTargets", {
+      await axios.post("http://175.29.181.245:2001/categoryTargets", {
         userID,
         year: parseInt(year),
         month: parseInt(month),
@@ -167,7 +167,7 @@ const CategoryTargetPage = () => {
       toast.success("Targets saved successfully");
 
       const res = await axios.get(
-        "http://175.29.181.245:5000/categoryTargets",
+        "http://175.29.181.245:2001/categoryTargets",
         {
           params: { year, month },
         }
@@ -219,7 +219,7 @@ const CategoryTargetPage = () => {
               target: parseFloat(target),
             }));
 
-          return axios.post("http://175.29.181.245:5000/categoryTargets", {
+          return axios.post("http://175.29.181.245:2001/categoryTargets", {
             userID,
             year: parseInt(year),
             month: parseInt(month),
@@ -231,7 +231,7 @@ const CategoryTargetPage = () => {
       toast.success("All targets saved successfully");
 
       const res = await axios.get(
-        "http://175.29.181.245:5000/categoryTargets",
+        "http://175.29.181.245:2001/categoryTargets",
         {
           params: { year, month },
         }

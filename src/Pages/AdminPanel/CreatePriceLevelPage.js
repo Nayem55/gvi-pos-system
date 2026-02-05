@@ -33,7 +33,7 @@ const CreatePriceLevelPage = () => {
 
       // Step 1: Create the new price level
       await axios.post(
-        "http://175.29.181.245:5000/api/pricelevels",
+        "http://175.29.181.245:2001/api/pricelevels",
         newPriceLevel
       );
 
@@ -43,7 +43,7 @@ const CreatePriceLevelPage = () => {
       try {
         toast.loading("Adding price level to all products...");
         await axios.put(
-          "http://175.29.181.245:5000/update-products-with-new-pricelevel",
+          "http://175.29.181.245:2001/update-products-with-new-pricelevel",
           {
             priceLevelName: newPriceLevel.name,
           }

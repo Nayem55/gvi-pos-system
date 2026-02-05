@@ -21,7 +21,7 @@ const AlterPriceLevelsPage = () => {
     const fetchPriceLevels = async () => {
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/api/pricelevels"
+          "http://175.29.181.245:2001/api/pricelevels"
         );
         setPriceLevels(response.data);
       } catch (error) {
@@ -47,12 +47,12 @@ const AlterPriceLevelsPage = () => {
       setDeletingId(id);
 
       // First delete from price levels
-      await axios.delete(`http://175.29.181.245:5000/api/pricelevels/${name}`);
+      await axios.delete(`http://175.29.181.245:2001/api/pricelevels/${name}`);
 
       // Then remove from all products
       toast.loading(`Removing ${name} from all products...`);
       await axios.put(
-        "http://175.29.181.245:5000/remove-pricelevel-from-products",
+        "http://175.29.181.245:2001/remove-pricelevel-from-products",
         {
           priceLevelName: name,
         }
@@ -103,7 +103,7 @@ const AlterPriceLevelsPage = () => {
 
       // First update the price level itself
       await axios.put(
-        `http://175.29.181.245:5000/api/pricelevels/${editForm.originalName}`,
+        `http://175.29.181.245:2001/api/pricelevels/${editForm.originalName}`,
         {
           name: editForm.name,
           displayName: editForm.displayName,
@@ -114,7 +114,7 @@ const AlterPriceLevelsPage = () => {
       if (editForm.name !== editForm.originalName) {
         toast.loading(`Updating price level name in all products...`);
         await axios.put(
-          "http://175.29.181.245:5000/update-pricelevel-in-products",
+          "http://175.29.181.245:2001/update-pricelevel-in-products",
           {
             oldName: editForm.originalName,
             newName: editForm.name,

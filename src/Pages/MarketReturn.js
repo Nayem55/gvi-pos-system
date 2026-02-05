@@ -86,7 +86,7 @@ export default function MarketReturn({ user, stock, getStockValue, allProducts }
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/search-product",
+          "http://175.29.181.245:2001/search-product",
           { params: { search: query, type: searchType } }
         );
         setSearchResults(response.data);
@@ -111,7 +111,7 @@ export default function MarketReturn({ user, stock, getStockValue, allProducts }
     try {
       const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+        `http://175.29.181.245:2001/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
       const currentStock = stockRes.data.stock.currentStock || 0;
       const currentStockDP = stockRes.data.stock.currentStockValueDP || 0;
@@ -192,7 +192,7 @@ export default function MarketReturn({ user, stock, getStockValue, allProducts }
           } else {
             // API call for non-admin
             const productResponse = await axios.get(
-              "http://175.29.181.245:5000/search-product",
+              "http://175.29.181.245:2001/search-product",
               {
                 params: {
                   search: row["Barcode"] || row["Product Name"],
@@ -210,7 +210,7 @@ export default function MarketReturn({ user, stock, getStockValue, allProducts }
 
           const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            `http://175.29.181.245:5000/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+            `http://175.29.181.245:2001/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
           const currentStock = stockRes.data?.stock?.currentStock ?? 0;
@@ -390,7 +390,7 @@ export default function MarketReturn({ user, stock, getStockValue, allProducts }
 
     try {
       const requests = cart.map(async (item) => {
-        await axios.put("http://175.29.181.245:5000/update-outlet-stock", {
+        await axios.put("http://175.29.181.245:2001/update-outlet-stock", {
           barcode: item.barcode,
           outlet: user.outlet,
           newStock: item.openingStock + item.marketReturn,
@@ -400,7 +400,7 @@ export default function MarketReturn({ user, stock, getStockValue, allProducts }
             item.currentStockTP + item.marketReturn * item.editableTP,
         });
 
-        await axios.post("http://175.29.181.245:5000/stock-transactions", {
+        await axios.post("http://175.29.181.245:2001/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "market return",

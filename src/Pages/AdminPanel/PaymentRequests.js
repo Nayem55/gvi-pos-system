@@ -33,7 +33,7 @@ export default function PaymentRequests({ user }) {
         params.append("status", selectedStatus);
       }
       const res = await axios.get(
-        `http://175.29.181.245:5000/payment-requests?${params.toString()}`
+        `http://175.29.181.245:2001/payment-requests?${params.toString()}`
       );
       setRequests(res.data.requests);
     } catch (error) {
@@ -48,7 +48,7 @@ export default function PaymentRequests({ user }) {
     setActionLoading((prev) => ({ ...prev, [id]: "confirm" }));
     try {
       await axios.put(
-        `http://175.29.181.245:5000/payment-request/${id}/confirm`
+        `http://175.29.181.245:2001/payment-request/${id}/confirm`
       );
       toast.success("Payment request confirmed successfully!");
       fetchRequests(); // Refresh list
@@ -64,7 +64,7 @@ export default function PaymentRequests({ user }) {
     setActionLoading((prev) => ({ ...prev, [id]: "reject" }));
     try {
       await axios.put(
-        `http://175.29.181.245:5000/payment-request/${id}/reject`
+        `http://175.29.181.245:2001/payment-request/${id}/reject`
       );
       toast.success("Payment request rejected successfully!");
       fetchRequests(); // Refresh list

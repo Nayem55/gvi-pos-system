@@ -95,7 +95,7 @@ const StockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "http://175.29.181.245:5000/api/stock-movement",
+        "http://175.29.181.245:2001/api/stock-movement",
         { params }
       );
 
@@ -230,7 +230,7 @@ const StockMovementReport = () => {
         };
 
         const response = await axios.get(
-          "http://175.29.181.245:5000/api/stock-transactions",
+          "http://175.29.181.245:2001/api/stock-transactions",
           { params }
         );
 
@@ -284,7 +284,7 @@ const StockMovementReport = () => {
   };
 
   const fetchOutlets = async () => {
-    const response = await axios.get("http://175.29.181.245:5000/get-outlets");
+    const response = await axios.get("http://175.29.181.245:2001/get-outlets");
     setOutlets(response.data);
   };
 
@@ -327,7 +327,7 @@ const StockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "http://175.29.181.245:5000/api/stock-movement",
+        "http://175.29.181.245:2001/api/stock-movement",
         { params }
       );
 

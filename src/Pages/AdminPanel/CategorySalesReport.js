@@ -51,7 +51,7 @@ const CategoryWiseSalesReport = () => {
   useEffect(() => {
     const fetchZones = async () => {
       try {
-        const response = await axios.get("http://175.29.181.245:5000/sales/zone-wise", {
+        const response = await axios.get("http://175.29.181.245:2001/sales/zone-wise", {
           params: { month },
         });
         const uniqueZones = [...new Set(response.data.map((item) => item._id))].sort();
@@ -68,7 +68,7 @@ const CategoryWiseSalesReport = () => {
       const currentYear = month ? dayjs(month).year() : dayjs().year();
       const currentMonth = month ? dayjs(month).month() + 1 : dayjs().month() + 1;
       try {
-        const res = await axios.get("http://175.29.181.245:5000/categoryTargets", {
+        const res = await axios.get("http://175.29.181.245:2001/categoryTargets", {
           params: { year: currentYear, month: currentMonth },
         });
         const targetsMap = {};
@@ -95,7 +95,7 @@ const CategoryWiseSalesReport = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get("http://175.29.181.245:5000/sales/category-wise", { params });
+      const response = await axios.get("http://175.29.181.245:2001/sales/category-wise", { params });
       const adjustedData = response.data.map((cat) => ({
         ...cat,
         net_quantity: cat.total_quantity - (cat.return_quantity || 0),
@@ -137,7 +137,7 @@ const CategoryWiseSalesReport = () => {
       }
       if (zoneToUse) params.zone = zoneToUse;
 
-      const res = await axios.get("http://175.29.181.245:5000/sales/category-wise/outlet-details", { params });
+      const res = await axios.get("http://175.29.181.245:2001/sales/category-wise/outlet-details", { params });
       const enhanced = res.data.map((outlet) => {
         const userTargets = targetsData[outlet._id.userID] || {};
         const target = userTargets[category] || 0;

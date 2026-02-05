@@ -23,7 +23,7 @@ const DailyDealerSalesReport = () => {
       const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD");
 
       const response = await axios.get(
-        `http://175.29.181.245:5000/sales-reports/${userId}`,
+        `http://175.29.181.245:2001/sales-reports/${userId}`,
         {
           params: {
             startDate: formattedDate,

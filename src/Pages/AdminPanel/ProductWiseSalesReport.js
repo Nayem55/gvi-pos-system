@@ -47,7 +47,7 @@ const ProductWiseSalesReport = () => {
   useEffect(() => {
     const fetchZones = async () => {
       try {
-        const response = await axios.get("http://175.29.181.245:5000/sales/zone-wise", {
+        const response = await axios.get("http://175.29.181.245:2001/sales/zone-wise", {
           params: { month },
         });
         const uniqueZones = [...new Set(response.data.map((item) => item._id))].sort();
@@ -63,7 +63,7 @@ const ProductWiseSalesReport = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get("http://175.29.181.245:5000/sales/product-wise", { params });
+      const response = await axios.get("http://175.29.181.245:2001/sales/product-wise", { params });
 
       const adjustedData = response.data.map((p) => ({
         ...p,
@@ -112,7 +112,7 @@ const ProductWiseSalesReport = () => {
       if (zoneToUse) params.zone = zoneToUse;
 
       const res = await axios.get(
-        "http://175.29.181.245:5000/sales/product-wise/outlet-details",
+        "http://175.29.181.245:2001/sales/product-wise/outlet-details",
         { params }
       );
 

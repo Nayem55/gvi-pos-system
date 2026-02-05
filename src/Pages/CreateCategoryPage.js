@@ -17,7 +17,7 @@ const CreateCategoryPage = () => {
 
     try {
       setLoading(true);
-      await axios.post("http://175.29.181.245:5000/categories", {
+      await axios.post("http://175.29.181.245:2001/categories", {
         name: categoryName,
       });
       toast.success("Category created successfully!");

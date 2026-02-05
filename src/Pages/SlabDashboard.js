@@ -23,7 +23,7 @@ const SlabDashboard = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://175.29.181.245:5000/customer-sale-summary");
+      const response = await fetch("http://175.29.181.245:2001/customer-sale-summary");
       const data = await response.json();
       setCustomers(data);
       setLoading(false);
@@ -87,7 +87,7 @@ const SlabDashboard = () => {
       return;
     }
     try {
-      const res = await fetch(`http://175.29.181.245:5000/customer/${owner_number}`, {
+      const res = await fetch(`http://175.29.181.245:2001/customer/${owner_number}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -112,7 +112,7 @@ const SlabDashboard = () => {
     if (!customerToEdit) return;
 
     try {
-      const res = await fetch(`http://175.29.181.245:5000/customer/${customerToEdit.owner_number}/quantity`, {
+      const res = await fetch(`http://175.29.181.245:2001/customer/${customerToEdit.owner_number}/quantity`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lifetime_quantity: parseInt(editQuantity) || 0 }),
@@ -138,7 +138,7 @@ const SlabDashboard = () => {
     setSelectedCustomer(customer);
     setIsModalOpen(true);
     try {
-      const res = await fetch(`http://175.29.181.245:5000/customer-transactions?owner_number=${customer.owner_number}`);
+      const res = await fetch(`http://175.29.181.245:2001/customer-transactions?owner_number=${customer.owner_number}`);
       const data = await res.json();
       const merged = data.reduce((acc, tx) => {
         const date = tx.sale_date.split(" ")[0];

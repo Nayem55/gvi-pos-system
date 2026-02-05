@@ -63,7 +63,7 @@ const CategoryStockMovementReport = () => {
       };
 
       const response = await axios.get(
-        "http://175.29.181.245:5000/api/category-stock-movement",
+        "http://175.29.181.245:2001/api/category-stock-movement",
         { params }
       );
 
@@ -100,7 +100,7 @@ const CategoryStockMovementReport = () => {
   };
 
   const fetchCategories = async () => {
-    const response = await axios.get("http://175.29.181.245:5000/product-categories");
+    const response = await axios.get("http://175.29.181.245:2001/product-categories");
     setCategories(response.data);
   };
 

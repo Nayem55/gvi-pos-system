@@ -14,7 +14,7 @@ const AlterBrandsPage = () => {
   const fetchBrands = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://175.29.181.245:5000/all-brands");
+      const response = await axios.get("http://175.29.181.245:2001/all-brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -40,12 +40,12 @@ const AlterBrandsPage = () => {
       setUpdatingProducts(true);
 
       // 1. First update the brand name
-      await axios.put(`http://175.29.181.245:5000/brands/${id}`, {
+      await axios.put(`http://175.29.181.245:2001/brands/${id}`, {
         name: editedName,
       });
 
       // 2. Then update all products with this brand
-      await axios.put("http://175.29.181.245:5000/update-products-brand", {
+      await axios.put("http://175.29.181.245:2001/update-products-brand", {
         oldBrand: oldName,
         newBrand: editedName,
       });

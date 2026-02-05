@@ -102,7 +102,7 @@ export default function Secondary({
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/search-product",
+          "http://175.29.181.245:2001/search-product",
           {
             params: { search: query, type: searchType },
           }
@@ -123,7 +123,7 @@ export default function Secondary({
     try {
       const encodedOutlet = encodeURIComponent(user.outlet);
       const stockResponse = await axios.get(
-        `http://175.29.181.245:5000/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
+        `http://175.29.181.245:2001/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
       );
       const outletStock = stockResponse.data.stock.currentStock || 0;
 
@@ -235,7 +235,7 @@ export default function Secondary({
           } else {
             // API call for non-admin
             const productResponse = await axios.get(
-              "http://175.29.181.245:5000/search-product",
+              "http://175.29.181.245:2001/search-product",
               {
                 params: {
                   search: row["Barcode"] || row["Product Name"],
@@ -253,7 +253,7 @@ export default function Secondary({
 
           const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            `http://175.29.181.245:5000/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
+            `http://175.29.181.245:2001/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
           );
 
           const outletStock = stockRes.data?.stock?.currentStock ?? 0;
@@ -464,7 +464,7 @@ export default function Secondary({
       // Check if a report already exists for the same date and outlet
       const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
       const checkResponse = await axios.get(
-        `http://175.29.181.245:5000/check-sale-report`,
+        `http://175.29.181.245:2001/check-sale-report`,
         {
           params: {
             user: user._id,
@@ -510,10 +510,10 @@ export default function Secondary({
         })),
       };
 
-      await axios.post("http://175.29.181.245:5000/add-sale-report", saleEntry);
+      await axios.post("http://175.29.181.245:2001/add-sale-report", saleEntry);
 
       const updatePromises = cart.map(async (item) => {
-        await axios.post("http://175.29.181.245:5000/stock-transactions", {
+        await axios.post("http://175.29.181.245:2001/stock-transactions", {
           barcode: item.barcode,
           outlet: user.outlet,
           type: "secondary",

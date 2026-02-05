@@ -23,7 +23,7 @@ const FullSalesReport = () => {
     const fetchUsers = async () => {
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/getAlluser"
+          "http://175.29.181.245:2001/getAlluser"
         );
         setAllUsers(response.data);
       } catch (error) {
@@ -39,7 +39,7 @@ const FullSalesReport = () => {
     try {
       setIsGenerating(true);
       const response = await axios.get(
-        "http://175.29.181.245:5000/sales/full-report",
+        "http://175.29.181.245:2001/sales/full-report",
         {
           params: { month: selectedMonth },
         }
@@ -106,7 +106,7 @@ const FullSalesReport = () => {
   const fetchUserReports = async (userId) => {
     try {
       const response = await axios.get(
-        `http://175.29.181.245:5000/sales-reports/${userId}`,
+        `http://175.29.181.245:2001/sales-reports/${userId}`,
         { params: { month: selectedMonth } }
       );
       return Array.isArray(response.data) ? response.data : [response.data];

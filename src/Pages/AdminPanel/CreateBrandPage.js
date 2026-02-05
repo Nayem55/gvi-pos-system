@@ -17,7 +17,7 @@ const CreateBrandPage = () => {
 
     try {
       setLoading(true);
-      await axios.post("http://175.29.181.245:5000/brands", {
+      await axios.post("http://175.29.181.245:2001/brands", {
         name: brandName,
       });
       toast.success("Brand created successfully!");

@@ -52,7 +52,7 @@ const BrandWiseSalesReport = () => {
       const currentMonth = month ? dayjs(month).month() + 1 : dayjs().month() + 1;
 
       try {
-        const res = await axios.get("http://175.29.181.245:5000/brandTargets", {
+        const res = await axios.get("http://175.29.181.245:2001/brandTargets", {
           params: { year: currentYear, month: currentMonth },
         });
 
@@ -78,7 +78,7 @@ const BrandWiseSalesReport = () => {
 
     const fetchZones = async () => {
       try {
-        const response = await axios.get("http://175.29.181.245:5000/sales/zone-wise", {
+        const response = await axios.get("http://175.29.181.245:2001/sales/zone-wise", {
           params: { month },
         });
         const uniqueZones = [...new Set(response.data.map((item) => item._id))].sort();
@@ -97,7 +97,7 @@ const BrandWiseSalesReport = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get("http://175.29.181.245:5000/sales/brand-wise", {
+      const response = await axios.get("http://175.29.181.245:2001/sales/brand-wise", {
         params,
       });
 
@@ -143,7 +143,7 @@ const BrandWiseSalesReport = () => {
       }
 
       const outletSalesRes = await axios.get(
-        "http://175.29.181.245:5000/sales/brand-wise/outlet-details",
+        "http://175.29.181.245:2001/sales/brand-wise/outlet-details",
         { params }
       );
 

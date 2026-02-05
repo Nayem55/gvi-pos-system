@@ -20,7 +20,7 @@ export default function PrimaryRequest() {
       setIsSearching(true);
       try {
         const res = await axios.get(
-          "http://175.29.181.245:5000/search-product",
+          "http://175.29.181.245:2001/search-product",
           {
             params: { search: query, type: "name" },
           }
@@ -87,7 +87,7 @@ export default function PrimaryRequest() {
 
     try {
       setIsSubmitting(true);
-      await axios.post("http://175.29.181.245:5000/primary-request", order);
+      await axios.post("http://175.29.181.245:2001/primary-request", order);
       toast.success("Request submitted successfully!");
       setCart([]);
     } catch (err) {

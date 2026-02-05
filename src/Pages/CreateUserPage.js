@@ -139,13 +139,13 @@ const CreateUserPage = () => {
       try {
         setFetchingData((prev) => ({ ...prev, groups: true }));
         const groups = await axios.get(
-          "http://175.29.181.245:5000/get-user-field-values?field=group"
+          "http://175.29.181.245:2001/get-user-field-values?field=group"
         );
         setDropdownData((prev) => ({ ...prev, groups: groups.data }));
 
         setFetchingData((prev) => ({ ...prev, asms: true }));
         const asms = await axios.get(
-          "http://175.29.181.245:5000/get-user-field-values?field=asm"
+          "http://175.29.181.245:2001/get-user-field-values?field=asm"
         );
         setDropdownData((prev) => ({ ...prev, asms: asms.data }));
 
@@ -170,7 +170,7 @@ const CreateUserPage = () => {
     try {
       setFetchingData((prev) => ({ ...prev, pricelabel: true }));
       const response = await axios.get(
-        "http://175.29.181.245:5000/api/pricelevels"
+        "http://175.29.181.245:2001/api/pricelevels"
       );
       const priceLevels = response.data.map((level) => level.name);
       setDropdownData((prev) => ({ ...prev, pricelabel: priceLevels }));
@@ -185,7 +185,7 @@ const CreateUserPage = () => {
   const fetchOutlets = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, outlets: true }));
-      const outlets = await axios.get("http://175.29.181.245:5000/get-outlets");
+      const outlets = await axios.get("http://175.29.181.245:2001/get-outlets");
       setDropdownData((prev) => ({ ...prev, outlets: outlets.data }));
     } catch (error) {
       console.error("Error fetching outlets:", error);
@@ -221,7 +221,7 @@ const CreateUserPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("http://175.29.181.245:5000/api/users", newUser);
+      await axios.post("http://175.29.181.245:2001/api/users", newUser);
       toast.success("User created successfully!");
       setNewUser({
         name: "",
@@ -268,7 +268,7 @@ const CreateUserPage = () => {
     try {
       setCreatingOutlet(true);
       const response = await axios.post(
-        "http://175.29.181.245:5000/add-new-outlet",
+        "http://175.29.181.245:2001/add-new-outlet",
         newOutlet
       );
 

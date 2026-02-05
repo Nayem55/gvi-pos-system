@@ -45,7 +45,7 @@ const ManageStock = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://175.29.181.245:5000/getAllUser");
+      const response = await axios.get("http://175.29.181.245:2001/getAllUser");
       setUsers(response.data);
       setLoading(false);
     } catch (error) {
@@ -58,7 +58,7 @@ const ManageStock = () => {
     try {
       setProductsLoading(true);
       const response = await axios.get(
-        "http://175.29.181.245:5000/all-products"
+        "http://175.29.181.245:2001/all-products"
       );
       setProducts(response.data);
       setProductsLoading(false);
@@ -79,10 +79,10 @@ const ManageStock = () => {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
         axios.get(
-          `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
+          `http://175.29.181.245:2001/api/stock-value/${encodedOutletName}`
         ),
         axios.get(
-          `http://175.29.181.245:5000/current-due/${encodedOutletName}`
+          `http://175.29.181.245:2001/current-due/${encodedOutletName}`
         ),
       ]);
       console.log(

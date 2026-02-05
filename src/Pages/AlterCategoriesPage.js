@@ -15,7 +15,7 @@ const AlterCategoriesPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://175.29.181.245:5000/all-category"
+        "http://175.29.181.245:2001/all-category"
       );
       setCategories(response.data);
     } catch (error) {
@@ -42,12 +42,12 @@ const AlterCategoriesPage = () => {
       setUpdatingProducts(true);
 
       // 1. First update the category name
-      await axios.put(`http://175.29.181.245:5000/categories/${id}`, {
+      await axios.put(`http://175.29.181.245:2001/categories/${id}`, {
         name: editedName,
       });
 
       // 2. Then update all products with this category
-      await axios.put("http://175.29.181.245:5000/update-products-category", {
+      await axios.put("http://175.29.181.245:2001/update-products-category", {
         oldCategory: oldName,
         newCategory: editedName,
       });

@@ -62,7 +62,7 @@ export default function PaymentVoucher({
     );
 
     try {
-      await axios.post("http://175.29.181.245:5000/payment-request", {
+      await axios.post("http://175.29.181.245:2001/payment-request", {
         outlet: user.outlet,
         userId: user._id,
         SO: user.name,

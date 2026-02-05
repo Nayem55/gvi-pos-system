@@ -126,7 +126,7 @@ export default function AdminHomePage() {
     const fetchZones = async () => {
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/api/area-options",
+          "http://175.29.181.245:2001/api/area-options",
           { params: { type: "Zone" } }
         );
         setZones(response.data.data);
@@ -208,7 +208,7 @@ export default function AdminHomePage() {
     setLoading(true);
     setError(null);
     try {
-      let url = "http://175.29.181.245:5000/api/area-stock-movement";
+      let url = "http://175.29.181.245:2001/api/area-stock-movement";
       let params = {
         startDate: dayjs(dateRange.from).format("YYYY-MM-DD HH:mm:ss"),
         endDate: dayjs(dateRange.to).format("YYYY-MM-DD HH:mm:ss"),

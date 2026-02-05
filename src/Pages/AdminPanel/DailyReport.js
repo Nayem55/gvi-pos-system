@@ -53,7 +53,7 @@ const DailyReport = () => {
       try {
         setUserLoading(true);
         const response = await axios.get(
-          `http://175.29.181.245:5000/getUser/${userId}`
+          `http://175.29.181.245:2001/getUser/${userId}`
         );
         setViewedUser(response.data);
       } catch (error) {
@@ -85,7 +85,7 @@ const DailyReport = () => {
       }
 
       const response = await axios.get(
-        `http://175.29.181.245:5000/sales-reports/${userId}`,
+        `http://175.29.181.245:2001/sales-reports/${userId}`,
         { params }
       );
       setReports(
@@ -128,7 +128,7 @@ const DailyReport = () => {
       };
 
       await axios.put(
-        `http://175.29.181.245:5000/update-sales-report/${editingReport._id}`,
+        `http://175.29.181.245:2001/update-sales-report/${editingReport._id}`,
         updatedReport
       );
 
@@ -150,13 +150,14 @@ const DailyReport = () => {
       return;
 
     try {
+      console.log(viewedUser)
       const outlet = viewedUser?.outlet;
       if (!outlet) {
         throw new Error("Outlet information not available");
       }
 
       const reportResponse = await axios.get(
-        `http://175.29.181.245:5000/sales-reports/report/${reportId}`
+        `http://175.29.181.245:2001/sales-reports/report/${reportId}`
       );
       const report = reportResponse.data;
 
@@ -167,7 +168,7 @@ const DailyReport = () => {
       }
 
       await axios.delete(
-        `http://175.29.181.245:5000/delete-sales-report/${reportId}`
+        `http://175.29.181.245:2001/delete-sales-report/${reportId}`
       );
 
       toast.success(

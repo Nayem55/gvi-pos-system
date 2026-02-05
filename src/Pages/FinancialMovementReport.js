@@ -41,7 +41,7 @@ const FinancialMovementReport = () => {
   }, []);
 
   const fetchOutlets = async () => {
-    const response = await axios.get("http://175.29.181.245:5000/get-outlets");
+    const response = await axios.get("http://175.29.181.245:2001/get-outlets");
     setOutlets(response.data);
   };
 
@@ -49,7 +49,7 @@ const FinancialMovementReport = () => {
     const fetchAreaOptions = async () => {
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/api/area-options",
+          "http://175.29.181.245:2001/api/area-options",
           { params: { type: selectedType } }
         );
         if (response.data?.success) {
@@ -106,14 +106,14 @@ const FinancialMovementReport = () => {
       if (selectedType === "outlet") {
         params.outlet = selectedArea;
         response = await axios.get(
-          "http://175.29.181.245:5000/api/financial-movement",
+          "http://175.29.181.245:2001/api/financial-movement",
           { params }
         );
       } else {
         params.areaType = selectedType;
         params.areaValue = selectedArea;
         response = await axios.get(
-          "http://175.29.181.245:5000/api/area-financial-movement",
+          "http://175.29.181.245:2001/api/area-financial-movement",
           { params }
         );
       }
@@ -460,7 +460,7 @@ const FinancialMovementReport = () => {
   const handleSaveEdit = async () => {
     try {
       await axios.put(
-        `http://175.29.181.245:5000/money-transaction/${editingTxn._id}`,
+        `http://175.29.181.245:2001/money-transaction/${editingTxn._id}`,
         editForm // now includes { amount, type, remarks, date }
       );
       toast.success("Transaction updated successfully!");
@@ -479,7 +479,7 @@ const FinancialMovementReport = () => {
       return;
     }
     try {
-      await axios.delete(`http://175.29.181.245:5000/money-transaction/${id}`);
+      await axios.delete(`http://175.29.181.245:2001/money-transaction/${id}`);
       toast.success("Transaction deleted successfully!");
       fetchReportData();
     } catch (error) {

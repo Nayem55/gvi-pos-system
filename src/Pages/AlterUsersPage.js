@@ -62,7 +62,7 @@ const AlterUsersPage = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://175.29.181.245:5000/getAllUser");
+      const response = await axios.get("http://175.29.181.245:2001/getAllUser");
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -76,7 +76,7 @@ const AlterUsersPage = () => {
   const fetchPriceLevels = async () => {
     try {
       const response = await axios.get(
-        "http://175.29.181.245:5000/api/pricelevels"
+        "http://175.29.181.245:2001/api/pricelevels"
       );
       const priceLevels = response.data.map((level) => level.name);
       setDropdownData((prev) => ({ ...prev, pricelabel: priceLevels }));
@@ -90,17 +90,17 @@ const AlterUsersPage = () => {
   const fetchDropdownData = async () => {
     try {
       const groups = await axios.get(
-        "http://175.29.181.245:5000/get-user-field-values?field=group"
+        "http://175.29.181.245:2001/get-user-field-values?field=group"
       );
-      const outlets = await axios.get("http://175.29.181.245:5000/get-outlets");
+      const outlets = await axios.get("http://175.29.181.245:2001/get-outlets");
       const asms = await axios.get(
-        "http://175.29.181.245:5000/get-user-field-values?field=asm"
+        "http://175.29.181.245:2001/get-user-field-values?field=asm"
       );
       const rsms = await axios.get(
-        "http://175.29.181.245:5000/get-user-field-values?field=rsm"
+        "http://175.29.181.245:2001/get-user-field-values?field=rsm"
       );
       const soms = await axios.get(
-        "http://175.29.181.245:5000/get-user-field-values?field=som"
+        "http://175.29.181.245:2001/get-user-field-values?field=som"
       );
       await fetchPriceLevels();
 
@@ -177,7 +177,7 @@ const AlterUsersPage = () => {
     try {
       setLoading(true);
       await axios.put(
-        `http://175.29.181.245:5000/updateUser/${editingUser._id}`,
+        `http://175.29.181.245:2001/updateUser/${editingUser._id}`,
         editingUser
       );
       toast.success("User updated successfully!");

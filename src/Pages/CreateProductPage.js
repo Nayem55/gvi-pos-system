@@ -170,7 +170,7 @@ const CreateProductPage = () => {
   const fetchCategories = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, categories: true }));
-      const response = await axios.get("http://175.29.181.245:5000/categories");
+      const response = await axios.get("http://175.29.181.245:2001/categories");
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -183,7 +183,7 @@ const CreateProductPage = () => {
   const fetchBrands = async () => {
     try {
       setFetchingData((prev) => ({ ...prev, brands: true }));
-      const response = await axios.get("http://175.29.181.245:5000/brands");
+      const response = await axios.get("http://175.29.181.245:2001/brands");
       setBrands(response.data);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -196,7 +196,7 @@ const CreateProductPage = () => {
   const fetchPriceLevels = async () => {
     try {
       const response = await axios.get(
-        "http://175.29.181.245:5000/api/pricelevels"
+        "http://175.29.181.245:2001/api/pricelevels"
       );
       const namesArray = response.data.map((level) => level.name);
       setPriceLevels(namesArray);
@@ -242,7 +242,7 @@ const CreateProductPage = () => {
         ),
       };
       await axios.post(
-        "http://175.29.181.245:5000/create-product-with-stocks",
+        "http://175.29.181.245:2001/create-product-with-stocks",
         {
           productData: productToSend,
         }
@@ -278,7 +278,7 @@ const CreateProductPage = () => {
 
     try {
       setLoading(true);
-      await axios.post("http://175.29.181.245:5000/categories", {
+      await axios.post("http://175.29.181.245:2001/categories", {
         name: newCategory,
       });
       toast.success("Category created successfully!");
@@ -303,7 +303,7 @@ const CreateProductPage = () => {
 
     try {
       setLoading(true);
-      await axios.post("http://175.29.181.245:5000/brands", {
+      await axios.post("http://175.29.181.245:2001/brands", {
         name: newBrand,
       });
       toast.success("Brand created successfully!");

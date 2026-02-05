@@ -27,7 +27,7 @@ const Accounts = () => {
     const fetchAreaOptions = async () => {
       try {
         const response = await axios.get(
-          "http://175.29.181.245:5000/api/area-options",
+          "http://175.29.181.245:2001/api/area-options",
           { params: { type: selectedType } }
         );
         if (response.data?.success) {
@@ -69,14 +69,14 @@ const Accounts = () => {
       if (selectedType === "outlet") {
         params.outlet = selectedArea;
         response = await axios.get(
-          "http://175.29.181.245:5000/api/financial-movement",
+          "http://175.29.181.245:2001/api/financial-movement",
           { params }
         );
       } else {
         params.areaType = selectedType;
         params.areaValue = selectedArea;
         response = await axios.get(
-          "http://175.29.181.245:5000/api/area-financial-movement",
+          "http://175.29.181.245:2001/api/area-financial-movement",
           { params }
         );
       }

@@ -20,7 +20,7 @@ const MonthlyTargetPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get("http://175.29.181.245:5000/getAllUser");
+        const res = await axios.get("http://175.29.181.245:2001/getAllUser");
         const fetchedUsers = res.data;
         setAllUsers(fetchedUsers);
         setUsers(fetchedUsers); // Initially show all
@@ -47,7 +47,7 @@ const MonthlyTargetPage = () => {
 
       try {
         setLoading(true);
-        const res = await axios.get("http://175.29.181.245:5000/targets", {
+        const res = await axios.get("http://175.29.181.245:2001/targets", {
           params: { year, month },
         });
 
@@ -120,14 +120,14 @@ const MonthlyTargetPage = () => {
 
       const targetExists = targets[user._id] !== undefined;
       if (targetExists) {
-        await axios.put("http://175.29.181.245:5000/targets", targetData);
+        await axios.put("http://175.29.181.245:2001/targets", targetData);
         toast.success("Target updated successfully");
       } else {
-        await axios.post("http://175.29.181.245:5000/targets", targetData);
+        await axios.post("http://175.29.181.245:2001/targets", targetData);
         toast.success("Target created successfully");
       }
 
-      const res = await axios.get("http://175.29.181.245:5000/targets", {
+      const res = await axios.get("http://175.29.181.245:2001/targets", {
         params: { year, month },
       });
 
@@ -180,10 +180,10 @@ const MonthlyTargetPage = () => {
           dp: tempTargets[user._id].dp,
         }));
 
-      await axios.post("http://175.29.181.245:5000/targets/bulk", targetsToSave);
+      await axios.post("http://175.29.181.245:2001/targets/bulk", targetsToSave);
       toast.success(`Successfully saved ${targetsToSave.length} targets`);
 
-      const res = await axios.get("http://175.29.181.245:5000/targets", {
+      const res = await axios.get("http://175.29.181.245:2001/targets", {
         params: { year, month },
       });
 

@@ -38,7 +38,7 @@ export default function Home() {
     try {
       setDataLoading(true);
       const response = await axios.get(
-        `http://175.29.181.245:5000/getUser/${posUser._id}`
+        `http://175.29.181.245:2001/getUser/${posUser._id}`
       );
       const updatedUser = response.data;
       localStorage.setItem("pos-user", JSON.stringify(updatedUser));
@@ -65,7 +65,7 @@ export default function Home() {
       try {
         setDataLoading(true);
         const response = await axios.get(
-          `http://175.29.181.245:5000/getUserWithMultipleOutlets`,
+          `http://175.29.181.245:2001/getUserWithMultipleOutlets`,
           {
             params: { name: posUser.name },
           }
@@ -156,7 +156,7 @@ export default function Home() {
 
       // Fetch target
       const targetResponse = await axios.get(
-        "http://175.29.181.245:5000/targets",
+        "http://175.29.181.245:2001/targets",
         {
           params: { year, month, userID: posUser._id },
         }
@@ -175,7 +175,7 @@ export default function Home() {
 
       // Fetch sales reports for the current month to calculate achievement
       const reportsResponse = await axios.get(
-        `http://175.29.181.245:5000/sales-reports/${posUser._id}?month=${currentMonth}`
+        `http://175.29.181.245:2001/sales-reports/${posUser._id}?month=${currentMonth}`
       );
       const reports = reportsResponse.data;
       const totalTPValue = reports.reduce(
@@ -194,10 +194,10 @@ export default function Home() {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
         axios.get(
-          `http://175.29.181.245:5000/api/stock-value/${encodedOutletName}`
+          `http://175.29.181.245:2001/api/stock-value/${encodedOutletName}`
         ),
         axios.get(
-          `http://175.29.181.245:5000/current-due/${encodedOutletName}`
+          `http://175.29.181.245:2001/current-due/${encodedOutletName}`
         ),
       ]);
       setCurrentDue(dueResponse.data.current_due);

@@ -39,7 +39,7 @@ const TDDAdminPanel = () => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get("http://175.29.181.245:5000/tdda/users");
+        const response = await axios.get("http://175.29.181.245:2001/tdda/users");
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -80,7 +80,7 @@ const TDDAdminPanel = () => {
 
     try {
       setIsGenerating(true);
-      const response = await axios.get("http://175.29.181.245:5000/tdda/admin-report", {
+      const response = await axios.get("http://175.29.181.245:2001/tdda/admin-report", {
         params: {
           userId: selectedUser,
           month: selectedMonth,
@@ -120,7 +120,7 @@ const TDDAdminPanel = () => {
   // Fetch report data for a specific user
   const fetchReportDataForUser = async (userId) => {
     try {
-      const response = await axios.get("http://175.29.181.245:5000/tdda/admin-report", {
+      const response = await axios.get("http://175.29.181.245:2001/tdda/admin-report", {
         params: {
           userId: userId,
           month: selectedMonth,
@@ -378,7 +378,7 @@ const TDDAdminPanel = () => {
 
     try {
       setIsSaving(true);
-      await axios.put(`http://175.29.181.245:5000/tdda/${editForm.id}`, updatedData);
+      await axios.put(`http://175.29.181.245:2001/tdda/${editForm.id}`, updatedData);
       toast.success("Record updated successfully");
       setEditModalOpen(false);
       generateReport();
@@ -393,7 +393,7 @@ const TDDAdminPanel = () => {
   // Confirm delete
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://175.29.181.245:5000/tdda/${recordToDelete}`);
+      await axios.delete(`http://175.29.181.245:2001/tdda/${recordToDelete}`);
       toast.success("Record deleted successfully");
       setDeleteModalOpen(false);
       generateReport();
@@ -407,7 +407,7 @@ const TDDAdminPanel = () => {
   const getSubmissionCount = async () => {
     try {
       setIsCounting(true);
-      const response = await axios.get("http://175.29.181.245:5000/tdda/count-by-date", {
+      const response = await axios.get("http://175.29.181.245:2001/tdda/count-by-date", {
         params: { date: selectedDateForCount }
       });
       setSubmissionsCount(response.data.count);

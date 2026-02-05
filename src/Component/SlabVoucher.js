@@ -37,7 +37,7 @@ export default function SlabVoucher({ stock, setStock }) {
         setLoadingSearch(true);
         try {
           const res = await axios.get(
-            "http://175.29.181.245:5000/search-product",
+            "http://175.29.181.245:2001/search-product",
             { params: { search, type: "name" } }
           );
           setSearchResults(res.data);
@@ -60,7 +60,7 @@ export default function SlabVoucher({ stock, setStock }) {
         setLoadingCustomer(true);
         try {
           const res = await axios.get(
-            `http://175.29.181.245:5000/search-customer?search=${ownerNumber}`
+            `http://175.29.181.245:2001/search-customer?search=${ownerNumber}`
           );
           setCustomerSuggestions(res.data);
         } catch (err) {
@@ -311,9 +311,9 @@ export default function SlabVoucher({ stock, setStock }) {
         })),
       };
 
-      await axios.post("http://175.29.181.245:5000/add-slab-report", payload);
+      await axios.post("http://175.29.181.245:2001/add-slab-report", payload);
 
-      await axios.post("http://175.29.181.245:5000/upsert-customer", {
+      await axios.post("http://175.29.181.245:2001/upsert-customer", {
         owner_name: ownerName,
         owner_number: ownerNumber,
         shop_name: shopName,
