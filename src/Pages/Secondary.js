@@ -26,7 +26,7 @@ export default function Secondary({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD")
+    dayjs().format("YYYY-MM-DD"),
   );
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
@@ -105,7 +105,7 @@ export default function Secondary({
           "http://175.29.181.245:2001/search-product",
           {
             params: { search: query, type: searchType },
-          }
+          },
         );
         setSearchResults(response.data);
       } catch (error) {
@@ -123,7 +123,7 @@ export default function Secondary({
     try {
       const encodedOutlet = encodeURIComponent(user.outlet);
       const stockResponse = await axios.get(
-        `http://175.29.181.245:2001/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
+        `http://175.29.181.245:2001/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`,
       );
       const outletStock = stockResponse.data.stock.currentStock || 0;
 
@@ -145,7 +145,7 @@ export default function Secondary({
       };
 
       const existingItem = cart.find(
-        (item) => item._id === productWithStock._id
+        (item) => item._id === productWithStock._id,
       );
 
       if (existingItem) {
@@ -158,12 +158,12 @@ export default function Secondary({
                     pcs: item.pcs + 1,
                     total: (item.pcs + 1) * parseFloat(item.editableTP),
                   }
-                : item
-            )
+                : item,
+            ),
           );
         } else {
           toast.error(
-            `Cannot add more ${product.name}. Only ${outletStock} left.`
+            `Cannot add more ${product.name}. Only ${outletStock} left.`,
           );
         }
       } else {
@@ -230,7 +230,7 @@ export default function Secondary({
             // Find product in allProducts for admin panel
             product = allProducts.find(
               (p) =>
-                p.barcode === row["Barcode"] || p.name === row["Product Name"]
+                p.barcode === row["Barcode"] || p.name === row["Product Name"],
             );
           } else {
             // API call for non-admin
@@ -241,7 +241,7 @@ export default function Secondary({
                   search: row["Barcode"] || row["Product Name"],
                   type: "barcode",
                 },
-              }
+              },
             );
             product = productResponse.data[0];
           }
@@ -253,7 +253,7 @@ export default function Secondary({
 
           const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            `http://175.29.181.245:2001/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`
+            `http://175.29.181.245:2001/outlet-stock-secondary?barcode=${product.barcode}&outlet=${encodedOutlet}`,
           );
 
           const outletStock = stockRes.data?.stock?.currentStock ?? 0;
@@ -269,14 +269,14 @@ export default function Secondary({
           }
 
           const existingItemIndex = cart.findIndex(
-            (item) => item._id === product._id
+            (item) => item._id === product._id,
           );
 
           if (existingItemIndex >= 0) {
             const existingItem = cart[existingItemIndex];
             const newQuantity = Math.min(
               existingItem.pcs + validQuantity,
-              outletStock
+              outletStock,
             );
 
             setCart((prev) =>
@@ -287,8 +287,8 @@ export default function Secondary({
                       pcs: newQuantity,
                       total: newQuantity * item.editableTP,
                     }
-                  : item
-              )
+                  : item,
+              ),
             );
           } else {
             setCart((prev) => [
@@ -389,7 +389,7 @@ export default function Secondary({
           ["2. Quantity cannot exceed current stock"],
           ["3. DP/TP are optional - will use current prices if omitted"],
         ],
-        { origin: -1 }
+        { origin: -1 },
       );
 
       // Auto-size columns
@@ -423,8 +423,8 @@ export default function Secondary({
                 Math.max(0, Math.min(newQuantity, item.stock)) *
                 item.editableTP,
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -444,7 +444,7 @@ export default function Secondary({
           };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -470,7 +470,7 @@ export default function Secondary({
             user: user._id,
             sale_date: formattedDate,
           },
-        }
+        },
       );
 
       if (checkResponse.data.exists) {
@@ -491,12 +491,12 @@ export default function Secondary({
         sale_date: formattedDate,
         total_tp: cart.reduce(
           (sum, item) => sum + item.editableTP * item.pcs,
-          0
+          0,
         ),
         total_mrp: cart.reduce((sum, item) => sum + item.mrp * item.pcs, 0),
         total_dp: cart.reduce(
           (sum, item) => sum + item.editableDP * item.pcs,
-          0
+          0,
         ),
         products: cart.map((item) => ({
           product_name: item.name,
@@ -541,7 +541,7 @@ export default function Secondary({
     } catch (error) {
       console.error("Error updating outlet stock:", error);
       toast.error(
-        error.response?.data?.message || "Failed to submit sales report"
+        error.response?.data?.message || "Failed to submit sales report",
       );
     } finally {
       setIsSubmitting(false);
@@ -562,7 +562,8 @@ export default function Secondary({
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              max={dayjs().format("YYYY-MM-DD")} 
+              min={dayjs().year() + "-02-01"}
+              max={dayjs().format("YYYY-MM-DD")}
               className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -686,7 +687,7 @@ export default function Secondary({
                         style={{
                           width: `${Math.min(
                             (totalTP / target?.tp) * 100,
-                            100
+                            100,
                           )}%`,
                         }}
                       ></div>
@@ -834,7 +835,7 @@ export default function Secondary({
                           handlePriceChange(
                             item._id,
                             "editableDP",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
@@ -846,7 +847,7 @@ export default function Secondary({
                           handlePriceChange(
                             item._id,
                             "editableTP",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
