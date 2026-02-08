@@ -346,34 +346,35 @@ const DealerSalesReport = () => {
 
   const isLoading = loading.sales || loading.targets;
 
-  const exportToExcel = () => {
-    // Flatten the organized reports for export
-    const exportData = organizedReports.flatMap((zoneGroup) =>
-      zoneGroup.reports.map((report) => ({
-        "User Name": report.name,
-        Outlet: report.outlet || "-",
-        Zone: report.zone,
-        Role: report.role,
-        Belt: report.belt,
-        Target: report.target,
-        "Total TP": report.totalTP.toFixed(2),
-        "Achievement (%)": report.achievement.toFixed(1),
-        "Total Sales": report.salesCount,
-      }))
-    );
+const exportToExcel = () => {
+  const exportData = organizedReports.flatMap((zoneGroup) =>
+    zoneGroup.reports.map((report) => ({
+      "User Name": report.name?.trim(), // ✅ removes starting & ending spaces
+      Outlet: report.outlet || "-",
+      Zone: report.zone,
+      Role: report.role,
+      Belt: report.belt,
+      Target: report.target,
+      "Total TP": report.totalTP.toFixed(2),
+      "Achievement (%)": report.achievement.toFixed(1),
+      "Total Sales": report.salesCount,
+    }))
+  );
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Dealer Sales Report");
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  XLSX.utils.book_append_sheet(wb, ws, "Dealer Sales Report");
 
-    const fileName = `Dealer_Sales_Report_${
-      selectedMonth ||
-      (startDate && endDate
-        ? `${startDate}_to_${endDate}`
-        : dayjs().format("YYYY-MM"))
-    }.xlsx`;
-    XLSX.writeFile(wb, fileName);
-  };
+  const fileName = `Dealer_Sales_Report_${
+    selectedMonth ||
+    (startDate && endDate
+      ? `${startDate}_to_${endDate}`
+      : dayjs().format("YYYY-MM"))
+  }.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+};
+
 
   const handleResetFilters = () => {
     setStartDate("");
