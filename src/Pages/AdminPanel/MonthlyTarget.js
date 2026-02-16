@@ -306,6 +306,7 @@ const MonthlyTargetPage = () => {
 
     const demoData = exportUsers.map((user) => ({
       "User ID": user._id,
+      "Dealer Name": user.outlet,
       "User Name": user.name,
       "User Number": user.number,
       "User Zone": user.zone || "",
