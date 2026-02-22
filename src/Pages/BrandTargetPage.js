@@ -341,6 +341,7 @@ const BrandTargetPage = () => {
     const demoData = downloadUsers.map((user) => {
       const row = {
         "User ID": user._id,
+        "Dealer Name": user.outlet,
         "User Name": user.name,
         "Zone": user.zone || "",
       };
