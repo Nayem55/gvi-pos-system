@@ -792,8 +792,8 @@ const SalarySheet = () => {
                         <th className="p-2">Target (TP)</th>
                         <th className="p-2">Opening (DP)</th>
                         <th className="p-2">Primary (DP)</th>
-                        <th className="p-2">Secondary (TP)</th>
-                        <th className="p-2">Market Return (TP)</th>
+                        <th className="p-2">Secondary (DP)</th>
+                        <th className="p-2">Market Return (DP)</th>
                         <th className="p-2">Office Return (DP)</th>
                         <th className="p-2">Closing (DP)</th>
                         <th className="p-2">Collection</th>
@@ -850,10 +850,10 @@ const SalarySheet = () => {
                               {report.primary?.valueDP?.toFixed(2) || "0.00"}
                             </td>
                             <td className="border p-2 text-right">
-                              {report.secondary?.valueTP?.toFixed(2) || "0.00"}
+                              {report.secondary?.valueDP?.toFixed(2) || "0.00"}
                             </td>
                             <td className="border p-2 text-right">
-                              {report.marketReturn?.valueTP?.toFixed(2) ||
+                              {report.marketReturn?.valueDP?.toFixed(2) ||
                                 "0.00"}
                             </td>
                             <td className="border p-2 text-right">
