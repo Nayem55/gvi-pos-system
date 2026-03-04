@@ -39,6 +39,8 @@ const StockMovementReport = () => {
   const [modalContext, setModalContext] = useState(""); // 'summary', 'product', or 'total'
   const [transactionData, setTransactionData] = useState({}); // Cache full data per type
   const [currentBarcode, setCurrentBarcode] = useState(null);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [downloadingSummary, setDownloadingSummary] = useState(false);
 
   useEffect(() => {
     fetchOutlets();
@@ -96,7 +98,7 @@ const StockMovementReport = () => {
 
       const response = await axios.get(
         "http://175.29.181.245:2001/api/stock-movement",
-        { params }
+        { params },
       );
 
       if (response.data?.success) {
@@ -112,7 +114,7 @@ const StockMovementReport = () => {
 
         const uniqueCategories = [
           ...new Set(
-            filteredData.map((item) => item.category || "Uncategorized")
+            filteredData.map((item) => item.category || "Uncategorized"),
           ),
         ].sort();
         setCategories([
@@ -129,7 +131,7 @@ const StockMovementReport = () => {
         ]);
 
         const sortedData = [...filteredData].sort((a, b) =>
-          a.productName.localeCompare(b.productName)
+          a.productName.localeCompare(b.productName),
         );
         setReportData(sortedData);
       } else {
@@ -162,7 +164,7 @@ const StockMovementReport = () => {
       ...new Set(
         reportData
           .filter((item) => item.brand === selectedBrand)
-          .map((item) => item.category || "Uncategorized")
+          .map((item) => item.category || "Uncategorized"),
       ),
     ].sort();
     return [
@@ -179,7 +181,7 @@ const StockMovementReport = () => {
       ...new Set(
         reportData
           .filter((item) => item.category === selectedCategory)
-          .map((item) => item.brand || "Unbranded")
+          .map((item) => item.brand || "Unbranded"),
       ),
     ].sort();
     return [
@@ -205,7 +207,7 @@ const StockMovementReport = () => {
   const fetchDetails = async (
     type,
     productBarcode = null,
-    context = "total"
+    context = "total",
   ) => {
     setLoadingDetails(true);
     setModalData(null);
@@ -231,7 +233,7 @@ const StockMovementReport = () => {
 
         const response = await axios.get(
           "http://175.29.181.245:2001/api/stock-transactions",
-          { params }
+          { params },
         );
 
         if (response.data.success) {
@@ -316,6 +318,159 @@ const StockMovementReport = () => {
     }
   };
 
+const downloadDealerWiseSummaryExcel = async () => {
+  setDownloadingSummary(true);
+
+  try {
+    const summaryData = [];
+
+    for (const outlet of outlets) {
+      try {
+        const params = {
+          outlet,
+          startDate: dayjs(dateRange.start).format("YYYY-MM-DD HH:mm:ss"),
+          endDate: dayjs(dateRange.end).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        };
+
+        const response = await axios.get(
+          "http://175.29.181.245:2001/api/stock-movement",
+          { params }
+        );
+
+        if (!response.data?.success) continue;
+
+        // === EXACT SAME FILTER AS FRONTEND ===
+        const rawData = response.data.data;
+        const filteredData = rawData.filter((item) => {
+          return (
+            (item.openingStock && item.openingStock !== 0) ||
+            (item.primary && item.primary !== 0) ||
+            (item.secondary && item.secondary !== 0) ||
+            (item.officeReturn && item.officeReturn !== 0) ||
+            (item.marketReturn && item.marketReturn !== 0)
+          );
+        });
+
+        if (filteredData.length === 0) continue;
+
+        // === EXACT SAME TOTALS CALCULATION AS WEB PAGE ===
+        const totals = filteredData.reduce(
+          (acc, item) => {
+            acc.openingValue += item.openingValueDP || 0;
+            acc.primaryValue += item.primaryValueDP || 0;
+            acc.secondaryValue += item.secondaryValueDP || 0;
+            acc.marketReturnValue += item.marketReturnValueDP || 0;
+            acc.officeReturnValue += item.officeReturnValueDP || 0;
+
+            return acc;
+          },
+          {
+            openingValue: 0,
+            primaryValue: 0,
+            secondaryValue: 0,
+            marketReturnValue: 0,
+            officeReturnValue: 0,
+          }
+        );
+
+        const actualSecondaryValue = totals.secondaryValue - totals.marketReturnValue;
+
+        const closingValue =
+          totals.openingValue +
+          totals.primaryValue +
+          totals.marketReturnValue -
+          totals.secondaryValue -
+          totals.officeReturnValue;
+
+        summaryData.push({
+          Outlet: outlet,
+          "Opening Value": Number(totals.openingValue.toFixed(2)),
+          "Primary Value": Number(totals.primaryValue.toFixed(2)),
+          "Secondary Value": Number(totals.secondaryValue.toFixed(2)),
+          "Market Return Value": Number(totals.marketReturnValue.toFixed(2)),
+          "Office Return Value": Number(totals.officeReturnValue.toFixed(2)),
+          "Actual Secondary Value": Number(actualSecondaryValue.toFixed(2)),
+          "Closing Value": Number(closingValue.toFixed(2)),
+        });
+      } catch (err) {
+        console.warn(`Failed for outlet ${outlet}:`, err);
+      }
+    }
+
+    if (summaryData.length === 0) {
+      alert("No data found for any outlet in the selected period.");
+      return;
+    }
+
+    // === GRAND TOTAL ===
+    const grand = summaryData.reduce(
+      (acc, row) => {
+        acc.opening += Number(row["Opening Value"] || 0);
+        acc.primary += Number(row["Primary Value"] || 0);
+        acc.secondary += Number(row["Secondary Value"] || 0);
+        acc.marketReturn += Number(row["Market Return Value"] || 0);
+        acc.officeReturn += Number(row["Office Return Value"] || 0);
+        acc.actualSecondary += Number(row["Actual Secondary Value"] || 0);
+        acc.closing += Number(row["Closing Value"] || 0);
+        return acc;
+      },
+      {
+        opening: 0, primary: 0, secondary: 0,
+        marketReturn: 0, officeReturn: 0,
+        actualSecondary: 0, closing: 0,
+      }
+    );
+
+    summaryData.push({
+      Outlet: "GRAND TOTAL",
+      "Opening Value": Number(grand.opening.toFixed(2)),
+      "Primary Value": Number(grand.primary.toFixed(2)),
+      "Secondary Value": Number(grand.secondary.toFixed(2)),
+      "Market Return Value": Number(grand.marketReturn.toFixed(2)),
+      "Office Return Value": Number(grand.officeReturn.toFixed(2)),
+      "Actual Secondary Value": Number(grand.actualSecondary.toFixed(2)),
+      "Closing Value": Number(grand.closing.toFixed(2)),
+    });
+
+    // === CREATE EXCEL ===
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(summaryData);
+
+    // Auto column width + bold header
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    ws["!cols"] = [];
+    for (let C = 0; C <= range.e.c; ++C) {
+      let maxWidth = 15;
+      for (let R = 0; R <= range.e.r; ++R) {
+        const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+        if (cell?.v) {
+          const len = String(cell.v).length;
+          if (len > maxWidth) maxWidth = len;
+        }
+      }
+      ws["!cols"][C] = { wch: maxWidth + 3 };
+    }
+
+    // Bold header row
+    for (let C = 0; C <= range.e.c; ++C) {
+      const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+      if (cell) {
+        cell.s = { font: { bold: true }, alignment: { horizontal: "center" } };
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, "Dealer Wise Summary");
+
+    const fileName = `Dealer_Wise_Value_Summary_${dayjs(dateRange.start).format("YYYY-MM-DD")}_to_${dayjs(dateRange.end).format("YYYY-MM-DD")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  } catch (error) {
+    console.error("Dealer summary error:", error);
+    alert("Failed to generate Dealer Wise Summary. Please try again.");
+  } finally {
+    setDownloadingSummary(false);
+  }
+};
+
   const fetchReportDataForOutlet = async (outlet) => {
     try {
       const params = {
@@ -328,7 +483,7 @@ const StockMovementReport = () => {
 
       const response = await axios.get(
         "http://175.29.181.245:2001/api/stock-movement",
-        { params }
+        { params },
       );
 
       if (response.data?.success) {
@@ -365,7 +520,7 @@ const StockMovementReport = () => {
         dayjs(dateRange.end).format("DD-MM-YY")
       }`,
       pageWidth - 75,
-      15
+      15,
     );
 
     const headers = [
@@ -551,7 +706,7 @@ const StockMovementReport = () => {
         actualSecondaryValue: 0,
         closingQty: 0,
         closingValue: 0,
-      }
+      },
     );
   };
 
@@ -559,10 +714,10 @@ const StockMovementReport = () => {
     const filteredData = reportData.filter(
       (item) =>
         (selectedCategory === "all" || item.category === selectedCategory) &&
-        (selectedBrand === "all" || item.brand === selectedBrand)
+        (selectedBrand === "all" || item.brand === selectedBrand),
     );
     const sortedData = [...filteredData].sort((a, b) =>
-      a.productName.localeCompare(b.productName)
+      a.productName.localeCompare(b.productName),
     );
 
     const excelData = [
@@ -675,7 +830,7 @@ const StockMovementReport = () => {
     XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
     XLSX.writeFile(
       wb,
-      `Stock_Movement_${selectedOutlet}_${dateRange.start}.xlsx`
+      `Stock_Movement_${selectedOutlet}_${dateRange.start}.xlsx`,
     );
   };
 
@@ -683,10 +838,10 @@ const StockMovementReport = () => {
     const filteredData = reportData.filter(
       (item) =>
         (selectedCategory === "all" || item.category === selectedCategory) &&
-        (selectedBrand === "all" || item.brand === selectedBrand)
+        (selectedBrand === "all" || item.brand === selectedBrand),
     );
     const sortedData = [...filteredData].sort((a, b) =>
-      a.productName.localeCompare(b.productName)
+      a.productName.localeCompare(b.productName),
     );
     try {
       const doc = new jsPDF({
@@ -704,7 +859,7 @@ const StockMovementReport = () => {
           dayjs(dateRange.end).format("DD-MM-YY")
         }`,
         pageWidth - 75,
-        15
+        15,
       );
 
       const headers = [
@@ -905,18 +1060,18 @@ const StockMovementReport = () => {
       actualSecondaryValue: 0,
       closingQty: 0,
       closingValue: 0,
-    }
+    },
   );
 
   // Filter outlets based on search query
   const filteredOutlets = outlets.filter((outlet) =>
-    outlet?.toLowerCase().includes(outletSearch?.toLowerCase())
+    outlet?.toLowerCase().includes(outletSearch?.toLowerCase()),
   );
 
   const filteredData = reportData.filter(
     (item) =>
       (selectedCategory === "all" || item.category === selectedCategory) &&
-      (selectedBrand === "all" || item.brand === selectedBrand)
+      (selectedBrand === "all" || item.brand === selectedBrand),
   );
 
   // Handle outlet selection
@@ -951,7 +1106,7 @@ const StockMovementReport = () => {
     const [open, setOpen] = useState(false);
 
     const filteredOptions = options.filter((opt) =>
-      opt.label.toLowerCase().includes(search.toLowerCase())
+      opt.label.toLowerCase().includes(search.toLowerCase()),
     );
 
     const currentLabel =
@@ -1055,7 +1210,7 @@ const StockMovementReport = () => {
             </button>
 
             {exportDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10">
                 <div className="py-1">
                   <button
                     onClick={() => {
@@ -1064,7 +1219,7 @@ const StockMovementReport = () => {
                     }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    Export to Excel
+                    Export to Excel (Current Outlet)
                   </button>
                   <button
                     onClick={() => {
@@ -1073,16 +1228,34 @@ const StockMovementReport = () => {
                     }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    Export to PDF
+                    Export to PDF (Current Outlet)
                   </button>
+
                   {user.role === "super admin" && (
-                    <button
-                      onClick={downloadAllPDFs}
-                      disabled={downloadingAll || outlets.length === 0}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {downloadingAll ? "Downloading..." : "Download All PDFs"}
-                    </button>
+                    <>
+                      <button
+                        onClick={downloadAllPDFs}
+                        disabled={downloadingAll || outlets.length === 0}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {downloadingAll
+                          ? "Downloading PDFs..."
+                          : "Download All PDFs"}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          downloadDealerWiseSummaryExcel();
+                          setExportDropdown(false);
+                        }}
+                        disabled={downloadingSummary || outlets.length === 0}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed border-t border-gray-200 mt-1 pt-2"
+                      >
+                        {downloadingSummary
+                          ? "Generating Summary..."
+                          : "Dealer Wise Summary (Excel)"}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -1698,11 +1871,11 @@ const StockMovementReport = () => {
                         const transactions = modalData[date];
                         const dateTotalQty = transactions.reduce(
                           (sum, t) => sum + t.quantity,
-                          0
+                          0,
                         );
                         const dateTotalValue = transactions.reduce(
                           (sum, t) => sum + t.valueDP,
-                          0
+                          0,
                         );
 
                         return (
@@ -1859,11 +2032,11 @@ const StockMovementReport = () => {
                         XLSX.utils.book_append_sheet(
                           wb,
                           ws,
-                          `${modalType} Details`
+                          `${modalType} Details`,
                         );
                         XLSX.writeFile(
                           wb,
-                          `${modalType}_${selectedOutlet}_${dateRange.start}.xlsx`
+                          `${modalType}_${selectedOutlet}_${dateRange.start}.xlsx`,
                         );
                       }}
                       className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
