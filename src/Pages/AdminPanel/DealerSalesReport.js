@@ -485,6 +485,7 @@ const exportToExcel = () => {
               <option value="DHAKA-02-ZONE-01">DHAKA-02-ZONE-01</option>
               <option value="DHAKA-02-ZONE-03">DHAKA-02-ZONE-03</option>
               <option value="DHAKA-03-ZONE-03">DHAKA-03-ZONE-03</option>
+              <option value="SYLHET-ZONE-03">SYLHET-ZONE-03</option>
               <option value="KHULNA-ZONE-01">KHULNA-ZONE-01</option>
               <option value="COMILLA-ZONE-03">COMILLA-ZONE-03</option>
               <option value="CHITTAGONG-ZONE-03">CHITTAGONG-ZONE-03</option>

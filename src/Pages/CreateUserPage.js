@@ -56,6 +56,7 @@ const CreateUserPage = () => {
       "DHAKA-03-ZONE-03",
       "KHULNA-ZONE-01",
       "COMILLA-ZONE-03",
+      "SYLHET-ZONE-03",
       "CHITTAGONG-ZONE-03",
       "RANGPUR-ZONE-01",
       "BARISAL-ZONE-03",
