@@ -460,8 +460,8 @@ export default function SlabVoucher({ stock, setStock }) {
               const lowerName = product.name;
               const brand = product.brand;
               if (
-                lowerName.includes("Layer'r Shot 18ML") ||
-                brand !== "Adjavis Venture Ltd."
+                // lowerName.includes("Layer'r Shot 18ML") ||
+                brand !== "Earth Beauty & You"
               )
                 return null;
               return (

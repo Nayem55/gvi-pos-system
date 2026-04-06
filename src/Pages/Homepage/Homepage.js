@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import PrimaryRequest from "../PrimaryRequest";
 import toast from "react-hot-toast";
 import { Store, StoreIcon } from "lucide-react";
+import SlabVoucher from './../../Component/SlabVoucher';
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -363,6 +364,18 @@ export default function Home() {
       )}
       {selectedTab === "pos" && (
         <PosVoucher
+          user={posUser}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
+          dataLoading={dataLoading}
+        />
+      )}
+      {selectedTab === "slab" && (
+        <SlabVoucher
           user={posUser}
           stock={stock}
           setStock={setStock}
