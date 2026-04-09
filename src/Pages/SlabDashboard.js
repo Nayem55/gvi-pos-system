@@ -54,6 +54,8 @@ const SlabDashboard = () => {
     setFilteredCustomers(filtered);
   }, [zoneFilter, soFilter, customers]);
 
+  console.log(filteredCustomers)
+
   const uniqueZones = ["All", ...new Set(customers.map(c => c.so_zone).filter(Boolean))];
   const uniqueSoNames = ["All", ...new Set(customers.map(c => c.so_name).filter(Boolean))];
 
