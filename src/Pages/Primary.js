@@ -3,7 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import { FaFileDownload, FaFileImport } from "react-icons/fa";
 
 export default function Primary({
@@ -20,7 +20,7 @@ export default function Primary({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD")
+    dayjs().format("YYYY-MM-DD"),
   );
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
@@ -93,7 +93,7 @@ export default function Primary({
       try {
         const response = await axios.get(
           "http://175.29.181.245:2001/search-product",
-          { params: { search: query, type: searchType } }
+          { params: { search: query, type: searchType } },
         );
         setSearchResults(response.data);
       } catch (error) {
@@ -117,7 +117,7 @@ export default function Primary({
     try {
       const encodedOutlet = encodeURIComponent(user.outlet);
       const stockRes = await axios.get(
-        `http://175.29.181.245:2001/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+        `http://175.29.181.245:2001/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`,
       );
 
       const currentStock = stockRes.data?.stock?.currentStock ?? 0;
@@ -194,7 +194,7 @@ export default function Primary({
             // Find product in allProducts for admin panel
             product = allProducts.find(
               (p) =>
-                p.barcode === row["Barcode"] || p.name === row["Product Name"]
+                p.barcode === row["Barcode"] || p.name === row["Product Name"],
             );
           } else {
             // API call for non-admin
@@ -205,7 +205,7 @@ export default function Primary({
                   search: row["Barcode"] || row["Product Name"],
                   type: "barcode",
                 },
-              }
+              },
             );
             product = productResponse.data[0];
           }
@@ -217,7 +217,7 @@ export default function Primary({
 
           const encodedOutlet = encodeURIComponent(user.outlet);
           const stockRes = await axios.get(
-            `http://175.29.181.245:2001/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`
+            `http://175.29.181.245:2001/outlet-stock?barcode=${product.barcode}&outlet=${encodedOutlet}`,
           );
 
           const currentStock = stockRes.data?.stock?.currentStock ?? 0;
@@ -324,7 +324,7 @@ export default function Primary({
           ["1. Set 'Primary Quantity' to desired value (0 will be ignored)"],
           ["2. DP/TP are optional - will use current prices if omitted"],
         ],
-        { origin: -1 }
+        { origin: -1 },
       );
 
       // Auto-size columns
@@ -356,8 +356,8 @@ export default function Primary({
               primary: newValue,
               total: newValue * item.editableDP,
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -374,7 +374,7 @@ export default function Primary({
           };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -382,107 +382,107 @@ export default function Primary({
     setCart((prev) => prev.filter((item) => item.barcode !== barcode));
   };
 
-const handleSubmit = async () => {
-  if (cart.length === 0) return;
-  setIsSubmitting(true);
-  const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
-  const transaction_id = uuidv4(); // Generate a unique transaction ID
+  const handleSubmit = async () => {
+    if (cart.length === 0) return;
+    setIsSubmitting(true);
+    const formattedDateTime = dayjs(selectedDate).format("YYYY-MM-DD HH:mm:ss");
+    const transaction_id = uuidv4(); // Generate a unique transaction ID
 
-  try {
-    // Calculate total amount that will be added to due
-    const totalAmount = cart.reduce(
-      (sum, item) => sum + item.primary * item.editableDP,
-      0
-    );
+    try {
+      // Calculate total amount that will be added to due
+      const totalAmount = cart.reduce(
+        (sum, item) => sum + item.primary * item.editableDP,
+        0,
+      );
 
-    // First update the due amount
-    const dueResponse = await axios.put(
-      "http://175.29.181.245:2001/update-due",
-      {
-        outlet: user.outlet,
-        currentDue: currentDue + totalAmount,
+      // First update the due amount
+      const dueResponse = await axios.put(
+        "http://175.29.181.245:2001/update-due",
+        {
+          outlet: user.outlet,
+          currentDue: currentDue + totalAmount,
+        },
+      );
+
+      if (!dueResponse.data.success) {
+        throw new Error("Failed to update due amount");
       }
-    );
 
-    if (!dueResponse.data.success) {
-      throw new Error("Failed to update due amount");
-    }
+      // Process stock updates with improved error handling
+      const updatePromises = cart.map(async (item) => {
+        try {
+          // Update outlet stock
+          const stockResponse = await axios.put(
+            "http://175.29.181.245:2001/update-outlet-stock",
+            {
+              barcode: item.barcode,
+              outlet: user.outlet,
+              newStock: item.openingStock + item.primary,
+              currentStockValueDP:
+                item.currentStockDP + item.primary * item.editableDP,
+              currentStockValueTP:
+                item.currentStockTP + item.primary * item.editableTP,
+            },
+          );
 
-    // Process stock updates with improved error handling
-    const updatePromises = cart.map(async (item) => {
-      try {
-        // Update outlet stock
-        const stockResponse = await axios.put(
-          "http://175.29.181.245:2001/update-outlet-stock",
-          {
+          // Record transaction with transaction_id
+          await axios.post("http://175.29.181.245:2001/stock-transactions", {
             barcode: item.barcode,
             outlet: user.outlet,
-            newStock: item.openingStock + item.primary,
-            currentStockValueDP:
-              item.currentStockDP + item.primary * item.editableDP,
-            currentStockValueTP:
-              item.currentStockTP + item.primary * item.editableTP,
-          }
-        );
+            type: "primary",
+            quantity: item.primary,
+            date: formattedDateTime,
+            asm: user.asm,
+            rsm: user.rsm,
+            som: user.som,
+            zone: user.zone,
+            user: user.name,
+            userID: user._id,
+            dp: item.editableDP,
+            tp: item.editableTP,
+            transaction_id: transaction_id, // Add unique transaction ID
+          });
 
-        // Record transaction with transaction_id
-        await axios.post("http://175.29.181.245:2001/stock-transactions", {
-          barcode: item.barcode,
-          outlet: user.outlet,
-          type: "primary",
-          quantity: item.primary,
-          date: formattedDateTime,
-          asm: user.asm,
-          rsm: user.rsm,
-          som: user.som,
-          zone: user.zone,
-          user: user.name,
-          userID: user._id,
-          dp: item.editableDP,
-          tp: item.editableTP,
-          transaction_id: transaction_id, // Add unique transaction ID
-        });
+          return { success: true, barcode: item.barcode };
+        } catch (error) {
+          console.error(`Error updating product ${item.barcode}:`, error);
+          return { success: false, barcode: item.barcode, error };
+        }
+      });
 
-        return { success: true, barcode: item.barcode };
-      } catch (error) {
-        console.error(`Error updating product ${item.barcode}:`, error);
-        return { success: false, barcode: item.barcode, error };
+      const results = await Promise.all(updatePromises);
+      const failedUpdates = results.filter((r) => !r.success);
+
+      if (failedUpdates.length > 0) {
+        throw new Error(`${failedUpdates.length} products failed to update`);
       }
-    });
 
-    const results = await Promise.all(updatePromises);
-    const failedUpdates = results.filter((r) => !r.success);
+      // Record money transaction for the primary voucher with transaction_id
+      await axios.post("http://175.29.181.245:2001/money-transfer", {
+        outlet: user.outlet,
+        amount: totalAmount,
+        asm: user.asm,
+        rsm: user.rsm,
+        som: user.som,
+        zone: user.zone,
+        type: "primary",
+        date: formattedDateTime,
+        createdBy: user.name,
+        transaction_id: transaction_id, // Add unique transaction ID
+      });
 
-    if (failedUpdates.length > 0) {
-      throw new Error(`${failedUpdates.length} products failed to update`);
+      toast.success("Primary voucher processed successfully!");
+      getStockValue(user.outlet);
+      setCart([]);
+      setSearch("");
+      setSearchResults([]);
+    } catch (err) {
+      console.error("Bulk update error:", err);
+      toast.error(err.message || "Failed to process primary voucher");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Record money transaction for the primary voucher with transaction_id
-    await axios.post("http://175.29.181.245:2001/money-transfer", {
-      outlet: user.outlet,
-      amount: totalAmount,
-      asm: user.asm,
-      rsm: user.rsm,
-      som: user.som,
-      zone: user.zone,
-      type: "primary",
-      date: formattedDateTime,
-      createdBy: user.name,
-      transaction_id: transaction_id, // Add unique transaction ID
-    });
-
-    toast.success("Primary voucher processed successfully!");
-    getStockValue(user.outlet);
-    setCart([]);
-    setSearch("");
-    setSearchResults([]);
-  } catch (err) {
-    console.error("Bulk update error:", err);
-    toast.error(err.message || "Failed to process primary voucher");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   return (
     <div className="p-4 w-full max-w-md mx-auto bg-gray-100 min-h-screen">
@@ -607,7 +607,8 @@ const handleSubmit = async () => {
               {cart.map((item) => (
                 <tr key={item.barcode} className="border-b text-xs">
                   <td className="p-2 text-left break-words max-w-[120px] whitespace-normal">
-                    {item.name} {item.openingStock ? `(${item.openingStock})` : ""}
+                    {item.name}{" "}
+                    {item.openingStock ? `(${item.openingStock})` : ""}
                   </td>
                   <td className="p-1 text-center">
                     <div className="flex flex-col items-center gap-1">
@@ -618,7 +619,7 @@ const handleSubmit = async () => {
                           handlePriceChange(
                             item.barcode,
                             "editableDP",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"
@@ -630,7 +631,7 @@ const handleSubmit = async () => {
                           handlePriceChange(
                             item.barcode,
                             "editableTP",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="border rounded px-1 py-0.5 text-center text-xs w-full max-w-[70px]"

@@ -156,6 +156,7 @@ const StockMovementReport = () => {
     }
   };
 
+
   const filteredCategories = useMemo(() => {
     if (selectedBrand === "all") {
       return categories;
@@ -710,129 +711,138 @@ const downloadDealerWiseSummaryExcel = async () => {
     );
   };
 
-  const exportToExcel = () => {
-    const filteredData = reportData.filter(
-      (item) =>
-        (selectedCategory === "all" || item.category === selectedCategory) &&
-        (selectedBrand === "all" || item.brand === selectedBrand),
-    );
-    const sortedData = [...filteredData].sort((a, b) =>
-      a.productName.localeCompare(b.productName),
-    );
+const exportToExcel = () => {
+  const filteredData = reportData.filter(
+    (item) =>
+      (selectedCategory === "all" || item.category === selectedCategory) &&
+      (selectedBrand === "all" || item.brand === selectedBrand),
+  );
 
-    const excelData = [
-      [
-        `Distributor Name: ${selectedOutlet}`,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        `Period: ${
-          dayjs(dateRange.start).format("DD-MM-YY") +
-          " to " +
-          dayjs(dateRange.end).format("DD-MM-YY")
-        }`,
-      ],
-      ["", "", "", "", "", "", "", "", "", ""],
-      [
-        "Sl",
-        "Products Name",
-        "Category",
-        "Brand",
-        "Opening Stock",
-        "",
-        "Primary",
-        "",
-        "Market Return",
-        "",
-        "Office Return",
-        "",
-        "Secondary",
-        "",
-        "Actual Secondary",
-        "",
-        "Closing Stock",
-        "",
-      ],
-      [
-        "",
-        "",
-        "",
-        "",
-        "Qty",
-        "Value",
-        "Qty",
-        "Value",
-        "Qty",
-        "Value",
-        "Qty",
-        "Value",
-        "Qty",
-        "Value",
-        "Qty",
-        "Value",
-        "Qty",
-        "Value",
-      ],
-      ...sortedData.map((item, index) => [
-        index + 1,
-        item.productName,
-        item.category,
-        item.brand,
-        item.openingStock,
-        item.openingValueDP?.toFixed(2),
-        item.primary,
-        item.primaryValueDP?.toFixed(2),
-        item.marketReturn,
-        item.marketReturnValueDP?.toFixed(2),
-        item.officeReturn,
-        item.officeReturnValueDP?.toFixed(2),
-        item.secondary,
-        item.secondaryValueDP?.toFixed(2),
-        item.secondary - item.marketReturn,
-        (item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2),
-        item.openingStock +
-          item.primary +
-          item.marketReturn -
-          item.secondary -
-          item.officeReturn,
-        (
-          item.openingValueDP +
-          item.primaryValueDP +
-          item.marketReturnValueDP -
-          item.secondaryValueDP -
-          item.officeReturnValueDP
-        )?.toFixed(2),
-      ]),
-    ];
+  const sortedData = [...filteredData].sort((a, b) =>
+    a.productName.localeCompare(b.productName),
+  );
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const excelData = [
+    [
+      `Distributor Name: ${selectedOutlet}`,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      `Period: ${
+        dayjs(dateRange.start).format("DD-MM-YY") +
+        " to " +
+        dayjs(dateRange.end).format("DD-MM-YY")
+      }`,
+    ],
+    ["", "", "", "", "", "", "", "", "", "", ""],
+    [
+      "Sl",
+      "SO",                    // SO Name column
+      "Products Name",
+      "Category",
+      "Brand",
+      "Opening Stock",
+      "",
+      "Primary",
+      "",
+      "Market Return",
+      "",
+      "Office Return",
+      "",
+      "Secondary",
+      "",
+      "Actual Secondary",
+      "",
+      "Closing Stock",
+      "",
+    ],
+    [
+      "",
+      "",                      // SO sub-header (empty)
+      "",
+      "",
+      "",
+      "Qty",
+      "Value",
+      "Qty",
+      "Value",
+      "Qty",
+      "Value",
+      "Qty",
+      "Value",
+      "Qty",
+      "Value",
+      "Qty",
+      "Value",
+      "Qty",
+      "Value",
+    ],
+    ...sortedData.map((item, index) => [
+      index + 1,
+      item.user || "",         // ← SO Name (this was the main missing piece)
+      item.productName,
+      item.category,
+      item.brand,
+      item.openingStock || 0,
+      item.openingValueDP?.toFixed(2) || "0.00",
+      item.primary || 0,
+      item.primaryValueDP?.toFixed(2) || "0.00",
+      item.marketReturn || 0,
+      item.marketReturnValueDP?.toFixed(2) || "0.00",
+      item.officeReturn || 0,
+      item.officeReturnValueDP?.toFixed(2) || "0.00",
+      item.secondary || 0,
+      item.secondaryValueDP?.toFixed(2) || "0.00",
+      item.secondary - item.marketReturn || 0,
+      (item.secondaryValueDP - item.marketReturnValueDP)?.toFixed(2) || "0.00",
+      item.openingStock +
+        item.primary +
+        item.marketReturn -
+        item.secondary -
+        item.officeReturn || 0,
+      (
+        item.openingValueDP +
+        item.primaryValueDP +
+        item.marketReturnValueDP -
+        item.secondaryValueDP -
+        item.officeReturnValueDP
+      )?.toFixed(2) || "0.00",
+    ]),
+  ];
 
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
-      { s: { r: 0, c: 9 }, e: { r: 0, c: 17 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
-      { s: { r: 1, c: 9 }, e: { r: 1, c: 17 } },
-      { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } },
-      { s: { r: 2, c: 6 }, e: { r: 2, c: 7 } },
-      { s: { r: 2, c: 8 }, e: { r: 2, c: 9 } },
-      { s: { r: 2, c: 10 }, e: { r: 2, c: 11 } },
-      { s: { r: 2, c: 12 }, e: { r: 2, c: 13 } },
-      { s: { r: 2, c: 14 }, e: { r: 2, c: 15 } },
-      { s: { r: 2, c: 16 }, e: { r: 2, c: 17 } },
-    ];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-    XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
-    XLSX.writeFile(
-      wb,
-      `Stock_Movement_${selectedOutlet}_${dateRange.start}.xlsx`,
-    );
-  };
+  // Updated merges (now 19 columns total because we added "SO" column)
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },   // Distributor Name (columns 0-9)
+    { s: { r: 0, c: 10 }, e: { r: 0, c: 18 } }, // Period (columns 10-18)
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
+    { s: { r: 1, c: 10 }, e: { r: 1, c: 18 } },
+
+    // Header merges for grouped columns
+    { s: { r: 2, c: 5 }, e: { r: 2, c: 6 } },   // Opening Stock
+    { s: { r: 2, c: 7 }, e: { r: 2, c: 8 } },   // Primary
+    { s: { r: 2, c: 9 }, e: { r: 2, c: 10 } },  // Market Return
+    { s: { r: 2, c: 11 }, e: { r: 2, c: 12 } }, // Office Return
+    { s: { r: 2, c: 13 }, e: { r: 2, c: 14 } }, // Secondary
+    { s: { r: 2, c: 15 }, e: { r: 2, c: 16 } }, // Actual Secondary
+    { s: { r: 2, c: 17 }, e: { r: 2, c: 18 } }, // Closing Stock
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Stock Movement");
+
+  XLSX.writeFile(
+    wb,
+    `Stock_Movement_${selectedOutlet}_${dayjs(dateRange.start).format("YYYY-MM-DD")}.xlsx`
+  );
+};
 
   const exportToPDF = () => {
     const filteredData = reportData.filter(
