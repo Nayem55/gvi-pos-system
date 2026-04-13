@@ -31,6 +31,7 @@ const GroupStockMovementReport = () => {
   const [transactionData, setTransactionData] = useState({}); // Cache full data per type
   const [currentBarcode, setCurrentBarcode] = useState(null);
   const [selectedOutlet, setSelectedOutlet] = useState("");
+  console.log(user)
 
   // Fetch area options based on selected type, restricted for ASM and SOM roles
   useEffect(() => {

@@ -32,7 +32,8 @@ const TDDAdminPanel = () => {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  console.log(exportDropdownOpen);
+  const user = JSON.parse(localStorage.getItem("pos-user") || "{}");
+
 
   // Fetch all users with TDDA records
   useEffect(() => {
@@ -859,7 +860,7 @@ const TDDAdminPanel = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <AdminSidebar />
+      {user.role==="super admin" && <AdminSidebar />}
       <div className="flex-1 overflow-auto p-4 md:p-8">
         <div className="max-w-6xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
