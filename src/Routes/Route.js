@@ -52,6 +52,7 @@ import CategoryStockMovementReport from "../Pages/CategoryStockMovementReport";
 import BrandStockMovementReport from "../Pages/BrandStockMovementReport";
 import SlabDashboard from "../Pages/SlabDashboard";
 import ProtectedRoute from "../Component/ProtectedRoute";
+import JdotSlabDashboard from "../Pages/JdotSlabDashboard";
 
 // Import the ProtectedRoute you already created
 
@@ -348,6 +349,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={["super admin"]}>
             <SlabDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/jdot-slab-report",
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <JdotSlabDashboard />
           </ProtectedRoute>
         ),
       },

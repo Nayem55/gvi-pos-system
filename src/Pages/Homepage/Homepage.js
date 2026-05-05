@@ -15,6 +15,7 @@ import PrimaryRequest from "../PrimaryRequest";
 import toast from "react-hot-toast";
 import { Store, StoreIcon } from "lucide-react";
 import SlabVoucher from './../../Component/SlabVoucher';
+import JdotSlabVoucher from "../../Component/JdotSlabVoucher";
 
 export default function Home() {
   const [selectedTab, setSelectedTab] = useState("secondary");
@@ -275,6 +276,7 @@ export default function Home() {
           <option value="tada">TA/DA</option>
           <option value="attendance">Check In/Out</option>
           <option value="slab">Slab Voucher</option>
+          <option value="jdot-slab">Jdot Slab Voucher</option>
         </select>
       </div>
 
@@ -376,6 +378,18 @@ export default function Home() {
       )}
       {selectedTab === "slab" && (
         <SlabVoucher
+          user={posUser}
+          stock={stock}
+          setStock={setStock}
+          currentDue={currentDue}
+          getStockValue={getStockValue}
+          target={target}
+          totalTP={totalTP}
+          dataLoading={dataLoading}
+        />
+      )}
+      {selectedTab === "jdot-slab" && (
+        <JdotSlabVoucher
           user={posUser}
           stock={stock}
           setStock={setStock}
