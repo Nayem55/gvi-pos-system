@@ -562,7 +562,7 @@ export default function Secondary({
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              min={dayjs().year() + "-02-01"}
+              min={dayjs().year() + "-05-01"}
               max={dayjs().format("YYYY-MM-DD")}
               className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
