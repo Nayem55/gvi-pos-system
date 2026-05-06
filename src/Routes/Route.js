@@ -367,6 +367,12 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "/jdot-slab-report",
+        element: (
+            <JdotSlabDashboard />
+        ),
+      },
+      {
         path: "admin/tada-full-report",
         element: (
           <ProtectedRoute allowedRoles={["super admin"]}>

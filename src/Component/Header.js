@@ -350,7 +350,25 @@ const Header = () => {
               >
                 <span className="flex items-center gap-3">
                   <FileStack className="w-7 h-7 text-zinc-700 group-hover:scale-105 transition" />
-                  <span className="font-medium">Slab Report</span>
+                  <span className="font-medium">Ebay Slab Report</span>
+                </span>
+                <svg
+                  className="w-4 h-4 opacity-0 group-hover:opacity-100 transition"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M7 5l5 5-5 5" />
+                </svg>
+              </Link>
+
+              <Link
+                to={"/jdot-slab-report"}
+                className="group flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-zinc-800 hover:bg-zinc-100/90 active:bg-zinc-200 transition ring-1 ring-transparent hover:ring-zinc-200"
+                onClick={toggleSidebar}
+              >
+                <span className="flex items-center gap-3">
+                  <FileStack className="w-7 h-7 text-zinc-700 group-hover:scale-105 transition" />
+                  <span className="font-medium">Jdot Slab Report</span>
                 </span>
                 <svg
                   className="w-4 h-4 opacity-0 group-hover:opacity-100 transition"
