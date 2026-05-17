@@ -51,7 +51,7 @@ const SignUpForm = () => {
   // Validate all fields
   const validateForm = () => {
     const errors = Object.keys(formData).map((key) =>
-      validateField(key, formData[key])
+      validateField(key, formData[key]),
     );
     const firstError = errors.find((error) => error);
 
@@ -73,8 +73,8 @@ const SignUpForm = () => {
 
     try {
       const response = await axios.post(
-        "https://attendance-app-server-blue.vercel.app/signup",
-        formData
+        "http://175.29.181.245:11000/signup",
+        formData,
       );
 
       // Ensure user data is available in the response

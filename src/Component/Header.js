@@ -381,7 +381,7 @@ const Header = () => {
 
               {user?.role === "ASM" && (
                 <a
-                  href="https://rl.luvit.com.bd/admin-panel"
+                  href="http://175.29.181.245:11000/admin-panel"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-zinc-800 hover:bg-zinc-100/90 active:bg-zinc-200 transition ring-1 ring-transparent hover:ring-zinc-200"

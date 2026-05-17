@@ -1,8 +1,7 @@
 import "./App.css";
 import { RouterProvider } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import router from "./Routes/Route"
-
+import router from "./Routes/Route";
 
 function App() {
   return (
@@ -15,6 +14,4 @@ function App() {
 
 export default App;
 
-
-
-// https://attendance-app-server-blue.vercel.app/
+// http://175.29.181.245:11000/

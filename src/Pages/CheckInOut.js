@@ -168,8 +168,8 @@ export default function AttendanceVoucher() {
       };
       const url =
         mode === "in"
-          ? "https://attendance-app-server-blue.vercel.app/checkin"
-          : "https://attendance-app-server-blue.vercel.app/checkout";
+          ? "http://175.29.181.245:11000/checkin"
+          : "http://175.29.181.245:11000/checkout";
       
       const { data } = await axios.post(url, body);
       

@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import PrimaryRequest from "../PrimaryRequest";
 import toast from "react-hot-toast";
 import { Store, StoreIcon } from "lucide-react";
-import SlabVoucher from './../../Component/SlabVoucher';
+import SlabVoucher from "./../../Component/SlabVoucher";
 import JdotSlabVoucher from "../../Component/JdotSlabVoucher";
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
   const [totalTP, setTotalTP] = useState(0); // Total TP for achievement calculation
   const [dataLoading, setDataLoading] = useState(true); // Unified loading state
   const [posUser, setPosUser] = useState(
-    JSON.parse(localStorage.getItem("pos-user"))
+    JSON.parse(localStorage.getItem("pos-user")),
   );
   const attendanceUser = JSON.parse(localStorage.getItem("attendance-user"));
   const [locationError, setLocationError] = useState("");
@@ -40,7 +40,7 @@ export default function Home() {
     try {
       setDataLoading(true);
       const response = await axios.get(
-        `http://175.29.181.245:2001/getUser/${posUser._id}`
+        `http://175.29.181.245:2001/getUser/${posUser._id}`,
       );
       const updatedUser = response.data;
       localStorage.setItem("pos-user", JSON.stringify(updatedUser));
@@ -70,7 +70,7 @@ export default function Home() {
           `http://175.29.181.245:2001/getUserWithMultipleOutlets`,
           {
             params: { name: posUser.name },
-          }
+          },
         );
 
         const users = response.data;
@@ -132,7 +132,7 @@ export default function Home() {
     try {
       setDataLoading(true);
       const response = await axios.get(
-        `https://attendance-app-server-blue.vercel.app/getUser/${attendanceUser?._id}`
+        `http://175.29.181.245:11000/getUser/${attendanceUser?._id}`,
       );
       localStorage.setItem("attendance-user", JSON.stringify(response.data));
     } catch (error) {
@@ -161,14 +161,14 @@ export default function Home() {
         "http://175.29.181.245:2001/targets",
         {
           params: { year, month, userID: posUser._id },
-        }
+        },
       );
       const targetEntry = targetResponse.data.find(
-        (entry) => entry.userID === posUser._id
+        (entry) => entry.userID === posUser._id,
       );
       if (targetEntry) {
         const targetForMonth = targetEntry.targets.find(
-          (t) => t.year === parseInt(year) && t.month === parseInt(month)
+          (t) => t.year === parseInt(year) && t.month === parseInt(month),
         );
         if (targetForMonth) {
           setTarget(targetForMonth);
@@ -177,12 +177,12 @@ export default function Home() {
 
       // Fetch sales reports for the current month to calculate achievement
       const reportsResponse = await axios.get(
-        `http://175.29.181.245:2001/sales-reports/${posUser._id}?month=${currentMonth}`
+        `http://175.29.181.245:2001/sales-reports/${posUser._id}?month=${currentMonth}`,
       );
       const reports = reportsResponse.data;
       const totalTPValue = reports.reduce(
         (sum, report) => sum + (report.total_tp || 0),
-        0
+        0,
       );
       setTotalTP(totalTPValue);
     } catch (error) {
@@ -196,10 +196,10 @@ export default function Home() {
       const encodedOutletName = encodeURIComponent(outletName);
       const [stockResponse, dueResponse] = await Promise.all([
         axios.get(
-          `http://175.29.181.245:2001/api/stock-value/${encodedOutletName}`
+          `http://175.29.181.245:2001/api/stock-value/${encodedOutletName}`,
         ),
         axios.get(
-          `http://175.29.181.245:2001/current-due/${encodedOutletName}`
+          `http://175.29.181.245:2001/current-due/${encodedOutletName}`,
         ),
       ]);
       setCurrentDue(dueResponse.data.current_due);

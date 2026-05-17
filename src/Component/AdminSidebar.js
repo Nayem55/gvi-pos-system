@@ -120,7 +120,7 @@ const AdminSidebar = () => {
         { name: "Jdot Slab Report", path: "/admin/jdot-slab-report", icon: <Sheet size={16} /> },  
         {
           name: "Attendance",
-          path: "https://rl.luvit.com.bd/admin-panel",
+          path: "http://175.29.181.245:11001/admin-panel",
           icon: <Clock size={16} />,
           external: true,
         },
