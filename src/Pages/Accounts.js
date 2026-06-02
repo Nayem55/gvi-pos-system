@@ -9,9 +9,8 @@ import AdminSidebar from "../Component/AdminSidebar";
 
 const Accounts = () => {
   const user = JSON.parse(localStorage.getItem("pos-user"));
-  console.log(user)
-  const [selectedType, setSelectedType] = useState("ASM"); // outlet, ASM, RSM, or Zone
-  const [selectedArea, setSelectedArea] = useState(user.name || "");
+  const [selectedType, setSelectedType] = useState(user.role==="SO" ? "outlet" : "ASM"); // outlet, ASM, RSM, or Zone
+  const [selectedArea, setSelectedArea] = useState(user.role==="SO" ? user.outlet : user.name || "");
   const [areaOptions, setAreaOptions] = useState([]);
   const [exportDropdown, setExportDropdown] = useState(false);
   const [dateRange, setDateRange] = useState({

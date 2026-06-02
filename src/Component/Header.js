@@ -184,27 +184,29 @@ const Header = () => {
               Reports
             </p>
             <div className="space-y-1">
-              <Link
-                to={"/dashboard"}
-                className="group flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-zinc-800 hover:bg-zinc-100/90 active:bg-zinc-200 transition ring-1 ring-transparent hover:ring-zinc-200"
-                onClick={toggleSidebar}
-              >
-                <span className="flex items-center gap-3">
-                  <img
-                    className="w-7 h-7 object-contain group-hover:scale-105 transition"
-                    alt=""
-                    src={dashboard}
-                  />
-                  <span className="font-medium">Sales Report</span>
-                </span>
-                <svg
-                  className="w-4 h-4 opacity-0 group-hover:opacity-100 transition"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
+              {user.role === "SO" && (
+                <Link
+                  to={"/dashboard"}
+                  className="group flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-zinc-800 hover:bg-zinc-100/90 active:bg-zinc-200 transition ring-1 ring-transparent hover:ring-zinc-200"
+                  onClick={toggleSidebar}
                 >
-                  <path d="M7 5l5 5-5 5" />
-                </svg>
-              </Link>
+                  <span className="flex items-center gap-3">
+                    <img
+                      className="w-7 h-7 object-contain group-hover:scale-105 transition"
+                      alt=""
+                      src={dashboard}
+                    />
+                    <span className="font-medium">Sales Report</span>
+                  </span>
+                  <svg
+                    className="w-4 h-4 opacity-0 group-hover:opacity-100 transition"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M7 5l5 5-5 5" />
+                  </svg>
+                </Link>
+              )}
 
               {(user?.role === "super admin" ||
                 user?.role === "SO" ||
