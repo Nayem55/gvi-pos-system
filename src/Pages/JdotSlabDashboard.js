@@ -23,7 +23,9 @@ const JdotSlabDashboard = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://175.29.181.245:2001/jdot-customer-sale-summary");
+      const response = await fetch(
+        "http://175.29.181.245:2001/jdot-customer-sale-summary",
+      );
       const data = await response.json();
       setCustomers(data);
       setLoading(false);
@@ -40,43 +42,55 @@ const JdotSlabDashboard = () => {
   // Filter Logic
   useEffect(() => {
     let filtered = [...customers];
-    if (zoneFilter !== "All") filtered = filtered.filter(c => c.so_zone === zoneFilter);
-    if (soFilter !== "All") filtered = filtered.filter(c => c.so_name === soFilter);
+
+    if (zoneFilter !== "All") {
+      filtered = filtered.filter((c) => c.so_zone === zoneFilter);
+    }
+    if (soFilter !== "All") {
+      filtered = filtered.filter((c) => c.so_name === soFilter);
+    }
+
     if (user.role === "SO") {
-      filtered = filtered.filter(c =>
-        c.so_name?.trim().toLowerCase() === user.name?.trim().toLowerCase()
+      filtered = filtered.filter(
+        (c) =>
+          c.so_name?.trim().toLowerCase() === user.name?.trim().toLowerCase(),
       );
     } else if (["ASM", "RSM", "SOM"].includes(user.role)) {
-      filtered = filtered.filter(c =>
-        c.so_zone?.toLowerCase().includes(user.zone?.toLowerCase())
+      filtered = filtered.filter((c) =>
+        c.so_zone?.toLowerCase().includes(user.zone?.toLowerCase()),
       );
     }
+
     setFilteredCustomers(filtered);
-  }, [zoneFilter, soFilter, customers]);
+  }, [zoneFilter, soFilter, customers, user]);
 
-  console.log(filteredCustomers)
-
-  const uniqueZones = ["All", ...new Set(customers.map(c => c.so_zone).filter(Boolean))];
-  const uniqueSoNames = ["All", ...new Set(customers.map(c => c.so_name).filter(Boolean))];
+  const uniqueZones = [
+    "All",
+    ...new Set(customers.map((c) => c.so_zone).filter(Boolean)),
+  ];
+  const uniqueSoNames = [
+    "All",
+    ...new Set(customers.map((c) => c.so_name).filter(Boolean)),
+  ];
 
   // Export
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(
-      filteredCustomers.map(c => ({
+      filteredCustomers.map((c) => ({
         "Customer Name": c.owner_name || "-",
-        "Phone": c.owner_number || "-",
-        "Shop": c.shop_name || "-",
-        "Address": c.shop_address || "-",
-        "Dealer": c.dealer_name || "-",
-        "SO": c.so_name || "-",
-        "Role": c.so_role || "-",
-        "Zone": c.so_zone || "-",
+        Phone: c.owner_number || "-",
+        Shop: c.shop_name || "-",
+        Address: c.shop_address || "-",
+        Dealer: c.dealer_name || "-",
+        SO: c.so_name || "-",
+        Role: c.so_role || "-",
+        Zone: c.so_zone || "-",
         "SO #": c.so_number || "-",
-        "ASM": c.asm || "-",
-        "RSM": c.rsm || "-",
-        "SOM": c.som || "-",
-        "Lifetime Qty": c.lifetime_quantity || 0,
-      }))
+        ASM: c.asm || "-",
+        RSM: c.rsm || "-",
+        SOM: c.som || "-",
+        "Lifetime Qty (This SO)": c.lifetime_quantity || 0,
+      })),
     );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Customers");
@@ -85,13 +99,20 @@ const JdotSlabDashboard = () => {
 
   // Delete Customer
   const deleteCustomer = async (owner_number) => {
-    if (!window.confirm("Are you sure you want to delete this customer and their transactions?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this customer and their transactions?",
+      )
+    ) {
       return;
     }
     try {
-      const res = await fetch(`http://175.29.181.245:2001/jdot-customer/${owner_number}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `http://175.29.181.245:2001/jdot-customer/${owner_number}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (res.ok) {
         fetchCustomers();
       } else {
@@ -114,14 +135,19 @@ const JdotSlabDashboard = () => {
     if (!customerToEdit) return;
 
     try {
-      const res = await fetch(`http://175.29.181.245:2001/jdot-customer/${customerToEdit.owner_number}/quantity`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lifetime_quantity: parseInt(editQuantity) || 0 }),
-      });
+      const res = await fetch(
+        `http://175.29.181.245:2001/jdot-customer/${customerToEdit.owner_number}/quantity`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lifetime_quantity: parseInt(editQuantity) || 0,
+          }),
+        },
+      );
 
       if (res.ok) {
-        fetchCustomers(); // Refresh data
+        fetchCustomers();
         setIsEditModalOpen(false);
         setCustomerToEdit(null);
         setEditQuantity("");
@@ -135,33 +161,80 @@ const JdotSlabDashboard = () => {
     }
   };
 
-  // Transaction Modal
+  // Transaction Modal - Now supports SO wise filtering
   const openModal = async (customer) => {
     setSelectedCustomer(customer);
     setIsModalOpen(true);
+
+    let url = `http://175.29.181.245:2001/jdot-customer-transactions?owner_number=${customer.owner_number}`;
+
+    // Pass user._id for proper SO-wise filtering
+    if (user._id) {
+      url += `&user_id=${user._id}`;
+    }
+
     try {
-      const res = await fetch(`http://175.29.181.245:2001/jdot-customer-transactions?owner_number=${customer.owner_number}`);
+      const res = await fetch(url);
       const data = await res.json();
+
+      console.log("Transactions received:", data); // For debugging
+
       const merged = data.reduce((acc, tx) => {
-        const date = tx.sale_date.split(" ")[0];
-        const existing = acc.find(t => t.sale_date === date);
-        if (existing) {
-          existing.purchase_quantity += tx.purchase_quantity;
-          tx.products.forEach(p => {
-            const ep = existing.products.find(x => x.product_name === p.product_name);
-            ep ? (ep.quantity += p.quantity) : existing.products.push(p);
-          });
-        } else {
-          acc.push({ sale_date: date, purchase_quantity: tx.purchase_quantity, products: [...tx.products] });
+        const date = tx.sale_date ? tx.sale_date.split(" ")[0] : "Unknown Date";
+
+        let existing = acc.find((t) => t.sale_date === date);
+
+        if (!existing) {
+          existing = {
+            sale_date: date,
+            purchase_quantity: 0,
+            products: [],
+          };
+          acc.push(existing);
         }
+
+        // Add quantity
+        existing.purchase_quantity += tx.purchase_quantity || tx.quantity || 0;
+
+        // Add products
+        if (tx.products && Array.isArray(tx.products)) {
+          tx.products.forEach((p) => {
+            const ep = existing.products.find(
+              (x) => x.product_name === p.product_name,
+            );
+            if (ep) {
+              ep.quantity += p.quantity || 0;
+            } else {
+              existing.products.push({
+                product_name: p.product_name,
+                quantity: p.quantity || 0,
+              });
+            }
+          });
+        } else if (tx.product_name) {
+          // Fallback
+          const ep = existing.products.find(
+            (x) => x.product_name === tx.product_name,
+          );
+          if (ep) {
+            ep.quantity += tx.quantity || 0;
+          } else {
+            existing.products.push({
+              product_name: tx.product_name,
+              quantity: tx.quantity || 0,
+            });
+          }
+        }
+
         return acc;
       }, []);
+
       setTransactions(merged);
     } catch (err) {
-      console.error(err);
+      console.error("Modal fetch error:", err);
+      setTransactions([]);
     }
   };
-
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedCustomer(null);
@@ -170,7 +243,11 @@ const JdotSlabDashboard = () => {
 
   // Summary
   const totalCustomers = filteredCustomers.length;
-  const totalQuantity = filteredCustomers.reduce((a, c) => a + (c.lifetime_quantity || 0), 0);
+  const totalQuantity = filteredCustomers.reduce(
+    (a, c) => a + (c.lifetime_quantity || 0),
+    0,
+  );
+
   const zoneSummary = filteredCustomers.reduce((acc, c) => {
     const z = c.so_zone || "Unknown";
     acc[z] = acc[z] || { count: 0, quantity: 0 };
@@ -202,28 +279,47 @@ const JdotSlabDashboard = () => {
                 onClick={() => setShowFilters(!showFilters)}
                 className="sm:hidden w-full text-left bg-white p-3 rounded-lg shadow flex justify-between items-center font-semibold"
               >
-                Filters {showFilters ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                Filters{" "}
+                {showFilters ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
               </button>
-              <div className={`${showFilters ? "block" : "hidden"} sm:block mt-3 sm:mt-0`}>
+              <div
+                className={`${showFilters ? "block" : "hidden"} sm:block mt-3 sm:mt-0`}
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Zone</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Zone
+                    </label>
                     <select
                       value={zoneFilter}
                       onChange={(e) => setZoneFilter(e.target.value)}
                       className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:ring-2 focus:ring-blue-500"
                     >
-                      {uniqueZones.map(z => <option key={z} value={z}>{z}</option>)}
+                      {uniqueZones.map((z) => (
+                        <option key={z} value={z}>
+                          {z}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">SO Name</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      SO Name
+                    </label>
                     <select
                       value={soFilter}
                       onChange={(e) => setSoFilter(e.target.value)}
                       className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:ring-2 focus:ring-blue-500"
                     >
-                      {uniqueSoNames.map(n => <option key={n} value={n}>{n}</option>)}
+                      {uniqueSoNames.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -234,16 +330,24 @@ const JdotSlabDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 rounded-xl shadow-lg">
               <h3 className="text-lg font-semibold">Total Customers</h3>
-              <p className="text-3xl font-bold mt-1">{totalCustomers.toLocaleString()}</p>
+              <p className="text-3xl font-bold mt-1">
+                {totalCustomers.toLocaleString()}
+              </p>
             </div>
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-5 rounded-xl shadow-lg">
-              <h3 className="text-lg font-semibold">Lifetime Quantity</h3>
-              <p className="text-3xl font-bold mt-1">{totalQuantity.toLocaleString()}</p>
+              <h3 className="text-lg font-semibold">
+                Lifetime Quantity (Visible SOs)
+              </h3>
+              <p className="text-3xl font-bold mt-1">
+                {totalQuantity.toLocaleString()}
+              </p>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-5 mb-6 overflow-hidden">
-            <h3 className="text-lg font-bold text-gray-800 mb-3">Zone Wise Summary</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-3">
+              Zone Wise Summary
+            </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100">
@@ -254,13 +358,17 @@ const JdotSlabDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(zoneSummary).map(([zone, { count, quantity }]) => (
-                    <tr key={zone} className="border-t">
-                      <td className="p-3 font-medium">{zone}</td>
-                      <td className="text-center p-3">{count}</td>
-                      <td className="text-right p-3 font-semibold">{quantity}</td>
-                    </tr>
-                  ))}
+                  {Object.entries(zoneSummary).map(
+                    ([zone, { count, quantity }]) => (
+                      <tr key={zone} className="border-t">
+                        <td className="p-3 font-medium">{zone}</td>
+                        <td className="text-center p-3">{count}</td>
+                        <td className="text-right p-3 font-semibold">
+                          {quantity}
+                        </td>
+                      </tr>
+                    ),
+                  )}
                 </tbody>
               </table>
             </div>
@@ -281,21 +389,30 @@ const JdotSlabDashboard = () => {
                       <th className="p-3 text-left">Shop</th>
                       <th className="p-3 text-left">Owner</th>
                       <th className="p-3 text-left">Phone</th>
-                      <th className="p-3 text-left">SO</th>
+                      <th className="p-3 text-left">SO Name</th>
                       <th className="p-3 text-left">Zone</th>
-                      <th className="p-3 text-right">Qty</th>
+                      <th className="p-3 text-right">Qty (This SO)</th>
                       <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCustomers.map((c, i) => (
-                      <tr key={i} className="border-t hover:bg-gray-50 transition">
-                        <td className="p-3 font-medium">{c.shop_name || "-"}</td>
+                      <tr
+                        key={i}
+                        className="border-t hover:bg-gray-50 transition"
+                      >
+                        <td className="p-3 font-medium">
+                          {c.shop_name || "-"}
+                        </td>
                         <td className="p-3">{c.owner_name || "-"}</td>
                         <td className="p-3">{c.owner_number || "-"}</td>
-                        <td className="p-3">{c.so_name || "-"}</td>
+                        <td className="p-3 font-medium text-blue-700">
+                          {c.so_name || "-"}
+                        </td>
                         <td className="p-3">{c.so_zone || "-"}</td>
-                        <td className="p-3 text-right font-semibold">{c.lifetime_quantity}</td>
+                        <td className="p-3 text-right font-semibold text-lg">
+                          {c.lifetime_quantity || 0}
+                        </td>
                         <td className="p-3 text-center flex justify-center gap-2">
                           <button
                             onClick={() => openModal(c)}
@@ -328,20 +445,31 @@ const JdotSlabDashboard = () => {
                 {/* Mobile Cards */}
                 <div className="md:hidden p-4 space-y-3">
                   {filteredCustomers.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">No customers found.</p>
+                    <p className="text-center text-gray-500 py-8">
+                      No customers found.
+                    </p>
                   ) : (
                     filteredCustomers.map((c, i) => (
                       <div key={i} className="bg-gray-50 rounded-lg p-4 border">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-gray-800">{c.shop_name || "Unknown Shop"}</h4>
-                          <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                            {c.lifetime_quantity} qty
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-gray-800">
+                            {c.shop_name || "Unknown Shop"}
+                          </h4>
+                          <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">
+                            {c.lifetime_quantity || 0} qty
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600"><strong>Owner:</strong> {c.owner_name}</p>
-                        <p className="text-sm text-gray-600"><strong>Phone:</strong> {c.owner_number}</p>
-                        <p className="text-sm text-gray-600"><strong>SO:</strong> {c.so_name} ({c.so_zone})</p>
-                        <div className="mt-3 flex flex-col gap-2">
+                        <p className="text-sm text-gray-600">
+                          <strong>Owner:</strong> {c.owner_name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Phone:</strong> {c.owner_number}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>SO:</strong> {c.so_name} ({c.so_zone})
+                        </p>
+
+                        <div className="mt-4 flex flex-col gap-2">
                           <button
                             onClick={() => openModal(c)}
                             className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
@@ -384,29 +512,47 @@ const JdotSlabDashboard = () => {
                 <h2 className="text-xl font-bold text-gray-800">
                   Transactions: {selectedCustomer?.owner_name}
                 </h2>
-                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                <button
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700"
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
+              {user.role === "SO" && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Showing only your sales
+                </p>
+              )}
             </div>
             <div className="p-5 space-y-4">
               {transactions.length > 0 ? (
                 transactions.map((tx, i) => (
                   <div key={i} className="border rounded-lg p-3 bg-gray-50">
-                    <p className="font-semibold text-gray-800">{tx.sale_date}</p>
-                    <p className="text-sm"><strong>Total Qty:</strong> {tx.purchase_quantity}</p>
+                    <p className="font-semibold text-gray-800">
+                      {tx.sale_date}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Total Qty:</strong> {tx.purchase_quantity}
+                    </p>
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-blue-600 text-sm font-medium">View Products</summary>
+                      <summary className="cursor-pointer text-blue-600 text-sm font-medium">
+                        View Products
+                      </summary>
                       <ul className="mt-1 text-sm text-gray-600 list-disc list-inside">
                         {tx.products.map((p, pi) => (
-                          <li key={pi}>{p.product_name}: {p.quantity}</li>
+                          <li key={pi}>
+                            {p.product_name}: {p.quantity}
+                          </li>
                         ))}
                       </ul>
                     </details>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-8">No transactions found.</p>
+                <p className="text-center text-gray-500 py-8">
+                  No transactions found.
+                </p>
               )}
             </div>
           </div>
@@ -417,11 +563,19 @@ const JdotSlabDashboard = () => {
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Lifetime Quantity</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Edit Lifetime Quantity
+            </h2>
             <p className="text-sm text-gray-600 mb-4">
-              Customer: <strong>{customerToEdit?.owner_name}</strong> ({customerToEdit?.owner_number})
+              Customer: <strong>{customerToEdit?.owner_name}</strong> (
+              {customerToEdit?.owner_number})
             </p>
-            <label className="block text-sm font-medium text-gray-700 mb-2">New Quantity</label>
+            <p className="text-sm text-gray-500 mb-4">
+              SO: <strong>{customerToEdit?.so_name}</strong>
+            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Quantity
+            </label>
             <input
               type="number"
               value={editQuantity}

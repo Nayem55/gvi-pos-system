@@ -142,6 +142,7 @@ const SlabDashboard = () => {
     try {
       const res = await fetch(`http://175.29.181.245:2001/customer-transactions?owner_number=${customer.owner_number}`);
       const data = await res.json();
+            console.log("Transactions received:", data); // Debug
       const merged = data.reduce((acc, tx) => {
         const date = tx.sale_date.split(" ")[0];
         const existing = acc.find(t => t.sale_date === date);
