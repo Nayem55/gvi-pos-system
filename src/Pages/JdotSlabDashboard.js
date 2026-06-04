@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import AdminSidebar from "../Component/AdminSidebar";
 import { Menu, X, Download, Eye, Trash2, Edit2 } from "lucide-react";
 
 const JdotSlabDashboard = () => {
   const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [zoneFilter, setZoneFilter] = useState("All");
   const [soFilter, setSoFilter] = useState("All");
   const [loading, setLoading] = useState(true);
@@ -17,14 +15,16 @@ const JdotSlabDashboard = () => {
   const [editQuantity, setEditQuantity] = useState("");
   const [customerToEdit, setCustomerToEdit] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const user = JSON.parse(localStorage.getItem("pos-user") || "{}");
 
-  // Fetch Data
+  const user = useMemo(() => {
+    return JSON.parse(localStorage.getItem("pos-user") || "{}");
+  }, []);
+
   const fetchCustomers = async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "http://175.29.181.245:2001/jdot-customer-sale-summary",
+        "http://175.29.181.245:2001/jdot-customer-sale-summary"
       );
       const data = await response.json();
       setCustomers(data);
@@ -39,13 +39,13 @@ const JdotSlabDashboard = () => {
     fetchCustomers();
   }, []);
 
-  // Filter Logic
-  useEffect(() => {
+  const filteredCustomers = useMemo(() => {
     let filtered = [...customers];
 
     if (zoneFilter !== "All") {
       filtered = filtered.filter((c) => c.so_zone === zoneFilter);
     }
+
     if (soFilter !== "All") {
       filtered = filtered.filter((c) => c.so_name === soFilter);
     }
@@ -53,27 +53,27 @@ const JdotSlabDashboard = () => {
     if (user.role === "SO") {
       filtered = filtered.filter(
         (c) =>
-          c.so_name?.trim().toLowerCase() === user.name?.trim().toLowerCase(),
+          c.so_name?.trim().toLowerCase() === user.name?.trim().toLowerCase()
       );
     } else if (["ASM", "RSM", "SOM"].includes(user.role)) {
       filtered = filtered.filter((c) =>
-        c.so_zone?.toLowerCase().includes(user.zone?.toLowerCase()),
+        c.so_zone?.toLowerCase().includes(user.zone?.toLowerCase())
       );
     }
 
-    setFilteredCustomers(filtered);
+    return filtered;
   }, [zoneFilter, soFilter, customers, user]);
 
   const uniqueZones = [
     "All",
     ...new Set(customers.map((c) => c.so_zone).filter(Boolean)),
   ];
+
   const uniqueSoNames = [
     "All",
     ...new Set(customers.map((c) => c.so_name).filter(Boolean)),
   ];
 
-  // Export
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(
       filteredCustomers.map((c) => ({
@@ -90,29 +90,30 @@ const JdotSlabDashboard = () => {
         RSM: c.rsm || "-",
         SOM: c.som || "-",
         "Lifetime Qty (This SO)": c.lifetime_quantity || 0,
-      })),
+      }))
     );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Customers");
     XLSX.writeFile(wb, "Lifetime_Customers.xlsx");
   };
 
-  // Delete Customer
   const deleteCustomer = async (owner_number) => {
     if (
       !window.confirm(
-        "Are you sure you want to delete this customer and their transactions?",
+        "Are you sure you want to delete this customer and their transactions?"
       )
     ) {
       return;
     }
+
     try {
       const res = await fetch(
         `http://175.29.181.245:2001/jdot-customer/${owner_number}`,
         {
           method: "DELETE",
-        },
+        }
       );
+
       if (res.ok) {
         fetchCustomers();
       } else {
@@ -124,7 +125,6 @@ const JdotSlabDashboard = () => {
     }
   };
 
-  // Edit Quantity
   const openEditModal = (customer) => {
     setCustomerToEdit(customer);
     setEditQuantity(customer.lifetime_quantity || 0);
@@ -143,7 +143,7 @@ const JdotSlabDashboard = () => {
           body: JSON.stringify({
             lifetime_quantity: parseInt(editQuantity) || 0,
           }),
-        },
+        }
       );
 
       if (res.ok) {
@@ -161,14 +161,12 @@ const JdotSlabDashboard = () => {
     }
   };
 
-  // Transaction Modal - Now supports SO wise filtering
   const openModal = async (customer) => {
     setSelectedCustomer(customer);
     setIsModalOpen(true);
 
     let url = `http://175.29.181.245:2001/jdot-customer-transactions?owner_number=${customer.owner_number}`;
 
-    // Pass user._id for proper SO-wise filtering
     if (user._id) {
       url += `&user_id=${user._id}`;
     }
@@ -177,7 +175,7 @@ const JdotSlabDashboard = () => {
       const res = await fetch(url);
       const data = await res.json();
 
-      console.log("Transactions received:", data); // For debugging
+      console.log("Transactions received:", data);
 
       const merged = data.reduce((acc, tx) => {
         const date = tx.sale_date ? tx.sale_date.split(" ")[0] : "Unknown Date";
@@ -193,15 +191,14 @@ const JdotSlabDashboard = () => {
           acc.push(existing);
         }
 
-        // Add quantity
         existing.purchase_quantity += tx.purchase_quantity || tx.quantity || 0;
 
-        // Add products
         if (tx.products && Array.isArray(tx.products)) {
           tx.products.forEach((p) => {
             const ep = existing.products.find(
-              (x) => x.product_name === p.product_name,
+              (x) => x.product_name === p.product_name
             );
+
             if (ep) {
               ep.quantity += p.quantity || 0;
             } else {
@@ -212,10 +209,10 @@ const JdotSlabDashboard = () => {
             }
           });
         } else if (tx.product_name) {
-          // Fallback
           const ep = existing.products.find(
-            (x) => x.product_name === tx.product_name,
+            (x) => x.product_name === tx.product_name
           );
+
           if (ep) {
             ep.quantity += tx.quantity || 0;
           } else {
@@ -235,17 +232,18 @@ const JdotSlabDashboard = () => {
       setTransactions([]);
     }
   };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedCustomer(null);
     setTransactions([]);
   };
 
-  // Summary
   const totalCustomers = filteredCustomers.length;
+
   const totalQuantity = filteredCustomers.reduce(
     (a, c) => a + (c.lifetime_quantity || 0),
-    0,
+    0
   );
 
   const zoneSummary = filteredCustomers.reduce((acc, c) => {
@@ -260,11 +258,13 @@ const JdotSlabDashboard = () => {
     <>
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         {user.role === "super admin" && <AdminSidebar />}
+
         <div className="flex-1 p-4 md:p-6 lg:p-8 relative">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
               Lifetime Customer Summary
             </h1>
+
             <button
               onClick={exportToExcel}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow-md transition"
@@ -286,8 +286,11 @@ const JdotSlabDashboard = () => {
                   <Menu className="w-5 h-5" />
                 )}
               </button>
+
               <div
-                className={`${showFilters ? "block" : "hidden"} sm:block mt-3 sm:mt-0`}
+                className={`${
+                  showFilters ? "block" : "hidden"
+                } sm:block mt-3 sm:mt-0`}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow">
                   <div>
@@ -306,6 +309,7 @@ const JdotSlabDashboard = () => {
                       ))}
                     </select>
                   </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       SO Name
@@ -334,6 +338,7 @@ const JdotSlabDashboard = () => {
                 {totalCustomers.toLocaleString()}
               </p>
             </div>
+
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-5 rounded-xl shadow-lg">
               <h3 className="text-lg font-semibold">
                 Lifetime Quantity (Visible SOs)
@@ -348,15 +353,19 @@ const JdotSlabDashboard = () => {
             <h3 className="text-lg font-bold text-gray-800 mb-3">
               Zone Wise Summary
             </h3>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left p-3 font-semibold">Zone</th>
-                    <th className="text-center p-3 font-semibold">Customers</th>
+                    <th className="text-center p-3 font-semibold">
+                      Customers
+                    </th>
                     <th className="text-right p-3 font-semibold">Qty</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {Object.entries(zoneSummary).map(
                     ([zone, { count, quantity }]) => (
@@ -367,7 +376,7 @@ const JdotSlabDashboard = () => {
                           {quantity}
                         </td>
                       </tr>
-                    ),
+                    )
                   )}
                 </tbody>
               </table>
@@ -382,7 +391,6 @@ const JdotSlabDashboard = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                {/* Desktop Table */}
                 <table className="hidden md:table w-full text-sm">
                   <thead className="bg-indigo-50 text-indigo-800">
                     <tr>
@@ -395,6 +403,7 @@ const JdotSlabDashboard = () => {
                       <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {filteredCustomers.map((c, i) => (
                       <tr
@@ -420,6 +429,7 @@ const JdotSlabDashboard = () => {
                           >
                             <Eye className="w-3 h-3" /> View
                           </button>
+
                           {user.role === "super admin" && (
                             <>
                               <button
@@ -428,6 +438,7 @@ const JdotSlabDashboard = () => {
                               >
                                 <Edit2 className="w-3 h-3" /> Edit Qty
                               </button>
+
                               <button
                                 onClick={() => deleteCustomer(c.owner_number)}
                                 className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1"
@@ -442,7 +453,6 @@ const JdotSlabDashboard = () => {
                   </tbody>
                 </table>
 
-                {/* Mobile Cards */}
                 <div className="md:hidden p-4 space-y-3">
                   {filteredCustomers.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">
@@ -455,16 +465,20 @@ const JdotSlabDashboard = () => {
                           <h4 className="font-bold text-gray-800">
                             {c.shop_name || "Unknown Shop"}
                           </h4>
+
                           <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">
                             {c.lifetime_quantity || 0} qty
                           </span>
                         </div>
+
                         <p className="text-sm text-gray-600">
                           <strong>Owner:</strong> {c.owner_name}
                         </p>
+
                         <p className="text-sm text-gray-600">
                           <strong>Phone:</strong> {c.owner_number}
                         </p>
+
                         <p className="text-sm text-gray-600">
                           <strong>SO:</strong> {c.so_name} ({c.so_zone})
                         </p>
@@ -476,6 +490,7 @@ const JdotSlabDashboard = () => {
                           >
                             <Eye className="w-4 h-4" /> View Transactions
                           </button>
+
                           {user.role === "super admin" && (
                             <>
                               <button
@@ -484,6 +499,7 @@ const JdotSlabDashboard = () => {
                               >
                                 <Edit2 className="w-4 h-4" /> Edit Quantity
                               </button>
+
                               <button
                                 onClick={() => deleteCustomer(c.owner_number)}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 rounded-lg flex items-center justify-center gap-2"
@@ -503,7 +519,6 @@ const JdotSlabDashboard = () => {
         </div>
       </div>
 
-      {/* Transaction Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
@@ -512,6 +527,7 @@ const JdotSlabDashboard = () => {
                 <h2 className="text-xl font-bold text-gray-800">
                   Transactions: {selectedCustomer?.owner_name}
                 </h2>
+
                 <button
                   onClick={closeModal}
                   className="text-gray-500 hover:text-gray-700"
@@ -519,12 +535,14 @@ const JdotSlabDashboard = () => {
                   <X className="w-6 h-6" />
                 </button>
               </div>
+
               {user.role === "SO" && (
                 <p className="text-sm text-gray-500 mt-1">
                   Showing only your sales
                 </p>
               )}
             </div>
+
             <div className="p-5 space-y-4">
               {transactions.length > 0 ? (
                 transactions.map((tx, i) => (
@@ -532,13 +550,16 @@ const JdotSlabDashboard = () => {
                     <p className="font-semibold text-gray-800">
                       {tx.sale_date}
                     </p>
+
                     <p className="text-sm">
                       <strong>Total Qty:</strong> {tx.purchase_quantity}
                     </p>
+
                     <details className="mt-2">
                       <summary className="cursor-pointer text-blue-600 text-sm font-medium">
                         View Products
                       </summary>
+
                       <ul className="mt-1 text-sm text-gray-600 list-disc list-inside">
                         {tx.products.map((p, pi) => (
                           <li key={pi}>
@@ -559,23 +580,26 @@ const JdotSlabDashboard = () => {
         </div>
       )}
 
-      {/* Edit Quantity Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">
               Edit Lifetime Quantity
             </h2>
+
             <p className="text-sm text-gray-600 mb-4">
               Customer: <strong>{customerToEdit?.owner_name}</strong> (
               {customerToEdit?.owner_number})
             </p>
+
             <p className="text-sm text-gray-500 mb-4">
               SO: <strong>{customerToEdit?.so_name}</strong>
             </p>
+
             <label className="block text-sm font-medium text-gray-700 mb-2">
               New Quantity
             </label>
+
             <input
               type="number"
               value={editQuantity}
@@ -583,6 +607,7 @@ const JdotSlabDashboard = () => {
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               min="0"
             />
+
             <div className="mt-6 flex gap-3">
               <button
                 onClick={saveQuantity}
@@ -590,6 +615,7 @@ const JdotSlabDashboard = () => {
               >
                 Save
               </button>
+
               <button
                 onClick={() => {
                   setIsEditModalOpen(false);

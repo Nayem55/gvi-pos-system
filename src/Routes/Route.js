@@ -75,8 +75,14 @@ const router = createBrowserRouter([
 
       // Stock movement (user level)
       { path: "/stock-movement/dealer", element: <StockMovementReport /> },
-      { path: "/stock-movement/product", element: <ProductStockMovementReport /> },
-      { path: "/stock-movement/category", element: <CategoryStockMovementReport /> },
+      {
+        path: "/stock-movement/product",
+        element: <ProductStockMovementReport />,
+      },
+      {
+        path: "/stock-movement/category",
+        element: <CategoryStockMovementReport />,
+      },
       { path: "/stock-movement/brand", element: <BrandStockMovementReport /> },
       { path: "/stock-movement/group", element: <GroupStockMovementReport /> },
 
@@ -362,15 +368,11 @@ const router = createBrowserRouter([
       },
       {
         path: "/slab-report",
-        element: (
-            <SlabDashboard />
-        ),
+        element: <SlabDashboard />,
       },
       {
         path: "/jdot-slab-report",
-        element: (
-            <JdotSlabDashboard />
-        ),
+        element: <JdotSlabDashboard />,
       },
       {
         path: "admin/tada-full-report",
