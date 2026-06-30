@@ -570,7 +570,7 @@ export default function Secondary({
 
           <div className="w-full flex justify-between gap-4">
             {/* Stock Card */}
-            <div className="w-full sm:w-1/3 bg-blue-50 p-3 rounded-lg">
+            {/* <div className="w-full sm:w-1/3 bg-blue-50 p-3 rounded-lg">
               <h3 className="text-sm font-semibold text-blue-800">Stock</h3>
               {dataLoading ? (
                 <div className="flex justify-center items-center h-10">
@@ -605,10 +605,10 @@ export default function Secondary({
                   </p>
                 </>
               )}
-            </div>
+            </div> */}
 
             {/* Target Card */}
-            <div className="w-full sm:w-1/3 bg-green-50 p-3 rounded-lg">
+            <div className="w-full sm:w-1/2 bg-green-50 p-3 rounded-lg">
               <h3 className="text-sm font-semibold text-green-800">Target</h3>
               {dataLoading ? (
                 <div className="flex justify-center items-center h-10">
@@ -646,7 +646,7 @@ export default function Secondary({
             </div>
 
             {/* Achievement Card with Progress */}
-            <div className="w-full sm:w-1/3 bg-yellow-50 p-3 rounded-lg">
+            <div className="w-full sm:w-1/2 bg-yellow-50 p-3 rounded-lg">
               <h3 className="text-sm font-semibold text-yellow-800">
                 Achievement
               </h3>
