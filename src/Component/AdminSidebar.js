@@ -299,6 +299,11 @@ const AdminSidebar = () => {
           icon: <FaTrademark size={16} />,
         },
         {
+          name: "Full Summary",
+          path: "/stock-movement/full-summary",
+          icon: <BarChart2 size={16} />,
+        },
+        {
           name: "Update Stock",
           path: "/admin/full-stock-report",
           icon: <Edit size={16} />,

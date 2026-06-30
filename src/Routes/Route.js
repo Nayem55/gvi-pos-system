@@ -50,6 +50,7 @@ import StockTransactionsReport from "../Pages/StockTransactionsReport";
 import ProductStockMovementReport from "../Pages/ProductStockMovementReport";
 import CategoryStockMovementReport from "../Pages/CategoryStockMovementReport";
 import BrandStockMovementReport from "../Pages/BrandStockMovementReport";
+import FullStockSummaryReport from "../Pages/AdminPanel/FullStockSummaryReport";
 import SlabDashboard from "../Pages/SlabDashboard";
 import ProtectedRoute from "../Component/ProtectedRoute";
 import JdotSlabDashboard from "../Pages/JdotSlabDashboard";
@@ -85,6 +86,14 @@ const router = createBrowserRouter([
       },
       { path: "/stock-movement/brand", element: <BrandStockMovementReport /> },
       { path: "/stock-movement/group", element: <GroupStockMovementReport /> },
+      {
+        path: "/stock-movement/full-summary",
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <FullStockSummaryReport />
+          </ProtectedRoute>
+        ),
+      },
 
       // TADA (user level)
       { path: "admin/tada", element: <TDDAdminPanel /> },
