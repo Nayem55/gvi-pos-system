@@ -266,6 +266,11 @@ const AdminSidebar = () => {
           path: "/admin/full-sales-report",
           icon: <BiCategoryAlt size={16} />,
         },
+        {
+          name: "Compare Report",
+          path: "/admin/sales-movement/compare-report",
+          icon: <Layers size={16} />,
+        },
       ],
     },
     {

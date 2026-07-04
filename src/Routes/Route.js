@@ -10,6 +10,7 @@ import DailyReport from "../Pages/AdminPanel/DailyReport";
 import ManageStock from "../Pages/AdminPanel/ManageStock";
 import UserManagementPage from "../Pages/AdminPanel/Users";
 import DealerSalesReport from "../Pages/AdminPanel/DealerSalesReport";
+import SalesCompareReport from "../Pages/AdminPanel/SalesCompareReport";
 import CategoryWiseSalesReport from "../Pages/AdminPanel/CategorySalesReport";
 import CategoryReportDetails from "../Pages/AdminPanel/CategoryReportDetails";
 import ProductWiseSalesReport from "../Pages/AdminPanel/ProductWiseSalesReport";
@@ -228,6 +229,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={["super admin"]}>
             <DealerSalesReport />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/sales-movement/compare-report",
+        element: (
+          <ProtectedRoute allowedRoles={["super admin"]}>
+            <SalesCompareReport />
           </ProtectedRoute>
         ),
       },
