@@ -643,10 +643,10 @@ const SalesCompareReport = () => {
                       <th className="p-2 border text-center bg-green-50" colSpan="2">Change</th>
                     </tr>
                     <tr className="bg-gray-50">
-                      <th className="p-1 border text-xs bg-blue-50">Sales (TP)</th>
                       <th className="p-1 border text-xs bg-blue-50">Sales Count</th>
-                      <th className="p-1 border text-xs bg-purple-50">Sales (TP)</th>
+                      <th className="p-1 border text-xs bg-blue-50">Sales (TP)</th>
                       <th className="p-1 border text-xs bg-purple-50">Sales Count</th>
+                      <th className="p-1 border text-xs bg-purple-50">Sales (TP)</th>
                       <th className="p-1 border text-xs bg-green-50">TP</th>
                       <th className="p-1 border text-xs bg-green-50">%</th>
                     </tr>
@@ -665,14 +665,14 @@ const SalesCompareReport = () => {
                         </td>
                         <td className="border p-2 text-sm">{report.zone}</td>
                         <td className="border p-2 text-sm">{report.role}</td>
-                        <td className="border p-2 text-right text-sm">{report.p1TotalTP.toFixed(2)}</td>
                         <td className="border p-2 text-center text-sm">{report.p1SalesCount}</td>
-                        <td className="border p-2 text-right text-sm">{report.p2TotalTP.toFixed(2)}</td>
+                        <td className="border p-2 text-center text-sm">{report.p1TotalTP.toFixed(2)}</td>
                         <td className="border p-2 text-center text-sm">{report.p2SalesCount}</td>
-                        <td className={`border p-2 text-right text-sm font-medium ${report.change >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <td className="border p-2 text-center text-sm">{report.p2TotalTP.toFixed(2)}</td>
+                        <td className={`border p-2 text-center text-sm font-medium ${report.change >= 0 ? "text-green-600" : "text-red-600"}`}>
                           {report.change >= 0 ? "+" : ""}{report.change.toFixed(2)}
                         </td>
-                        <td className={`border p-2 text-right text-sm font-medium ${report.changePercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <td className={`border p-2 text-center text-sm font-medium ${report.changePercent >= 0 ? "text-green-600" : "text-red-600"}`}>
                           {report.changePercent >= 0 ? "+" : ""}{report.changePercent.toFixed(1)}%
                         </td>
                       </tr>
