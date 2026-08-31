@@ -74,16 +74,18 @@ const FullStockSummaryReport = () => {
   };
 
   const categories = useMemo(() => {
-    const cats = [...new Set(products.map((p) => p.category || "Uncategorized"))].sort();
+    const brandFiltered = selectedBrand === "all"
+      ? products
+      : products.filter((p) => (p.brand || "Unbranded") === selectedBrand);
+    const cats = [...new Set(brandFiltered.map((p) => p.category || "Uncategorized"))].sort();
     return [{ value: "all", label: "All Categories" }, ...cats.map((c) => ({ value: c, label: c }))];
-  }, [products]);
+  }, [products, selectedBrand]);
 
   const brands = useMemo(() => {
-    const filteredProducts =
-      selectedCategory === "all"
-        ? products
-        : products.filter((p) => p.category === selectedCategory);
-    const brs = [...new Set(filteredProducts.map((p) => p.brand || "Unbranded"))].sort();
+    const catFiltered = selectedCategory === "all"
+      ? products
+      : products.filter((p) => (p.category || "Uncategorized") === selectedCategory);
+    const brs = [...new Set(catFiltered.map((p) => p.brand || "Unbranded"))].sort();
     return [{ value: "all", label: "All Brands" }, ...brs.map((b) => ({ value: b, label: b }))];
   }, [products, selectedCategory]);
 
@@ -94,6 +96,15 @@ const FullStockSummaryReport = () => {
       return catMatch && brandMatch;
     });
   }, [products, selectedCategory, selectedBrand]);
+
+  useEffect(() => {
+    if (selectedBrand !== "all") {
+      const validCategories = categories.map((c) => c.value);
+      if (selectedCategory !== "all" && !validCategories.includes(selectedCategory)) {
+        setSelectedCategory("all");
+      }
+    }
+  }, [selectedBrand, categories]);
 
   useEffect(() => {
     if (selectedCategory !== "all") {
