@@ -193,7 +193,11 @@ const CategoryTargetPage = () => {
       setTempTargets(updatedTargets);
     } catch (error) {
       console.error("Failed to save targets", error);
-      toast.error(error.response?.data?.message || "Error saving targets");
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Error saving targets",
+      );
     } finally {
       setLoading(false);
     }
@@ -257,7 +261,11 @@ const CategoryTargetPage = () => {
       setTempTargets(updatedTargets);
     } catch (error) {
       console.error("Failed to save all targets", error);
-      toast.error(error.response?.data?.message || "Error saving some targets");
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Error saving some targets",
+      );
     } finally {
       setLoading(false);
     }
