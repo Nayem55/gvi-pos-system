@@ -93,6 +93,11 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!posUser?.outlet) {
+        setDataLoading(false);
+        return;
+      }
+
       try {
         setDataLoading(true);
         await Promise.all([
@@ -107,7 +112,7 @@ export default function Home() {
       }
     };
     fetchData();
-  }, []);
+  }, [posUser?.outlet]);
 
   const handleOutletChange = (outlet) => {
     const selectedUser = siblingUsers.find((u) => u.outlet === outlet);
