@@ -19,6 +19,8 @@ const FullStockSummaryReport = () => {
   const [exportDropdown, setExportDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
+  const [selectedZone, setSelectedZone] = useState("all");
+  const [zones, setZones] = useState([]);
 
   useEffect(() => {
     if (dateRange.start && dateRange.end) {
@@ -50,6 +52,7 @@ const FullStockSummaryReport = () => {
       if (response.data?.success) {
         setProducts(response.data.data.products);
         setOutlets(response.data.data.outlets);
+        setZones(response.data.data.zones || [...new Set(response.data.data.outlets.map((o) => o.zone).filter(Boolean))].sort());
         setSelectedCategory("all");
         setSelectedBrand("all");
       } else {
@@ -97,6 +100,11 @@ const FullStockSummaryReport = () => {
     });
   }, [products, selectedCategory, selectedBrand]);
 
+  const filteredOutlets = useMemo(
+    () => selectedZone === "all" ? outlets : outlets.filter((outlet) => outlet.zone === selectedZone),
+    [outlets, selectedZone],
+  );
+
   useEffect(() => {
     if (selectedBrand !== "all") {
       const validCategories = categories.map((c) => c.value);
@@ -132,10 +140,14 @@ const FullStockSummaryReport = () => {
   };
 
   const getTotal = (barcode, field) => {
-    return outlets.reduce((sum, outlet) => {
+    return filteredOutlets.reduce((sum, outlet) => {
       return sum + getVal(outlet, barcode, field);
     }, 0);
   };
+
+  const getOutletTotal = (outlet, field) => filteredProducts.reduce((sum, product) => sum + getVal(outlet, product.barcode, field), 0);
+  const getOutletClosingTotal = (outlet) => filteredProducts.reduce((sum, product) => sum + getClosing(outlet, product.barcode), 0);
+  const getActualSecondary = (outlet, barcode) => getVal(outlet, barcode, "secondary") - getVal(outlet, barcode, "marketReturn");
 
   const exportToExcel = () => {
     try {
@@ -145,20 +157,23 @@ const FullStockSummaryReport = () => {
         "Primary",
         "Secondary",
         "Market Return",
+        "Act Secondary",
         "Office Return",
         "Closing Stock",
       ];
 
-      const totalCols = 1 + prods.length * 6;
+      const totalCols = 1 + (prods.length + 1) * 7;
       const headerRow1 = ["Dealer Name"];
       const headerRow2 = [""];
 
       prods.forEach((product) => {
-        headerRow1.push(product.name, "", "", "", "", "");
+        headerRow1.push(product.name, "", "", "", "", "", "");
         headerRow2.push(...subHeaders);
       });
+      headerRow1.push("TOTAL", "", "", "", "", "", "");
+      headerRow2.push(...subHeaders);
 
-      const dataRows = outlets.map((outlet) => {
+      const dataRows = filteredOutlets.map((outlet) => {
         const row = [outlet.outletName];
         prods.forEach((product) => {
           const barcode = product.barcode;
@@ -167,10 +182,12 @@ const FullStockSummaryReport = () => {
             getVal(outlet, barcode, "primary"),
             getVal(outlet, barcode, "secondary"),
             getVal(outlet, barcode, "marketReturn"),
+            getActualSecondary(outlet, barcode),
             getVal(outlet, barcode, "officeReturn"),
             getClosing(outlet, barcode),
           );
         });
+        row.push(getOutletTotal(outlet, "openingStock"), getOutletTotal(outlet, "primary"), getOutletTotal(outlet, "secondary"), getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "officeReturn"), getOutletClosingTotal(outlet));
         return row;
       });
 
@@ -187,20 +204,23 @@ const FullStockSummaryReport = () => {
           tPrimary,
           tSecondary,
           tMarketReturn,
+          tSecondary - tMarketReturn,
           tOfficeReturn,
           tOpening + tPrimary - tSecondary + tMarketReturn - tOfficeReturn,
         );
       });
+      totalsRow.push(...["openingStock", "primary", "secondary", "marketReturn"].map((f) => prods.reduce((sum, p) => sum + getTotal(p.barcode, f), 0)), prods.reduce((sum, p) => sum + getTotal(p.barcode, "secondary") - getTotal(p.barcode, "marketReturn"), 0), prods.reduce((sum, p) => sum + getTotal(p.barcode, "officeReturn"), 0), prods.reduce((sum, p) => sum + getTotal(p.barcode, "openingStock") + getTotal(p.barcode, "primary") - getTotal(p.barcode, "secondary") + getTotal(p.barcode, "marketReturn") - getTotal(p.barcode, "officeReturn"), 0));
 
       const filterLabel =
         (selectedCategory !== "all" ? `Category: ${selectedCategory}` : "") +
-        (selectedBrand !== "all" ? `${selectedCategory !== "all" ? " | " : ""}Brand: ${selectedBrand}` : "");
+        (selectedBrand !== "all" ? `${selectedCategory !== "all" ? " | " : ""}Brand: ${selectedBrand}` : "") +
+        (selectedZone !== "all" ? `${selectedCategory !== "all" || selectedBrand !== "all" ? " | " : ""}Zone: ${selectedZone}` : "");
 
       const excelData = [
         [
           `Period: ${dayjs(dateRange.start).format("DD-MM-YY")} to ${dayjs(dateRange.end).format("DD-MM-YY")}${filterLabel ? ` | ${filterLabel}` : ""}`,
           "",
-          ...new Array(prods.length * 6 - 1).fill(""),
+          ...new Array((prods.length + 1) * 7 - 1).fill(""),
         ],
         [],
         headerRow1,
@@ -214,10 +234,11 @@ const FullStockSummaryReport = () => {
 
       ws["!cols"] = [{ wch: 35 }];
       prods.forEach(() => {
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 7; i++) {
           ws["!cols"].push({ wch: 14 });
         }
       });
+      for (let i = 0; i < 7; i++) ws["!cols"].push({ wch: 14 });
 
       const merges = [
         {
@@ -227,12 +248,13 @@ const FullStockSummaryReport = () => {
       ];
 
       prods.forEach((_, idx) => {
-        const startCol = 1 + idx * 6;
+        const startCol = 1 + idx * 7;
         merges.push({
           s: { r: 2, c: startCol },
-          e: { r: 2, c: startCol + 5 },
+          e: { r: 2, c: startCol + 6 },
         });
       });
+      merges.push({ s: { r: 2, c: 1 + prods.length * 7 }, e: { r: 2, c: totalCols - 1 } });
 
       ws["!merges"] = merges;
 
@@ -257,7 +279,7 @@ const FullStockSummaryReport = () => {
 
       doc.setFontSize(14);
       doc.text(
-        `Full Stock Summary Period: ${dayjs(dateRange.start).format("DD-MM-YY")} to ${dayjs(dateRange.end).format("DD-MM-YY")}`,
+        `Full Stock Summary Period: ${dayjs(dateRange.start).format("DD-MM-YY")} to ${dayjs(dateRange.end).format("DD-MM-YY")}${selectedZone !== "all" ? ` | Zone: ${selectedZone}` : ""}`,
         14,
         15,
       );
@@ -267,15 +289,16 @@ const FullStockSummaryReport = () => {
         "Primary",
         "Secondary",
         "Mkt Ret",
+        "Act Secondary",
         "Off Ret",
         "Closing",
       ];
 
       const headers = [
-        ["Dealer Name", ...prods.flatMap(() => subHeaders)],
+        ["Dealer Name", ...prods.flatMap(() => subHeaders), ...subHeaders],
       ];
 
-      const body = outlets.map((outlet) => {
+      const body = filteredOutlets.map((outlet) => {
         const row = [outlet.outletName];
         prods.forEach((product) => {
           const barcode = product.barcode;
@@ -284,10 +307,12 @@ const FullStockSummaryReport = () => {
             getVal(outlet, barcode, "primary"),
             getVal(outlet, barcode, "secondary"),
             getVal(outlet, barcode, "marketReturn"),
+            getActualSecondary(outlet, barcode),
             getVal(outlet, barcode, "officeReturn"),
             getClosing(outlet, barcode),
           );
         });
+        row.push(getOutletTotal(outlet, "openingStock"), getOutletTotal(outlet, "primary"), getOutletTotal(outlet, "secondary"), getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "officeReturn"), getOutletClosingTotal(outlet));
         return row;
       });
 
@@ -304,10 +329,12 @@ const FullStockSummaryReport = () => {
           tPrimary,
           tSecondary,
           tMarketReturn,
+          tSecondary - tMarketReturn,
           tOfficeReturn,
           tOpening + tPrimary - tSecondary + tMarketReturn - tOfficeReturn,
         );
       });
+      totalsRow.push(...["openingStock", "primary", "secondary", "marketReturn"].map((f) => prods.reduce((sum, p) => sum + getTotal(p.barcode, f), 0)), prods.reduce((sum, p) => sum + getTotal(p.barcode, "secondary") - getTotal(p.barcode, "marketReturn"), 0), prods.reduce((sum, p) => sum + getTotal(p.barcode, "officeReturn"), 0), prods.reduce((sum, p) => sum + getTotal(p.barcode, "openingStock") + getTotal(p.barcode, "primary") - getTotal(p.barcode, "secondary") + getTotal(p.barcode, "marketReturn") - getTotal(p.barcode, "officeReturn"), 0));
       body.push(totalsRow);
 
       autoTable(doc, {
@@ -396,7 +423,7 @@ const FullStockSummaryReport = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category
@@ -427,6 +454,13 @@ const FullStockSummaryReport = () => {
                     {br.label}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+              <select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full border rounded-lg px-3 py-2">
+                <option value="all">All Zones</option>
+                {zones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
               </select>
             </div>
             <div>
@@ -478,7 +512,7 @@ const FullStockSummaryReport = () => {
             </div>
           )}
 
-          {!loading && filteredProducts.length > 0 && outlets.length > 0 && (
+          {!loading && filteredProducts.length > 0 && filteredOutlets.length > 0 && (
             <div className="shadow rounded-lg overflow-x-auto">
               <table
                 className="border border-gray-300"
@@ -494,25 +528,27 @@ const FullStockSummaryReport = () => {
                       Dealer Name
                     </th>
                     <th
-                      colSpan={filteredProducts.length * 6}
+                      colSpan={filteredProducts.length * 7}
                       className="bg-gray-200 border p-2 text-center"
                     >
                       Particulars
                     </th>
+                    <th colSpan="7" className="bg-gray-200 border p-2 text-center">TOTAL</th>
                   </tr>
                   <tr>
                     {filteredProducts.map((product) => (
                       <th
                         key={product.barcode}
-                        colSpan="6"
+                        colSpan="7"
                         className="bg-gray-100 border p-2 text-center text-xs"
                       >
                         {product.name}
                       </th>
                     ))}
+                    <th colSpan="7" className="bg-gray-100 border p-2 text-center text-xs">TOTAL</th>
                   </tr>
                   <tr>
-                    {filteredProducts.map((product) => (
+                  {[...filteredProducts, { barcode: "__total" }].map((product) => (
                       <React.Fragment key={product.barcode}>
                         <th className="bg-gray-50 border p-1 text-xs text-center whitespace-nowrap">
                           Opening
@@ -526,6 +562,7 @@ const FullStockSummaryReport = () => {
                         <th className="bg-gray-50 border p-1 text-xs text-center whitespace-nowrap">
                           Mkt Ret
                         </th>
+                        <th className="bg-gray-50 border p-1 text-xs text-center whitespace-nowrap">Act Secondary</th>
                         <th className="bg-gray-50 border p-1 text-xs text-center whitespace-nowrap">
                           Off Ret
                         </th>
@@ -537,7 +574,7 @@ const FullStockSummaryReport = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {outlets.map((outlet, index) => (
+                  {filteredOutlets.map((outlet, index) => (
                     <tr
                       key={outlet.outletName}
                       className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
@@ -548,7 +585,10 @@ const FullStockSummaryReport = () => {
                       >
                         {outlet.outletName}
                       </td>
-                      {filteredProducts.map((product) => {
+                      {[...filteredProducts, { barcode: "__total" }].map((product) => {
+                        if (product.barcode === "__total") return <React.Fragment key="__total">
+                          <td className="border p-1 text-right text-xs">{getOutletTotal(outlet, "openingStock")}</td><td className="border p-1 text-right text-xs">{getOutletTotal(outlet, "primary")}</td><td className="border p-1 text-right text-xs">{getOutletTotal(outlet, "secondary")}</td><td className="border p-1 text-right text-xs">{getOutletTotal(outlet, "marketReturn")}</td><td className="border p-1 text-right text-xs">{getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn")}</td><td className="border p-1 text-right text-xs">{getOutletTotal(outlet, "officeReturn")}</td><td className="border p-1 text-right text-xs">{getOutletClosingTotal(outlet)}</td>
+                        </React.Fragment>;
                         const barcode = product.barcode;
                         const opening = getVal(outlet, barcode, "openingStock");
                         const primary = getVal(outlet, barcode, "primary");
@@ -579,6 +619,7 @@ const FullStockSummaryReport = () => {
                             <td className="border p-1 text-right text-xs text-red-600">
                               {marketReturn}
                             </td>
+                            <td className="border p-1 text-right text-xs">{getActualSecondary(outlet, barcode)}</td>
                             <td className="border p-1 text-right text-xs text-yellow-600">
                               {officeReturn}
                             </td>
@@ -597,7 +638,11 @@ const FullStockSummaryReport = () => {
                     >
                       TOTAL
                     </td>
-                    {filteredProducts.map((product) => {
+                    {[...filteredProducts, { barcode: "__total" }].map((product) => {
+                      if (product.barcode === "__total") return <React.Fragment key="__total">
+                        <td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "openingStock"), 0)}</td>
+                        <td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "primary"), 0)}</td><td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "secondary"), 0)}</td><td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "marketReturn"), 0)}</td><td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "secondary") - getTotal(p.barcode, "marketReturn"), 0)}</td><td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "officeReturn"), 0)}</td><td className="border p-1 text-right text-xs">{filteredProducts.reduce((s, p) => s + getTotal(p.barcode, "openingStock") + getTotal(p.barcode, "primary") - getTotal(p.barcode, "secondary") + getTotal(p.barcode, "marketReturn") - getTotal(p.barcode, "officeReturn"), 0)}</td>
+                      </React.Fragment>;
                       const barcode = product.barcode;
                       const tOpening = getTotal(barcode, "openingStock");
                       const tPrimary = getTotal(barcode, "primary");
@@ -625,6 +670,7 @@ const FullStockSummaryReport = () => {
                           <td className="border p-1 text-right text-xs">
                             {tMarketReturn}
                           </td>
+                          <td className="border p-1 text-right text-xs">{tSecondary - tMarketReturn}</td>
                           <td className="border p-1 text-right text-xs">
                             {tOfficeReturn}
                           </td>
