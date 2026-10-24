@@ -105,6 +105,16 @@ const FullStockSummaryReport = () => {
     [outlets, selectedZone],
   );
 
+  const outletsByZone = useMemo(() => {
+    const groups = new Map();
+    filteredOutlets.forEach((outlet) => {
+      const zone = outlet.zone || "Unassigned Zone";
+      if (!groups.has(zone)) groups.set(zone, []);
+      groups.get(zone).push(outlet);
+    });
+    return [...groups.entries()].sort(([zoneA], [zoneB]) => zoneA.localeCompare(zoneB));
+  }, [filteredOutlets]);
+
   useEffect(() => {
     if (selectedBrand !== "all") {
       const validCategories = categories.map((c) => c.value);
@@ -173,22 +183,28 @@ const FullStockSummaryReport = () => {
       headerRow1.push("TOTAL", "", "", "", "", "", "");
       headerRow2.push(...subHeaders);
 
-      const dataRows = filteredOutlets.map((outlet) => {
-        const row = [outlet.outletName];
-        prods.forEach((product) => {
-          const barcode = product.barcode;
-          row.push(
-            getVal(outlet, barcode, "openingStock"),
-            getVal(outlet, barcode, "primary"),
-            getVal(outlet, barcode, "secondary"),
-            getVal(outlet, barcode, "marketReturn"),
-            getActualSecondary(outlet, barcode),
-            getVal(outlet, barcode, "officeReturn"),
-            getClosing(outlet, barcode),
-          );
+      const dataRows = [];
+      const zoneHeaderRows = [];
+      outletsByZone.forEach(([zone, zoneOutlets]) => {
+        zoneHeaderRows.push(4 + dataRows.length);
+        dataRows.push([zone, ...new Array(totalCols - 1).fill("")]);
+        zoneOutlets.forEach((outlet) => {
+          const row = [outlet.outletName];
+          prods.forEach((product) => {
+            const barcode = product.barcode;
+            row.push(
+              getVal(outlet, barcode, "openingStock"),
+              getVal(outlet, barcode, "primary"),
+              getVal(outlet, barcode, "secondary"),
+              getVal(outlet, barcode, "marketReturn"),
+              getActualSecondary(outlet, barcode),
+              getVal(outlet, barcode, "officeReturn"),
+              getClosing(outlet, barcode),
+            );
+          });
+          row.push(getOutletTotal(outlet, "openingStock"), getOutletTotal(outlet, "primary"), getOutletTotal(outlet, "secondary"), getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "officeReturn"), getOutletClosingTotal(outlet));
+          dataRows.push(row);
         });
-        row.push(getOutletTotal(outlet, "openingStock"), getOutletTotal(outlet, "primary"), getOutletTotal(outlet, "secondary"), getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "officeReturn"), getOutletClosingTotal(outlet));
-        return row;
       });
 
       const totalsRow = ["TOTAL"];
@@ -255,6 +271,9 @@ const FullStockSummaryReport = () => {
         });
       });
       merges.push({ s: { r: 2, c: 1 + prods.length * 7 }, e: { r: 2, c: totalCols - 1 } });
+      zoneHeaderRows.forEach((row) => {
+        merges.push({ s: { r: row, c: 0 }, e: { r: row, c: totalCols - 1 } });
+      });
 
       ws["!merges"] = merges;
 
@@ -298,22 +317,30 @@ const FullStockSummaryReport = () => {
         ["Dealer Name", ...prods.flatMap(() => subHeaders), ...subHeaders],
       ];
 
-      const body = filteredOutlets.map((outlet) => {
-        const row = [outlet.outletName];
-        prods.forEach((product) => {
-          const barcode = product.barcode;
-          row.push(
-            getVal(outlet, barcode, "openingStock"),
-            getVal(outlet, barcode, "primary"),
-            getVal(outlet, barcode, "secondary"),
-            getVal(outlet, barcode, "marketReturn"),
-            getActualSecondary(outlet, barcode),
-            getVal(outlet, barcode, "officeReturn"),
-            getClosing(outlet, barcode),
-          );
+      const body = [];
+      outletsByZone.forEach(([zone, zoneOutlets]) => {
+        body.push([{
+          content: zone,
+          colSpan: headers[0].length,
+          styles: { fontStyle: "bold", fillColor: [219, 234, 254], halign: "left" },
+        }]);
+        zoneOutlets.forEach((outlet) => {
+          const row = [outlet.outletName];
+          prods.forEach((product) => {
+            const barcode = product.barcode;
+            row.push(
+              getVal(outlet, barcode, "openingStock"),
+              getVal(outlet, barcode, "primary"),
+              getVal(outlet, barcode, "secondary"),
+              getVal(outlet, barcode, "marketReturn"),
+              getActualSecondary(outlet, barcode),
+              getVal(outlet, barcode, "officeReturn"),
+              getClosing(outlet, barcode),
+            );
+          });
+          row.push(getOutletTotal(outlet, "openingStock"), getOutletTotal(outlet, "primary"), getOutletTotal(outlet, "secondary"), getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "officeReturn"), getOutletClosingTotal(outlet));
+          body.push(row);
         });
-        row.push(getOutletTotal(outlet, "openingStock"), getOutletTotal(outlet, "primary"), getOutletTotal(outlet, "secondary"), getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "secondary") - getOutletTotal(outlet, "marketReturn"), getOutletTotal(outlet, "officeReturn"), getOutletClosingTotal(outlet));
-        return row;
       });
 
       const totalsRow = ["TOTAL"];
@@ -574,11 +601,18 @@ const FullStockSummaryReport = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOutlets.map((outlet, index) => (
-                    <tr
-                      key={outlet.outletName}
-                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                    >
+                  {outletsByZone.map(([zone, zoneOutlets]) => (
+                    <React.Fragment key={zone}>
+                      <tr className="bg-blue-100 font-bold">
+                        <td colSpan={1 + (filteredProducts.length + 1) * 7} className="border px-3 py-2 text-sm text-blue-900">
+                          {zone}
+                        </td>
+                      </tr>
+                      {zoneOutlets.map((outlet, index) => (
+                        <tr
+                          key={outlet.outletName}
+                          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        >
                       <td
                         className="border p-2 font-medium text-sm whitespace-nowrap bg-white"
                         style={{ position: "sticky", left: 0, zIndex: 1 }}
@@ -629,7 +663,9 @@ const FullStockSummaryReport = () => {
                           </React.Fragment>
                         );
                       })}
-                    </tr>
+                        </tr>
+                      ))}
+                    </React.Fragment>
                   ))}
                   <tr className="bg-gray-200 font-bold sticky bottom-0">
                     <td
