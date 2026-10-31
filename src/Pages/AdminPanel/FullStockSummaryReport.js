@@ -270,12 +270,15 @@ const FullStockSummaryReport = () => {
     0,
   );
   const getProductPeriodAverage = (outlet, product, column) => (
-    displayPeriods.length ? getProductPeriodTotal(outlet, product, column) / displayPeriods.length : 0
+    Number((displayPeriods.length ? getProductPeriodTotal(outlet, product, column) / displayPeriods.length : 0).toFixed(2))
   );
   const getProductGrandPeriodTotal = (product, column) => filteredOutlets.reduce(
     (sum, outlet) => sum + getProductPeriodTotal(outlet, product, column),
     0,
   );
+  const getProductGrandPeriodAverage = (product, column) => Number((
+    displayPeriods.length ? getProductGrandPeriodTotal(product, column) / displayPeriods.length : 0
+  ).toFixed(2));
   const showPeriodSummaryColumns = columnView !== "Normal" && (showProductTotal || showProductAverage);
   const productSummaryColumnCount = activeColumns.length * (
     (showPeriodSummaryColumns && showProductTotal ? 1 : 0) +
@@ -350,7 +353,7 @@ const FullStockSummaryReport = () => {
           ));
         });
         if (showPeriodSummaryColumns && showProductTotal) totalsRow.push(...activeColumns.map((column) => getProductGrandPeriodTotal(product, column)));
-        if (showPeriodSummaryColumns && showProductAverage) totalsRow.push(...activeColumns.map((column) => displayPeriods.length ? getProductGrandPeriodTotal(product, column) / displayPeriods.length : 0));
+        if (showPeriodSummaryColumns && showProductAverage) totalsRow.push(...activeColumns.map((column) => getProductGrandPeriodAverage(product, column)));
       });
 
       const filterLabel =
@@ -374,6 +377,18 @@ const FullStockSummaryReport = () => {
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+      if (columnView !== "Normal" && showProductAverage) {
+        headerRow2.forEach((header, startCol) => {
+          if (header !== "Average") return;
+          for (let row = 5; row < excelData.length; row++) {
+            for (let offset = 0; offset < activeColumns.length; offset++) {
+              const address = XLSX.utils.encode_cell({ r: row, c: startCol + offset });
+              if (ws[address] && typeof ws[address].v === "number") ws[address].z = "0.00";
+            }
+          }
+        });
+      }
 
       ws["!cols"] = [{ wch: 35 }];
       for (let i = 1; i < totalCols; i++) ws["!cols"].push({ wch: 14 });
@@ -461,7 +476,7 @@ const FullStockSummaryReport = () => {
             prods.forEach((product) => {
               displayPeriods.forEach((period) => row.push(...activeColumns.map((column) => column.getValue(outlet, product.barcode, period))));
               if (showPeriodSummaryColumns && showProductTotal) row.push(...activeColumns.map((column) => getProductPeriodTotal(outlet, product, column)));
-              if (showPeriodSummaryColumns && showProductAverage) row.push(...activeColumns.map((column) => getProductPeriodAverage(outlet, product, column)));
+              if (showPeriodSummaryColumns && showProductAverage) row.push(...activeColumns.map((column) => getProductPeriodAverage(outlet, product, column).toFixed(2)));
             });
           }
           body.push(row);
@@ -480,7 +495,7 @@ const FullStockSummaryReport = () => {
         prods.forEach((product) => {
           displayPeriods.forEach((period) => totalsRow.push(...activeColumns.map((column) => filteredOutlets.reduce((sum, outlet) => sum + column.getValue(outlet, product.barcode, period), 0))));
           if (showPeriodSummaryColumns && showProductTotal) totalsRow.push(...activeColumns.map((column) => getProductGrandPeriodTotal(product, column)));
-          if (showPeriodSummaryColumns && showProductAverage) totalsRow.push(...activeColumns.map((column) => displayPeriods.length ? getProductGrandPeriodTotal(product, column) / displayPeriods.length : 0));
+          if (showPeriodSummaryColumns && showProductAverage) totalsRow.push(...activeColumns.map((column) => getProductGrandPeriodAverage(product, column).toFixed(2)));
         });
       }
       body.push(totalsRow);
@@ -837,7 +852,7 @@ const FullStockSummaryReport = () => {
                         ...(showPeriodSummaryColumns && showProductTotal ? [{ product, summary: "total" }] : []),
                         ...(showPeriodSummaryColumns && showProductAverage ? [{ product, summary: "average" }] : []),
                       ])).map(({ product, period, summary }) => <React.Fragment key={`${product.barcode}-${period?.label || summary}`}>
-                        {activeColumns.map((column) => <td key={column.key} className="border p-1 text-right text-xs">{summary === "total" ? getProductPeriodTotal(outlet, product, column) : summary === "average" ? getProductPeriodAverage(outlet, product, column) : column.getValue(outlet, product.barcode, period)}</td>)}
+                        {activeColumns.map((column) => <td key={column.key} className="border p-1 text-right text-xs">{summary === "total" ? getProductPeriodTotal(outlet, product, column) : summary === "average" ? getProductPeriodAverage(outlet, product, column).toFixed(2) : column.getValue(outlet, product.barcode, period)}</td>)}
                       </React.Fragment>)}
                         </tr>
                       ))}
@@ -855,7 +870,7 @@ const FullStockSummaryReport = () => {
                       ...(showPeriodSummaryColumns && showProductTotal ? [{ product, summary: "total" }] : []),
                       ...(showPeriodSummaryColumns && showProductAverage ? [{ product, summary: "average" }] : []),
                     ])).map(({ product, period, summary }) => <React.Fragment key={`${product.barcode}-${period?.label || summary}`}>
-                      {activeColumns.map((column) => <td key={column.key} className="border p-1 text-right text-xs">{summary === "total" ? getProductGrandPeriodTotal(product, column) : summary === "average" ? (displayPeriods.length ? getProductGrandPeriodTotal(product, column) / displayPeriods.length : 0) : filteredOutlets.reduce((sum, outlet) => sum + column.getValue(outlet, product.barcode, period), 0)}</td>)}
+                      {activeColumns.map((column) => <td key={column.key} className="border p-1 text-right text-xs">{summary === "total" ? getProductGrandPeriodTotal(product, column) : summary === "average" ? getProductGrandPeriodAverage(product, column).toFixed(2) : filteredOutlets.reduce((sum, outlet) => sum + column.getValue(outlet, product.barcode, period), 0)}</td>)}
                     </React.Fragment>)}
                   </tr>
                 </tbody>
