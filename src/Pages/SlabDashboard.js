@@ -66,6 +66,7 @@ const SlabDashboard = () => {
         "Customer Name": c.owner_name || "-",
         "Phone": c.owner_number || "-",
         "Shop": c.shop_name || "-",
+        "Shop Category": c.shop_category || "-",
         "Address": c.shop_address || "-",
         "Dealer": c.dealer_name || "-",
         "SO": c.so_name || "-",
@@ -145,15 +146,19 @@ const SlabDashboard = () => {
             console.log("Transactions received:", data); // Debug
       const merged = data.reduce((acc, tx) => {
         const date = tx.sale_date.split(" ")[0];
+        const images = [tx.shop_image, tx.product_image].filter(Boolean);
+        const categories = tx.shop_category ? [tx.shop_category] : [];
         const existing = acc.find(t => t.sale_date === date);
         if (existing) {
           existing.purchase_quantity += tx.purchase_quantity;
+          existing.images = [...new Set([...existing.images, ...images])];
+          existing.shop_categories = [...new Set([...existing.shop_categories, ...categories])];
           tx.products.forEach(p => {
             const ep = existing.products.find(x => x.product_name === p.product_name);
             ep ? (ep.quantity += p.quantity) : existing.products.push(p);
           });
         } else {
-          acc.push({ sale_date: date, purchase_quantity: tx.purchase_quantity, products: [...tx.products] });
+          acc.push({ sale_date: date, purchase_quantity: tx.purchase_quantity, products: [...tx.products], images: [...new Set(images)], shop_categories: categories });
         }
         return acc;
       }, []);
@@ -280,6 +285,7 @@ const SlabDashboard = () => {
                   <thead className="bg-indigo-50 text-indigo-800">
                     <tr>
                       <th className="p-3 text-left">Shop</th>
+                      <th className="p-3 text-left">Category</th>
                       <th className="p-3 text-left">Owner</th>
                       <th className="p-3 text-left">Phone</th>
                       <th className="p-3 text-left">SO</th>
@@ -292,6 +298,7 @@ const SlabDashboard = () => {
                     {filteredCustomers.map((c, i) => (
                       <tr key={i} className="border-t hover:bg-gray-50 transition">
                         <td className="p-3 font-medium">{c.shop_name || "-"}</td>
+                        <td className="p-3">{c.shop_category || "-"}</td>
                         <td className="p-3">{c.owner_name || "-"}</td>
                         <td className="p-3">{c.owner_number || "-"}</td>
                         <td className="p-3">{c.so_name || "-"}</td>
@@ -340,6 +347,7 @@ const SlabDashboard = () => {
                           </span>
                         </div>
                         <p className="text-sm text-gray-600"><strong>Owner:</strong> {c.owner_name}</p>
+                        <p className="text-sm text-gray-600"><strong>Shop Category:</strong> {c.shop_category || "-"}</p>
                         <p className="text-sm text-gray-600"><strong>Phone:</strong> {c.owner_number}</p>
                         <p className="text-sm text-gray-600"><strong>SO:</strong> {c.so_name} ({c.so_zone})</p>
                         <div className="mt-3 flex flex-col gap-2">
@@ -396,6 +404,30 @@ const SlabDashboard = () => {
                   <div key={i} className="border rounded-lg p-3 bg-gray-50">
                     <p className="font-semibold text-gray-800">{tx.sale_date}</p>
                     <p className="text-sm"><strong>Total Qty:</strong> {tx.purchase_quantity}</p>
+                    <p className="text-sm"><strong>Shop Category:</strong> {tx.shop_categories?.join(", ") || "-"}</p>
+                    {tx.images?.length > 0 && (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {tx.images.map((imageUrl, imageIndex) => (
+                          <a
+                            key={`${imageUrl}-${imageIndex}`}
+                            href={imageUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block overflow-hidden rounded-md border bg-white"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Voucher attachment ${imageIndex + 1}`}
+                              loading="lazy"
+                              className="h-32 w-full object-cover"
+                            />
+                            <span className="block px-2 py-1 text-xs text-blue-700">
+                              View image {imageIndex + 1}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     <details className="mt-2">
                       <summary className="cursor-pointer text-blue-600 text-sm font-medium">View Products</summary>
                       <ul className="mt-1 text-sm text-gray-600 list-disc list-inside">

@@ -14,14 +14,15 @@ export default function SlabVoucher({ stock, setStock }) {
   const [ownerName, setOwnerName] = useState("");
   const [ownerNumber, setOwnerNumber] = useState("");
   const [shopAddress, setShopAddress] = useState("");
+  const [shopCategory, setShopCategory] = useState("");
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format("YYYY-MM-DD")
   );
-  const [imageFile, setImageFile] = useState(null);
   const [imageUrl, setImageUrl] = useState("");
   const [imageUrl1, setImageUrl1] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("pos-user"));
@@ -62,7 +63,19 @@ export default function SlabVoucher({ stock, setStock }) {
           const res = await axios.get(
             `http://175.29.181.245:2001/search-customer?search=${ownerNumber}`
           );
-          setCustomerSuggestions(res.data);
+          const matchingCustomer = res.data.find(
+            (customer) => String(customer.owner_number) === ownerNumber
+          );
+          if (ownerNumber.length === 11 && matchingCustomer) {
+            setShopName(matchingCustomer.shop_name || "");
+            setOwnerName(matchingCustomer.owner_name || "");
+            setShopAddress(matchingCustomer.shop_address || "");
+            setShopCategory(matchingCustomer.shop_category || "");
+            setCustomerSuggestions([]);
+          } else {
+            if (ownerNumber.length === 11) setShopCategory("");
+            setCustomerSuggestions(res.data);
+          }
         } catch (err) {
           console.error(err);
         } finally {
@@ -125,6 +138,7 @@ export default function SlabVoucher({ stock, setStock }) {
     setShopName(customer.shop_name);
     setOwnerName(customer.owner_name);
     setShopAddress(customer.shop_address);
+    setShopCategory(customer.shop_category || "");
     setCustomerSuggestions([]);
   };
 
@@ -174,19 +188,21 @@ export default function SlabVoucher({ stock, setStock }) {
     });
   };
 
-  const handleShopImageUpload = async (e) => {
-    const file = e.target.files[0];
+  const uploadImage = async (e, setUploadedImageUrl) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = "";
     if (!file) return;
 
-    if (!file.type.match("image.*")) {
+    if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
 
     try {
+      setIsUploadingImage(true);
       toast.loading("Processing image...", { id: "image-upload" });
       const compressedFile = await compressImage(file, 250, 250, 0.7);
-      setImageFile(compressedFile);
 
       const formData = new FormData();
       formData.append("file", compressedFile);
@@ -208,55 +224,23 @@ export default function SlabVoucher({ stock, setStock }) {
       );
 
       toast.success("Image uploaded successfully", { id: "image-upload" });
-      setImageUrl(res.data.secure_url);
+      setUploadedImageUrl(res.data.secure_url);
     } catch (err) {
       console.error(err);
       toast.error("Image upload failed", { id: "image-upload" });
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
-  const handleProductImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.match("image.*")) {
-      toast.error("Please select an image file");
-      return;
-    }
-
-    try {
-      toast.loading("Processing image...", { id: "image-upload" });
-      const compressedFile = await compressImage(file, 250, 250, 0.7);
-      setImageFile(compressedFile);
-
-      const formData = new FormData();
-      formData.append("file", compressedFile);
-      formData.append("upload_preset", "ebay-memo");
-
-      const res = await axios.post(
-        "https://api.cloudinary.com/v1_1/dodxop7lz/image/upload",
-        formData,
-        {
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            toast.loading(`Uploading: ${percentCompleted}%`, {
-              id: "image-upload",
-            });
-          },
-        }
-      );
-
-      toast.success("Image uploaded successfully", { id: "image-upload" });
-      setImageUrl1(res.data.secure_url);
-    } catch (err) {
-      console.error(err);
-      toast.error("Image upload failed", { id: "image-upload" });
-    }
-  };
+  const handleShopImageUpload = (e) => uploadImage(e, setImageUrl);
+  const handleProductImageUpload = (e) => uploadImage(e, setImageUrl1);
 
   const validateForm = () => {
+    if (isUploadingImage) {
+      toast.error("Please wait for the image upload to finish");
+      return false;
+    }
     if (
       !ownerNumber ||
       ownerNumber.length !== 11 ||
@@ -275,6 +259,10 @@ export default function SlabVoucher({ stock, setStock }) {
     }
     if (!shopAddress) {
       toast.error("Shop address is required");
+      return false;
+    }
+    if (!shopCategory) {
+      toast.error("Shop category is required");
       return false;
     }
     if (cart.length === 0) {
@@ -301,6 +289,7 @@ export default function SlabVoucher({ stock, setStock }) {
         owner_name: ownerName,
         owner_number: ownerNumber,
         shop_address: shopAddress,
+        shop_category: shopCategory,
         shop_image: imageUrl,
         product_image: imageUrl1 || "",
         sale_date: saleDateTime,
@@ -318,6 +307,7 @@ export default function SlabVoucher({ stock, setStock }) {
         owner_number: ownerNumber,
         shop_name: shopName,
         shop_address: shopAddress,
+        shop_category: shopCategory,
         purchase_quantity: totalQuantity,
         purchase_date: saleDateTime,
         dealer_name: user.outlet,
@@ -336,7 +326,7 @@ export default function SlabVoucher({ stock, setStock }) {
       setOwnerName("");
       setOwnerNumber("");
       setShopAddress("");
-      setImageFile(null);
+      setShopCategory("");
       setImageUrl("");
       setImageUrl1("");
       setSelectedDate(dayjs().format("YYYY-MM-DD"));
@@ -438,6 +428,64 @@ export default function SlabVoucher({ stock, setStock }) {
             placeholder="Enter shop address"
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Shop Category <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={shopCategory}
+            onChange={(e) => setShopCategory(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="">Select shop category</option>
+            {["A", "B", "C", "D"].map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-md bg-white p-3 shadow-md">
+        <div className="mb-3">
+          <h2 className="font-bold text-gray-800">Voucher Images</h2>
+          <p className="text-xs text-gray-500">Upload up to 2 images for this report.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[
+            { label: "Shop Image", url: imageUrl, onChange: handleShopImageUpload, setUrl: setImageUrl },
+            { label: "Product Image", url: imageUrl1, onChange: handleProductImageUpload, setUrl: setImageUrl1 },
+          ].map((image, index) => (
+            <div key={image.label} className="rounded-md border border-gray-200 p-3">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                {image.label} <span className="font-normal text-gray-400">({index + 1}/2)</span>
+              </label>
+              {image.url && (
+                <div className="mb-2 flex items-start gap-2">
+                  <img
+                    src={image.url}
+                    alt={image.label}
+                    className="h-20 w-20 rounded border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => image.setUrl("")}
+                    disabled={isUploadingImage || isSubmitting}
+                    className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={image.onChange}
+                disabled={isUploadingImage || isSubmitting}
+                className="block w-full text-xs text-gray-600 file:mr-2 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:font-medium file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+              />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -549,14 +597,16 @@ export default function SlabVoucher({ stock, setStock }) {
 
       <button
         onClick={handleSubmit}
-        disabled={isSubmitting}
+        disabled={isSubmitting || isUploadingImage}
         className={`w-full py-2 rounded-md text-white font-medium transition-colors ${
-          isSubmitting
+          isSubmitting || isUploadingImage
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-blue-600 hover:bg-blue-700"
         }`}
       >
-        {isSubmitting ? (
+        {isUploadingImage ? (
+          "Uploading image..."
+        ) : isSubmitting ? (
           <span className="flex items-center justify-center gap-2">
             <svg
               className="animate-spin h-5 w-5 text-white"
