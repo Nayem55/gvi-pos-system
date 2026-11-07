@@ -280,7 +280,7 @@ export default function Home() {
           <option value="payment">Payment</option>
           <option value="tada">TA/DA</option>
           <option value="attendance">Check In/Out</option>
-          <option value="slab">Slab Voucher</option>
+          <option value="slab">EBAY Slab (Winter 2026)</option>
           <option value="jdot-slab">Jdot Slab Voucher</option>
         </select>
       </div>
