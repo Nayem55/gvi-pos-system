@@ -375,6 +375,22 @@ const AlterUsersPage = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Attendance ID
+                  </label>
+                  <input
+                    type="text"
+                    value={editingUser.attendance_id || ""}
+                    onChange={(e) => handleInputChange(e, "attendance_id")}
+                    placeholder="Enter linked attendance user ID"
+                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Links this user to their attendance account.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Password *
                   </label>
                   <input
