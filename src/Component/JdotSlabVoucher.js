@@ -190,7 +190,7 @@ export default function JdotSlabVoucher({ stock, setStock }) {
 
       const formData = new FormData();
       formData.append("file", compressedFile);
-      formData.append("upload_preset", "ebay-memo");
+      formData.append("upload_preset", "Warehouse");
 
       const res = await axios.post(
         "https://api.cloudinary.com/v1_1/dodxop7lz/image/upload",
@@ -231,7 +231,7 @@ export default function JdotSlabVoucher({ stock, setStock }) {
 
       const formData = new FormData();
       formData.append("file", compressedFile);
-      formData.append("upload_preset", "ebay-memo");
+      formData.append("upload_preset", "Warehouse");
 
       const res = await axios.post(
         "https://api.cloudinary.com/v1_1/dodxop7lz/image/upload",

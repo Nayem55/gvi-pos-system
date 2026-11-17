@@ -143,11 +143,10 @@ export default function SlabVoucher({ stock, setStock }) {
   };
 
   const compressImage = (file, maxWidth, maxHeight, quality) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
-        img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement("canvas");
           let width = img.width;
@@ -168,10 +167,18 @@ export default function SlabVoucher({ stock, setStock }) {
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Could not process the selected image"));
+            return;
+          }
           ctx.drawImage(img, 0, 0, width, height);
 
           canvas.toBlob(
             (blob) => {
+              if (!blob) {
+                reject(new Error("Could not compress the selected image"));
+                return;
+              }
               resolve(
                 new File([blob], file.name, {
                   type: "image/jpeg",
@@ -183,7 +190,10 @@ export default function SlabVoucher({ stock, setStock }) {
             quality
           );
         };
+        img.onerror = () => reject(new Error("Could not read the selected image"));
+        img.src = event.target.result;
       };
+      reader.onerror = () => reject(new Error("Could not read the selected file"));
       reader.readAsDataURL(file);
     });
   };
@@ -206,28 +216,34 @@ export default function SlabVoucher({ stock, setStock }) {
 
       const formData = new FormData();
       formData.append("file", compressedFile);
-      formData.append("upload_preset", "ebay-memo");
+      formData.append("upload_preset", "Warehouse");
 
       const res = await axios.post(
         "https://api.cloudinary.com/v1_1/dodxop7lz/image/upload",
         formData,
         {
           onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            toast.loading(`Uploading: ${percentCompleted}%`, {
+            const progressMessage = progressEvent.total
+              ? `Uploading: ${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%`
+              : "Uploading image...";
+            toast.loading(progressMessage, {
               id: "image-upload",
             });
           },
         }
       );
 
+      if (!res.data?.secure_url) {
+        throw new Error("Cloudinary did not return an image URL");
+      }
       toast.success("Image uploaded successfully", { id: "image-upload" });
       setUploadedImageUrl(res.data.secure_url);
     } catch (err) {
       console.error(err);
-      toast.error("Image upload failed", { id: "image-upload" });
+      const cloudinaryMessage = err.response?.data?.error?.message;
+      toast.error(cloudinaryMessage || err.message || "Image upload failed", {
+        id: "image-upload",
+      });
     } finally {
       setIsUploadingImage(false);
     }
