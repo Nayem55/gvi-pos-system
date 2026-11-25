@@ -269,12 +269,9 @@ const DailyReport = () => {
   const getSerialWiseReport = () => {
     const yearMonth = filterMonth || dayjs().format("YYYY-MM");
     const daysInMonth = dayjs(yearMonth).daysInMonth();
-    const currentDate = dayjs();
-    const isCurrentMonth = yearMonth === currentDate.format("YYYY-MM");
-    const maxDay = isCurrentMonth ? currentDate.date() : daysInMonth;
     const reportData = [];
 
-    for (let day = 1; day <= maxDay; day++) {
+    for (let day = 1; day <= daysInMonth; day++) {
       const date = dayjs(`${yearMonth}-${day}`).format("YYYY-MM-DD");
       const dayReports = reports.filter(
         (report) => dayjs(report.sale_date).format("YYYY-MM-DD") === date
